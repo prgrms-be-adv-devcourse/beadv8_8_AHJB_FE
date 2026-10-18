@@ -1,0 +1,83 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  height: var(--space-40);
+  padding: 0 var(--space-20);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+.btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--focus-ring);
+}
+.btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.sm {
+  height: 32px;
+  padding: 0 var(--space-12);
+  font-size: 13px;
+}
+.lg {
+  height: 48px;
+  padding: 0 var(--space-24);
+  font-size: 15px;
+  font-weight: 600;
+}
+.full {
+  display: flex;
+  width: 100%;
+}
+.iconOnly {
+  padding: 0;
+  width: var(--space-40);
+}
+.sm.iconOnly {
+  width: 32px;
+}
+.lg.iconOnly {
+  width: 48px;
+}
+.solid {
+  background: var(--text);
+  color: var(--white);
+}
+.solid:not(:disabled):hover {
+  background: var(--black);
+}
+.highlight {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.highlight:not(:disabled):hover {
+  background: var(--coral);
+}
+.outline {
+  background: var(--white);
+  color: var(--text);
+  border-color: var(--border);
+}
+.outline:not(:disabled):hover {
+  border-color: var(--text);
+}
+.ghost {
+  background: transparent;
+  color: var(--text);
+}
+.ghost:not(:disabled):hover {
+  background: var(--hairline);
+}

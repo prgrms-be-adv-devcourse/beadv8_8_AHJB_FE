@@ -1,0 +1,108 @@
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  max-width: 100%;
+  height: 22px;
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 22px;
+  font-weight: 500;
+  border: 1px dashed currentColor;
+  background: var(--white);
+}
+.method {
+  font-weight: 700;
+}
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.status {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 10px;
+  padding: 0 var(--space-4);
+  border-radius: 3px;
+}
+.done {
+  color: #1f7a5a;
+}
+.done .status {
+  background: var(--mint);
+  color: var(--text);
+}
+.partial {
+  color: #8a6d00;
+}
+.partial .status {
+  background: var(--lemon);
+  color: var(--text);
+}
+.proposed {
+  color: #c2410c;
+}
+.proposed .status {
+  background: var(--coral);
+  color: var(--text);
+}
+.toggle {
+  position: fixed;
+  left: var(--space-16);
+  bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 32px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #ffffffeb;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #2222221f;
+}
+.toggle:hover {
+  border-color: var(--text);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.toggleOn {
+  background: var(--text);
+  color: var(--white);
+  border-color: var(--text);
+}
+.toggleOn .dot {
+  background: var(--mint);
+}
+@media (max-width: 767px) {
+  .toggle {
+    left: auto;
+    right: var(--space-12);
+    bottom: calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
+    height: 28px;
+    padding: 0 var(--space-10);
+    font-size: 11px;
+    opacity: 0.9;
+  }
+  .toggleMore {
+    display: none;
+  }
+}

@@ -1,0 +1,418 @@
+import type { HttpMethod } from '@/types/common'
+
+/** done = 백엔드 구현, partial = 필드 부족, proposed = 미구현(프론트 제안) */
+export type ApiImplStatus = 'done' | 'partial' | 'proposed'
+
+export interface ApiSpec {
+  method: HttpMethod
+  /** 표시용 경로 ({productId} 같은 자리표시자 포함) */
+  path: string
+  title: string
+  owner: string
+  status: ApiImplStatus
+  note?: string
+}
+
+/**
+ * API 구현 현황표 (원본 eA).
+ * 키(`auction.detail` 등)는 VITE_REAL_APIS 전환 키로도 쓰인다 (api/config.ts).
+ */
+export const apiRegistry = {
+  'auth.signup': {
+    method: 'POST',
+    path: '/api/v1/auth/signup',
+    title: '회원가입',
+    owner: '차승환',
+    status: 'done',
+  },
+  'auth.login': {
+    method: 'POST',
+    path: '/api/v1/auth/login',
+    title: '로그인',
+    owner: '차승환',
+    status: 'done',
+  },
+  'auth.logout': {
+    method: 'POST',
+    path: '/api/v1/auth/logout',
+    title: '로그아웃',
+    owner: '차승환',
+    status: 'done',
+  },
+  'auth.reissue': {
+    method: 'POST',
+    path: '/api/v1/auth/reissue',
+    title: '토큰 재발급',
+    owner: '차승환',
+    status: 'done',
+  },
+  'auth.emailAvailable': {
+    method: 'GET',
+    path: '/api/v1/auth/email-availability',
+    title: '이메일 중복 확인',
+    owner: '차승환',
+    status: 'done',
+  },
+  'auth.nicknameAvailable': {
+    method: 'GET',
+    path: '/api/v1/auth/nickname-availability',
+    title: '닉네임 중복 확인',
+    owner: '차승환',
+    status: 'done',
+  },
+  'member.registerSeller': {
+    method: 'POST',
+    path: '/api/v1/member/me/seller',
+    title: '판매자 등록',
+    owner: '차승환',
+    status: 'done',
+  },
+  'member.me': {
+    method: 'GET',
+    path: '/api/v1/member/me',
+    title: '내 정보',
+    owner: '차승환',
+    status: 'proposed',
+    note: '헤더 닉네임, 판매자 여부, 계정 상태, 기본 배송지',
+  },
+  'member.warnings': {
+    method: 'GET',
+    path: '/api/v1/member/me/warnings',
+    title: '내 경고 이력',
+    owner: '차승환',
+    status: 'proposed',
+  },
+  'product.create': {
+    method: 'POST',
+    path: '/api/v1/products',
+    title: '상품 등록(+경매 조건)',
+    owner: '송현수',
+    status: 'done',
+    note: '이미지 presigned 업로드는 TODO',
+  },
+  'product.update': {
+    method: 'PATCH',
+    path: '/api/v1/products/{productId}',
+    title: '상품 수정',
+    owner: '송현수',
+    status: 'done',
+  },
+  'product.delete': {
+    method: 'DELETE',
+    path: '/api/v1/products/{productId}',
+    title: '상품 삭제',
+    owner: '송현수',
+    status: 'done',
+  },
+  'product.detail': {
+    method: 'GET',
+    path: '/api/v1/products/{productId}',
+    title: '상품 상세',
+    owner: '송현수',
+    status: 'proposed',
+    note: '상품명·사진·설명·배송·판매자·auctionId',
+  },
+  'product.mine': {
+    method: 'GET',
+    path: '/api/v1/products/me',
+    title: '내가 올린 상품',
+    owner: '송현수',
+    status: 'proposed',
+  },
+  'product.images': {
+    method: 'POST',
+    path: '/api/v1/products/images/presigned',
+    title: '이미지 업로드 URL',
+    owner: '송현수',
+    status: 'proposed',
+  },
+  'qna.list': {
+    method: 'GET',
+    path: '/api/v1/products/{productId}/qnas',
+    title: 'Q&A 목록(폴링)',
+    owner: '송현수',
+    status: 'done',
+  },
+  'qna.create': {
+    method: 'POST',
+    path: '/api/v1/products/{productId}/qnas',
+    title: '질문 · 판매자 답글',
+    owner: '송현수',
+    status: 'done',
+  },
+  'qna.update': {
+    method: 'PATCH',
+    path: '/api/v1/qnas/{qnaId}',
+    title: 'Q&A 수정',
+    owner: '송현수',
+    status: 'done',
+  },
+  'qna.delete': {
+    method: 'DELETE',
+    path: '/api/v1/qnas/{qnaId}',
+    title: 'Q&A 삭제',
+    owner: '송현수',
+    status: 'done',
+  },
+  'wish.add': {
+    method: 'POST',
+    path: '/api/v1/products/{productId}/wishes',
+    title: '찜하기',
+    owner: '송현수',
+    status: 'done',
+  },
+  'wish.remove': {
+    method: 'DELETE',
+    path: '/api/v1/products/{productId}/wishes',
+    title: '찜 해제',
+    owner: '송현수',
+    status: 'done',
+  },
+  'wish.list': {
+    method: 'GET',
+    path: '/api/v1/wishes',
+    title: '찜 목록',
+    owner: '송현수',
+    status: 'partial',
+    note: '카드 사진(thumbnailUrl) 필요',
+  },
+  'auction.list': {
+    method: 'GET',
+    path: '/api/v1/auctions',
+    title: '경매 목록 · 검색',
+    owner: '박신형',
+    status: 'proposed',
+    note: 'keyword, status, category, manufacturer, sort, page, size',
+  },
+  'auction.detail': {
+    method: 'GET',
+    path: '/api/v1/auctions/{auctionId}',
+    title: '경매 상세(입찰판)',
+    owner: '박신형',
+    status: 'done',
+  },
+  'auction.bids': {
+    method: 'GET',
+    path: '/api/v1/auctions/{auctionId}/bids',
+    title: '입찰 내역',
+    owner: '박신형',
+    status: 'done',
+  },
+  'auction.bid': {
+    method: 'POST',
+    path: '/api/v1/auctions/{auctionId}/bids',
+    title: '입찰',
+    owner: '박신형',
+    status: 'done',
+  },
+  'auction.instantWin': {
+    method: 'POST',
+    path: '/api/v1/auctions/{auctionId}/instant-win',
+    title: '즉시낙찰',
+    owner: '박신형',
+    status: 'done',
+  },
+  'auction.myBids': {
+    method: 'GET',
+    path: '/api/v1/auctions/me/bids',
+    title: '내 입찰 내역',
+    owner: '박신형',
+    status: 'proposed',
+  },
+  'auction.reopen': {
+    method: 'POST',
+    path: '/api/v1/products/{productId}/rounds',
+    title: '다음 회차 열기',
+    owner: '박신형',
+    status: 'proposed',
+    note: '유찰·낙찰 무효 뒤 판매자가 다시 경매를 열어요',
+  },
+  'cart.list': {
+    method: 'GET',
+    path: '/api/v1/cart',
+    title: '장바구니(낙찰 상품)',
+    owner: '신종혁',
+    status: 'partial',
+    note: 'productName, thumbnailUrl 필요',
+  },
+  'cart.pay': {
+    method: 'POST',
+    path: '/api/v1/cart/payment',
+    title: '선택 상품 결제(예치금)',
+    owner: '신종혁',
+    status: 'done',
+  },
+  'order.winner': {
+    method: 'GET',
+    path: '/api/v1/order/winner',
+    title: '구매 주문 목록',
+    owner: '신종혁',
+    status: 'partial',
+    note: 'productName, thumbnailUrl 필요',
+  },
+  'order.seller': {
+    method: 'GET',
+    path: '/api/v1/order/seller',
+    title: '판매 주문 목록',
+    owner: '신종혁',
+    status: 'partial',
+    note: 'productName, thumbnailUrl 필요',
+  },
+  'order.detail': {
+    method: 'GET',
+    path: '/api/v1/order/{orderId}',
+    title: '주문 상세',
+    owner: '신종혁',
+    status: 'partial',
+    note: 'confirmExpiredAt(자동 구매확정 시각) 필요',
+  },
+  'order.confirm': {
+    method: 'POST',
+    path: '/api/v1/order/{orderId}/confirm-purchase',
+    title: '구매확정',
+    owner: '신종혁',
+    status: 'done',
+  },
+  'order.refund': {
+    method: 'POST',
+    path: '/api/v1/order/{orderId}/request-refund',
+    title: '환불 요청',
+    owner: '신종혁',
+    status: 'done',
+  },
+  'order.send': {
+    method: 'POST',
+    path: '/api/v1/order/{orderId}/send-product',
+    title: '발송(송장 등록)',
+    owner: '신종혁',
+    status: 'done',
+  },
+  'delivery.status': {
+    method: 'GET',
+    path: '/api/v1/order/{orderId}/delivery',
+    title: '배송 조회',
+    owner: '신종혁',
+    status: 'done',
+  },
+  'wallet.me': {
+    method: 'GET',
+    path: '/api/v1/wallet/me',
+    title: '예치금 잔액',
+    owner: '김지유',
+    status: 'proposed',
+    note: 'PaymentController 경로만 있음',
+  },
+  'wallet.transactions': {
+    method: 'GET',
+    path: '/api/v1/wallet/me/transactions',
+    title: '예치금 내역',
+    owner: '김지유',
+    status: 'proposed',
+  },
+  'wallet.charge': {
+    method: 'POST',
+    path: '/api/v1/wallet/me/charge',
+    title: '예치금 충전(PG)',
+    owner: '김지유',
+    status: 'proposed',
+    note: '토스 결제창 → 승인',
+  },
+  'refund.detail': {
+    method: 'GET',
+    path: '/api/v1/refunds/{refundId}',
+    title: '환불 상세',
+    owner: '조민형',
+    status: 'done',
+  },
+  'refund.byOrder': {
+    method: 'GET',
+    path: '/api/v1/refunds?orderId=',
+    title: '주문으로 환불 조회',
+    owner: '조민형',
+    status: 'done',
+  },
+  'refund.accept': {
+    method: 'PATCH',
+    path: '/api/v1/refunds/{refundId}/accept',
+    title: '환불 수락',
+    owner: '조민형',
+    status: 'done',
+  },
+  'refund.reject': {
+    method: 'PATCH',
+    path: '/api/v1/refunds/{refundId}/reject',
+    title: '환불 거절',
+    owner: '조민형',
+    status: 'done',
+  },
+  'settlement.list': {
+    method: 'GET',
+    path: '/api/v1/settlements',
+    title: '정산 목록',
+    owner: '조민형',
+    status: 'done',
+  },
+  'settlement.detail': {
+    method: 'GET',
+    path: '/api/v1/settlements/{settlementId}',
+    title: '정산 상세',
+    owner: '조민형',
+    status: 'done',
+  },
+  'review.reviewable': {
+    method: 'GET',
+    path: '/api/v1/reviews/reviewable-orders',
+    title: '후기 작성 가능 주문',
+    owner: '송현수',
+    status: 'done',
+  },
+  'review.create': {
+    method: 'POST',
+    path: '/api/v1/reviews',
+    title: '후기 작성',
+    owner: '송현수',
+    status: 'done',
+  },
+  'review.received': {
+    method: 'GET',
+    path: '/api/v1/reviews/received',
+    title: '받은 후기',
+    owner: '송현수',
+    status: 'done',
+  },
+  'review.written': {
+    method: 'GET',
+    path: '/api/v1/reviews/written',
+    title: '쓴 후기',
+    owner: '송현수',
+    status: 'done',
+  },
+  'review.update': {
+    method: 'PATCH',
+    path: '/api/v1/reviews/{reviewId}',
+    title: '후기 수정',
+    owner: '송현수',
+    status: 'done',
+  },
+  'review.delete': {
+    method: 'DELETE',
+    path: '/api/v1/reviews/{reviewId}',
+    title: '후기 삭제',
+    owner: '송현수',
+    status: 'done',
+  },
+} as const satisfies Record<string, ApiSpec>
+
+export type ApiKey = keyof typeof apiRegistry
+
+/** 현황 배지 문구 (원본 Co) */
+export const API_STATUS_LABELS: Record<ApiImplStatus, string> = {
+  done: '구현',
+  partial: '필드 부족',
+  proposed: '미구현',
+}
+
+/** 키로 명세 조회 (note 등 optional 필드를 공통 타입으로 읽을 때) */
+export function getApiSpec(key: ApiKey): ApiSpec {
+  return apiRegistry[key]
+}

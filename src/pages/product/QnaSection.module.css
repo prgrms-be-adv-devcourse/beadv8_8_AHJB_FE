@@ -1,0 +1,146 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--hairline);
+}
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-14) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.q,
+.a {
+  display: flex;
+  gap: var(--space-8);
+  font-size: 13px;
+  line-height: 19px;
+  word-break: keep-all;
+}
+.q {
+  font-weight: 600;
+}
+.a {
+  padding: var(--space-10) var(--space-12);
+  border-radius: var(--radius-md);
+  background: var(--white);
+}
+.mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+}
+.markA {
+  background: var(--accent);
+}
+.meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 26px;
+}
+.waiting {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-left: 26px;
+}
+.empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: var(--space-14) 0;
+  border-top: 1px solid var(--hairline);
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.formFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.counter {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.login {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.login a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.replies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-left: 26px;
+}
+.a {
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.aHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: 12px;
+  font-weight: 600;
+}
+.sellerTag {
+  display: inline-flex;
+  height: 16px;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 600;
+}
+.deleted {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-style: normal;
+}
+.tools {
+  display: inline-flex;
+  gap: var(--space-8);
+  margin-left: auto;
+}
+.tool {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tool:hover {
+  color: var(--text);
+}
+.replyForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-left: 26px;
+}
+.qRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}

@@ -1,0 +1,226 @@
+.board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+.timer,
+.current {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-14) var(--space-16);
+  border-radius: var(--radius-md);
+}
+.timer {
+  background: var(--text);
+  color: var(--white);
+  transition: background-color var(--dur) var(--ease);
+}
+.timerHot {
+  background: var(--coral);
+  color: var(--text);
+}
+.timerDone {
+  background: var(--olive-3);
+  color: var(--text);
+}
+.current {
+  background: var(--white);
+  border: 1px solid var(--hairline);
+  transition:
+    background-color 0.6s var(--ease),
+    border-color 0.6s var(--ease);
+}
+.flash {
+  background: var(--lemon);
+  border-color: var(--lemon);
+}
+.boardLabel {
+  font-size: 11px;
+  line-height: 16px;
+  opacity: 0.75;
+}
+.current .boardLabel,
+.current .boardSub {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.timerValue,
+.currentValue {
+  font-size: 26px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  .timerValue,
+  .currentValue {
+    font-size: 21px;
+  }
+}
+.boardSub {
+  font-size: 11px;
+  line-height: 16px;
+  opacity: 0.75;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+.facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-10) 0;
+}
+.facts > div + div {
+  padding-left: var(--space-12);
+  border-left: 1px solid var(--hairline);
+}
+.facts dt {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.facts dd {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .facts > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+.bidForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-16);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  border: 1px solid var(--hairline);
+}
+.bidLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+.quick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.quick button {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--dur) var(--ease);
+}
+.quick button:hover:not(:disabled) {
+  border-color: var(--text);
+}
+.quick button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.bidHelp {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--text-muted);
+}
+.bidHelp strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.bidError {
+  font-size: 12px;
+  line-height: 17px;
+  color: #c2410c;
+  font-weight: 500;
+}
+.bidActions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-8);
+}
+.timerSoon {
+  background: var(--lemon);
+  color: var(--text);
+}
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-size: 11px;
+}
+.tiers > span {
+  background: var(--white);
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.tiers > .tierOn {
+  background: var(--lemon);
+  font-weight: 600;
+}
+.summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-4) var(--space-12);
+  font-size: 13px;
+}
+.summary dt {
+  color: var(--text-muted);
+}
+.summary dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.summary .total {
+  font-size: 15px;
+}
+.ownerActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+.instant {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-14);
+  border-radius: var(--radius-md);
+  background: var(--violet-3);
+}
+.instantText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.instantText strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

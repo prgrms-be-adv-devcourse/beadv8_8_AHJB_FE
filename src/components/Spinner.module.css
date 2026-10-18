@@ -1,0 +1,24 @@
+.spinner {
+  display: inline-block;
+  flex: none;
+  border-radius: var(--radius-full);
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.6s linear infinite;
+}
+.block {
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
+  color: var(--text-muted);
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.skeleton {
+  display: block;
+  background: var(--hairline);
+  animation: jm-pulse 1.2s ease-in-out infinite;
+}

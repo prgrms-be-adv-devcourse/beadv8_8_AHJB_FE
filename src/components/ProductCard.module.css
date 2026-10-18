@@ -1,0 +1,128 @@
+.card {
+  position: relative;
+  min-width: 0;
+}
+.link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+.link:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+.media {
+  position: relative;
+}
+.image {
+  transition: transform 0.4s var(--ease);
+}
+.image > :first-child {
+  transition: transform 0.4s var(--ease);
+}
+.link:hover .image > :first-child {
+  transform: scale(1.04);
+}
+.timer {
+  position: absolute;
+  left: var(--space-8);
+  bottom: var(--space-8);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 22px;
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-sm);
+  background: #222222e6;
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.timerHot {
+  background: var(--coral);
+  color: var(--text);
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  min-height: 16px;
+}
+.title {
+  font-size: 14px;
+  line-height: 19px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+  transition: color var(--dur) var(--ease);
+}
+.link:hover .title {
+  color: var(--accent);
+}
+.meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-6);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+.priceLabel {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.price {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.bids {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.fav {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-8);
+}
+.skeletonMedia {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  background: var(--hairline);
+  animation: jm-pulse 1.2s ease-in-out infinite;
+}
+.skeletonLine {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--hairline);
+  animation: jm-pulse 1.2s ease-in-out infinite;
+}
+.timerSoon {
+  background: var(--lemon);
+  color: var(--text);
+}
+.ended .image img {
+  filter: grayscale(0.35);
+  opacity: 0.85;
+}

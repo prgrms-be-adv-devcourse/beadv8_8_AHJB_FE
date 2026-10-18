@@ -1,0 +1,40 @@
+.stepper {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 3px;
+}
+.stepper li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hairline);
+}
+.label {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.done .bar {
+  background: var(--teal);
+}
+.done .label {
+  color: var(--text);
+}
+.now .label {
+  font-weight: 700;
+}
+.coral .done .bar {
+  background: var(--coral);
+}
+.muted .done .bar {
+  background: var(--olive-2);
+}
