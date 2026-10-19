@@ -22,7 +22,8 @@ interface OrderCardProps {
 export function OrderCard({ order, role, onSend }: OrderCardProps) {
   const now = useNow()
   const meta = ORDER_STATE_META[order.state]
-  const detailPath = `/orders/${order.id}`
+  // 판매자 화면에서 들어가면 ?as=seller 를 붙인다 (member/me 가 없으면 uuid 로 역할을 알 수 없어서)
+  const detailPath = role === 'seller' ? `/orders/${order.id}?as=seller` : `/orders/${order.id}`
   const step = orderStepIndex(order.state)
   const isRefund = order.state === 'REFUND_REQUESTED' || order.state === 'REFUNDED'
   const autoConfirmIn =

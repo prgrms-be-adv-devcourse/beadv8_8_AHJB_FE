@@ -30,9 +30,14 @@ export interface Me {
   isSeller: boolean
   accountStatus: AccountStatus
   warningCount: number
-  address: MemberAddress
+  address: MemberAddress | null
   seller: SellerAccount | null
   createdAt: string
+  /**
+   * true 면 GET /member/me 없이 로그인 응답 + 토큰으로 만든 정보다.
+   * memberId·email·nickname·isSeller·accountStatus 만 믿을 수 있고 나머지는 빈 값이다.
+   */
+  partial?: boolean
 }
 
 /** GET /api/v1/member/me/warnings 의 항목 */

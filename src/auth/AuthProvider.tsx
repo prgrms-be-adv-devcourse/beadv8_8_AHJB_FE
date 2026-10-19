@@ -1,7 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { isRealApi } from '@/api/config'
 import { authApi, memberApi } from '@/api/endpoints'
-import { tokenStore } from '@/api/tokenStore'
+import { tokenStore, type SessionProfile } from '@/api/tokenStore'
+import { decodeAccessToken } from '@/lib/jwt'
 import type { LoginRequest, LoginResponse } from '@/types/auth'
 import type { Me } from '@/types/member'
 
@@ -18,26 +20,73 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/**
+ * 내 정보를 어디서 가져올지.
+ * - 로그인이 목업이거나 member.me 를 실제로 켰으면: GET /member/me (원본 방식)
+ * - 로그인만 실제이고 member.me 는 꺼져 있으면: 로그인 응답 + 토큰으로 만든다.
+ *   백엔드에 GET /member/me 가 없어서, 이 방식으로 로그인 상태·닉네임·판매자 여부를 판단한다.
+ */
+const USE_TOKEN_PROFILE = isRealApi('auth.login') && !isRealApi('member.me')
+
+/** 로그인 응답 + 토큰 → Me (partial) */
+function meFromToken(token: string, profile: SessionProfile | null): Me | null {
+  const claims = decodeAccessToken(token)
+  if (!claims || claims.memberId === null || !profile) return null
+  return {
+    memberId: claims.memberId,
+    uuid: '',
+    email: profile.email,
+    nickname: profile.nickname,
+    username: '',
+    phone: '',
+    birthDate: null,
+    isSeller: claims.authorities.includes('ROLE_SELLER'),
+    accountStatus: profile.suspended ? 'SUSPENDED' : 'ACTIVE',
+    warningCount: 0,
+    address: null,
+    seller: null,
+    createdAt: '',
+    partial: true,
+  }
+}
+
 /** 로그인 상태 제공 (원본 h0). QueryClientProvider 안에 둔다 */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [token, setToken] = useState(() => tokenStore.get())
+  const [profile, setProfile] = useState(() => tokenStore.getProfile())
 
-  useEffect(() => tokenStore.subscribe(() => setToken(tokenStore.get())), [])
+  useEffect(
+    () =>
+      tokenStore.subscribe(() => {
+        setToken(tokenStore.get())
+        setProfile(tokenStore.getProfile())
+      }),
+    [],
+  )
 
   const meQuery = useQuery({
     queryKey: ['me', token],
     queryFn: memberApi.me,
-    enabled: !!token,
+    enabled: !!token && !USE_TOKEN_PROFILE,
     staleTime: 60 * 1000,
     retry: false,
   })
+
+  const tokenMe = useMemo(
+    () => (USE_TOKEN_PROFILE && token ? meFromToken(token, profile) : null),
+    [token, profile],
+  )
+  const me = USE_TOKEN_PROFILE ? tokenMe : token ? (meQuery.data ?? null) : null
 
   const login = useCallback(
     async (body: LoginRequest) => {
       const result = await authApi.login(body)
       tokenStore.set(result.accessToken, result.refreshToken)
-      await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+      tokenStore.setProfile({ email: body.email, nickname: result.nickname, suspended: result.suspended })
+      if (!USE_TOKEN_PROFILE) {
+        await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+      }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
       return result
     },
@@ -62,13 +111,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      me: token ? (meQuery.data ?? null) : null,
-      isLoggedIn: !!token && !!meQuery.data,
-      isLoading: !!token && meQuery.isLoading,
+      me,
+      isLoggedIn: !!token && !!me,
+      isLoading: !!token && !USE_TOKEN_PROFILE && meQuery.isLoading,
       login,
       logout,
     }),
-    [token, meQuery.data, meQuery.isLoading, login, logout],
+    [token, me, meQuery.isLoading, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

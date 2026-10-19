@@ -1,4 +1,5 @@
 import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
+import type { LoginResponse } from '@/types/auth'
 import { API_BASE_URL, isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
 
@@ -109,6 +110,7 @@ function isEnvelope(body: object): body is ApiBody {
  * 공통 요청 함수 (원본 La).
  * `apiKey` 가 VITE_REAL_APIS 에 있으면 실제 서버, 아니면 목업 서버로 보낸다.
  * 성공하면 `data` 를, 바디 없는 성공 응답이면 null 을 돌려준다.
+ * 실제 서버가 401 을 주면 토큰을 한 번 재발급하고 같은 요청을 다시 보낸다.
  */
 export async function request<T>(
   apiKey: ApiKey,
@@ -117,11 +119,21 @@ export async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const params = buildQuery(options.query)
-  const token = tokenStore.get()
-  const send = isRealApi(apiKey) ? sendToServer : sendToMock
-  const response = await send(method, path, params, options.body, token)
-  const { status } = response
-  const body = response.body
+  const real = isRealApi(apiKey)
+  const send = real ? sendToServer : sendToMock
+  let response = await send(method, path, params, options.body, tokenStore.get())
+
+  // 액세스 토큰 만료(15분) → 재발급 후 한 번만 재시도. auth.* 요청은 재시도하지 않는다.
+  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.getRefresh()) {
+    const refreshed = await refreshSession()
+    if (refreshed) response = await send(method, path, params, options.body, tokenStore.get())
+  }
+
+  return parseResponse<T>(response)
+}
+
+function parseResponse<T>(response: RawResponse): T {
+  const { status, body } = response
 
   if (body === null) {
     if (status < 400) return null as T
@@ -137,6 +149,35 @@ export async function request<T>(
 
   if (!body.isSuccess) throw toApiError(body, status)
   return body.data as T
+}
+
+let refreshing: Promise<boolean> | null = null
+
+/**
+ * 리프레시 토큰으로 새 토큰을 받는다 (POST /api/v1/auth/reissue).
+ * 여러 요청이 동시에 401 을 받아도 재발급은 한 번만 한다 (백엔드 리프레시 토큰은 1회용).
+ * 판매자 등록처럼 권한이 바뀐 직후에도 호출해서 새 권한을 토큰에 반영한다.
+ */
+export function refreshSession(): Promise<boolean> {
+  if (refreshing) return refreshing
+  refreshing = (async () => {
+    const refreshToken = tokenStore.getRefresh()
+    if (!refreshToken) return false
+    try {
+      const send = isRealApi('auth.reissue') ? sendToServer : sendToMock
+      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), { refreshToken }, null)
+      const result = parseResponse<LoginResponse>(response)
+      tokenStore.set(result.accessToken, result.refreshToken)
+      tokenStore.setProfile({ nickname: result.nickname, suspended: result.suspended })
+      return true
+    } catch {
+      tokenStore.clear()
+      return false
+    } finally {
+      refreshing = null
+    }
+  })()
+  return refreshing
 }
 
 /** 실패 바디 → ApiError. 401 이면 토큰을 지운다 (원본과 같음) */

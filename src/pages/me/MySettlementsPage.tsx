@@ -198,7 +198,7 @@ export function MySettlementsPage() {
               <dd className="num">{detail.completedAt ? formatDateTime(detail.completedAt) : '-'}</dd>
               <dt>주문</dt>
               <dd>
-                <Link to={`/orders/${detail.orderId}`} onClick={() => setDetailId(null)}>
+                <Link to={`/orders/${detail.orderId}?as=seller`} onClick={() => setDetailId(null)}>
                   주문 {detail.orderId} 보기
                 </Link>
               </dd>

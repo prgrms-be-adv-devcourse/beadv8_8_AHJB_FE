@@ -135,7 +135,7 @@ export function MyProductsPage() {
                       </Button>
                     ) : null}
                     {product.orderId ? (
-                      <LinkButton to={`/orders/${product.orderId}`} size="sm" variant="outline">
+                      <LinkButton to={`/orders/${product.orderId}?as=seller`} size="sm" variant="outline">
                         주문 보기
                       </LinkButton>
                     ) : null}

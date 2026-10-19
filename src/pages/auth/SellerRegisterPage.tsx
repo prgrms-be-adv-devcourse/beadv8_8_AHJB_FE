@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import type { ApiError } from '@/api/client'
+import { refreshSession, type ApiError } from '@/api/client'
+import { isRealApi } from '@/api/config'
 import { memberApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/Button'
@@ -42,6 +43,8 @@ export function SellerRegisterPage() {
     setSubmitting(true)
     try {
       await memberApi.registerSeller({ bank, accountNumber, accountHolder: accountHolder.trim() })
+      // 실제 서버는 판매 권한이 토큰에 들어 있어서, 새 토큰을 받아야 판매자로 바뀐다
+      if (isRealApi('auth.login')) await refreshSession()
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       toast('판매자로 등록했어요. 이제 경매를 올릴 수 있어요.', { tone: 'success' })
       navigate(params.get('redirect') || '/sell', { replace: true })

@@ -45,6 +45,9 @@ export const authApi = {
   /** 201, 바디 없음 */
   signup: (body: SignupRequest) => http.post<null>('auth.signup', '/api/v1/auth/signup', body),
   login: (body: LoginRequest) => http.post<LoginResponse>('auth.login', '/api/v1/auth/login', body),
+  /** 보통은 client.ts 의 refreshSession() 이 자동으로 호출한다 */
+  reissue: (refreshToken: string) =>
+    http.post<LoginResponse>('auth.reissue', '/api/v1/auth/reissue', { refreshToken }),
   /** 204 */
   logout: (refreshToken: string) =>
     http.post<null>('auth.logout', '/api/v1/auth/logout', { refreshToken }),

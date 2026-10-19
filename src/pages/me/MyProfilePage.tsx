@@ -15,7 +15,12 @@ export function MyProfilePage() {
   const { me, logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
-  const warningsQuery = useQuery({ queryKey: ['me', 'warnings'], queryFn: memberApi.warnings })
+  const warningsQuery = useQuery({
+    queryKey: ['me', 'warnings'],
+    queryFn: memberApi.warnings,
+    // member/me 없이 로그인한 경우(partial)는 경고 이력 API 도 아직 없어서 부르지 않는다
+    enabled: !!me && !me.partial,
+  })
 
   if (!me) return null
   const address = me.address
@@ -37,15 +42,20 @@ export function MyProfilePage() {
         </Button>
       </div>
       <DevApiNote ids={['member.me', 'member.warnings', 'auth.logout']} />
+      {me.partial ? (
+        <p className={styles.hint}>
+          회원 상세 정보(이름, 휴대폰, 배송지, 정산 계좌, 경고 이력)는 백엔드 조회 API가 아직 없어서 표시되지 않아요.
+        </p>
+      ) : null}
       <dl className={styles.infoGrid}>
         <dt>닉네임</dt>
         <dd>{me.nickname}</dd>
         <dt>이메일</dt>
         <dd>{me.email}</dd>
         <dt>이름</dt>
-        <dd>{me.username}</dd>
+        <dd>{me.username || '-'}</dd>
         <dt>휴대폰</dt>
-        <dd className="num">{formatPhone(me.phone)}</dd>
+        <dd className="num">{me.phone ? formatPhone(me.phone) : '-'}</dd>
         <dt>생년월일</dt>
         <dd className="num">{me.birthDate ? formatDotDate(me.birthDate) : '-'}</dd>
         <dt>기본 배송지</dt>
@@ -61,11 +71,11 @@ export function MyProfilePage() {
           )}
         </dd>
         <dt>가입일</dt>
-        <dd className="num">{formatDotDate(me.createdAt)}</dd>
+        <dd className="num">{me.createdAt ? formatDotDate(me.createdAt) : '-'}</dd>
       </dl>
 
       <p className={styles.sectionTitle}>판매자</p>
-      {me.seller ? (
+      {me.seller || me.isSeller ? (
         <dl className={styles.infoGrid}>
           <dt>상태</dt>
           <dd>
@@ -73,7 +83,7 @@ export function MyProfilePage() {
           </dd>
           <dt>정산 계좌</dt>
           <dd className="num">
-            {me.seller.bank} {me.seller.accountNumberMasked} · {me.seller.accountHolder}
+            {me.seller ? `${me.seller.bank} ${me.seller.accountNumberMasked} · ${me.seller.accountHolder}` : '-'}
           </dd>
         </dl>
       ) : (
@@ -98,7 +108,7 @@ export function MyProfilePage() {
         </dd>
         <dt>경고</dt>
         <dd className="num">
-          {me.warningCount}회 <span className={styles.hint}>· 용어집 기준: 누적 1–2회는 활동 정지, 3회면 계정 차단</span>
+          {me.partial ? '-' : `${me.warningCount}회`} <span className={styles.hint}>· 용어집 기준: 누적 1–2회는 활동 정지, 3회면 계정 차단</span>
         </dd>
         {(warningsQuery.data ?? []).map((warning) => (
           <div key={warning.warningId} style={{ display: 'contents' }}>

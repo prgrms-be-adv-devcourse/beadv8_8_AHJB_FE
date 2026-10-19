@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { orderApi, refundApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
@@ -34,6 +34,7 @@ const REFUND_LOOKUP_STATES: OrderState[] = ['REFUND_REQUESTED', 'REFUNDED', 'CON
 /** 주문 상세 /orders/:orderId (원본 SO). 구매자·판매자 공용 */
 export function OrderDetailPage() {
   const orderId = Number(useParams().orderId)
+  const [searchParams] = useSearchParams()
   const { me } = useAuth()
   const now = useNow()
   const [actionKind, setActionKind] = useState<OrderActionKind | null>(null)
@@ -73,7 +74,14 @@ export function OrderDetailPage() {
     )
   }
 
-  const role: OrderRole = me?.uuid === order.sellerId ? 'seller' : 'buyer'
+  // 내 uuid 를 알면 그걸로, 모르면(member/me 없이 로그인) 링크의 ?as=seller 로 역할을 정한다
+  const role: OrderRole = me?.uuid
+    ? me.uuid === order.sellerId
+      ? 'seller'
+      : 'buyer'
+    : searchParams.get('as') === 'seller'
+      ? 'seller'
+      : 'buyer'
   const meta = ORDER_STATE_META[order.state]
   const stepIndex = orderStepIndex(order.state)
   const refund = refundQuery.data && !refundQuery.isError ? refundQuery.data : null

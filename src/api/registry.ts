@@ -73,7 +73,7 @@ export const apiRegistry = {
     title: '내 정보',
     owner: '차승환',
     status: 'proposed',
-    note: '헤더 닉네임, 판매자 여부, 계정 상태, 기본 배송지',
+    note: '없어도 됨: 로그인 응답 + 토큰으로 대체. 생기면 내 정보 화면 상세(이름·휴대폰·배송지·계좌) 표시',
   },
   'member.warnings': {
     method: 'GET',
