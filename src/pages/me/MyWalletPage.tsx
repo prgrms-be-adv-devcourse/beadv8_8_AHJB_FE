@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
 import { paymentApi, walletApi } from '@/api/endpoints'
+import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { ChargeDialog } from '@/components/ChargeDialog'
@@ -12,13 +13,21 @@ import { Pagination } from '@/components/Pagination'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatWon } from '@/lib/format'
-import { CHARGE_PURPOSE_LABELS, CHARGE_STATUS_LABELS } from '@/lib/labels'
+import { CHARGE_PURPOSE_LABELS, CHARGE_STATUS_LABELS, WITHDRAWAL_STATUS_LABELS } from '@/lib/labels'
 import type { Tone } from '@/lib/status'
 import type { ChargeStatus, ChargeSummary } from '@/types/payment'
+import type { Withdrawal, WithdrawalStatus } from '@/types/wallet'
 import styles from './MyPage.module.css'
 
 /** 충전 내역 한 페이지 크기 */
 const PAGE_SIZE = 10
+
+/** 출금 상태별 배지 색 */
+const WITHDRAWAL_TONES: Record<WithdrawalStatus, Tone> = {
+  REQUESTED: 'scheduled',
+  COMPLETED: 'ended',
+  FAILED: 'ended',
+}
 
 /** 충전 상태별 배지 색 */
 const CHARGE_TONES: Record<ChargeStatus, Tone> = {
@@ -33,16 +42,48 @@ const CHARGE_TONES: Record<ChargeStatus, Tone> = {
 export function MyWalletPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const { me } = useAuth()
+  const isSeller = !!me?.isSeller
   const [chargeOpen, setChargeOpen] = useState(false)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
   const [page, setPage] = useState(0)
+  const [withdrawalPage, setWithdrawalPage] = useState(0)
   const [cancelTarget, setCancelTarget] = useState<ChargeSummary | null>(null)
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
+  // 판매자: 받을 예정 금액(정산 전 홀딩 합계). 합계만 필요해서 1건만 받는다
+  const sellerHoldingsQuery = useQuery({
+    queryKey: ['wallet', 'holdings', 'SELLER'],
+    queryFn: () => walletApi.holdings({ role: 'SELLER', size: 1 }),
+    enabled: isSeller,
+  })
+  const withdrawalsQuery = useQuery({
+    queryKey: ['wallet', 'withdrawals', withdrawalPage],
+    queryFn: () => walletApi.withdrawals({ page: withdrawalPage, size: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  })
   const chargesQuery = useQuery({
     queryKey: ['wallet', 'charges', page],
     queryFn: () => paymentApi.charges({ page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
   const balance = walletQuery.data?.balance ?? 0
+  /** 출금하면 이전 충전을 취소할 수 없게 되므로, 지금 취소할 수 있는 충전 건 수를 모달에서 알려 준다 */
+  const cancelableCount = chargesQuery.data?.content.filter((c) => c.cancelable && balance >= c.amount).length ?? 0
+
+  /** 예치금 전액 출금(명목상). 실제 송금은 없고 잔액이 0 이 되며 출금 내역에 남는다 */
+  const withdraw = useMutation<Withdrawal, ApiError>({
+    mutationFn: () => walletApi.withdraw(),
+    onSuccess: (w) => {
+      toast(`${formatWon(w.amount)}을 등록 계좌로 출금했어요.`, { tone: 'success' })
+      setWithdrawOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+    },
+    onError: (error) => {
+      toast(error.message, { tone: 'error' })
+      setWithdrawOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+    },
+  })
 
   /** 충전 취소: 예치금에서 충전액을 빼고 토스 결제를 취소한다. 잔액이 충전액보다 적으면 백엔드가 거절한다 */
   const cancel = useMutation<ChargeSummary, ApiError, number>({
@@ -58,22 +99,23 @@ export function MyWalletPage() {
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
     },
   })
-  // 에스크로 보관 중 금액은 홀딩 합계(heldTotal)만 필요해서 1건만 받는다
-  const holdingsQuery = useQuery({
-    queryKey: ['wallet', 'holdings', 'BUYER'],
-    queryFn: () => walletApi.holdings({ role: 'BUYER', size: 1 }),
-  })
 
   return (
     <>
       <div className={styles.head}>
         <h1 className={styles.title}>예치금</h1>
       </div>
-      <p className={styles.headSub}>
-        입찰한 경매가 낙찰되면 예치금으로 결제해요. 결제 금액은 구매확정 전까지 찐막이 보관(에스크로)해요.
-      </p>
       <DevApiNote
-        ids={['wallet.me', 'wallet.holdings', 'payment.chargeRequest', 'payment.chargeConfirm', 'payment.charges', 'payment.chargeCancel']}
+        ids={[
+          'wallet.me',
+          'wallet.holdings',
+          'wallet.withdraw',
+          'wallet.withdrawals',
+          'payment.chargeRequest',
+          'payment.chargeConfirm',
+          'payment.charges',
+          'payment.chargeCancel',
+        ]}
       />
 
       <div className={styles.summaryCards}>
@@ -94,28 +136,29 @@ export function MyWalletPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled
-              title="출금 API 준비 중"
+              disabled={!walletQuery.data || balance <= 0}
+              title={balance <= 0 ? '출금할 예치금이 없어요' : '예치금 전액을 등록 계좌로 출금해요'}
               style={{ background: 'transparent', color: 'var(--white)', borderColor: '#ffffff59' }}
+              onClick={() => setWithdrawOpen(true)}
             >
-              출금 (준비 중)
+              출금
             </Button>
           </div>
         </div>
-        <div className={styles.sumCard}>
-          <span className={styles.sumLabel}>에스크로 보관 중</span>
-          <span className={`${styles.sumValue} num`}>
-            {holdingsQuery.data ? formatWon(holdingsQuery.data.heldTotal) : '–'}
-          </span>
-          <span className={styles.sumSub}>결제했지만 아직 판매자에게 정산되지 않은 금액</span>
-        </div>
-        <div className={styles.sumCard}>
-          <span className={styles.sumLabel}>결제 방식</span>
-          <span className={styles.sumValue} style={{ fontSize: 16, lineHeight: '22px' }}>
-            토스페이먼츠로 충전
-          </span>
-          <span className={styles.sumSub}>카드 · 계좌이체 · 간편결제</span>
-        </div>
+        {isSeller ? (
+          <div className={styles.sumCard}>
+            <span className={styles.sumLabel}>정산 예정 금액</span>
+            <span className={`${styles.sumValue} num`}>
+              {sellerHoldingsQuery.data ? formatWon(sellerHoldingsQuery.data.heldTotal) : '–'}
+            </span>
+            <span className={styles.sumSub}>
+              판매한 주문의 수수료 제외 금액
+              {sellerHoldingsQuery.data && sellerHoldingsQuery.data.settleableTotal > 0
+                ? ` · 구매확정 완료 ${formatWon(sellerHoldingsQuery.data.settleableTotal)}`
+                : ''}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <p className={styles.sectionTitle}>충전 내역</p>
@@ -182,6 +225,55 @@ export function MyWalletPage() {
         onChange={setPage}
       />
 
+      <p className={styles.sectionTitle}>출금 내역</p>
+      {withdrawalsQuery.isLoading ? (
+        <Spinner block />
+      ) : withdrawalsQuery.isError ? (
+        <ErrorState message={withdrawalsQuery.error.message} onRetry={() => void withdrawalsQuery.refetch()} />
+      ) : withdrawalsQuery.data?.content.length ? (
+        <div className={styles.list}>
+          {withdrawalsQuery.data.content.map((w) => (
+            <div key={w.withdrawalId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+              <div className={styles.rowBody}>
+                <div className={styles.rowTop}>
+                  <Badge tone={WITHDRAWAL_TONES[w.status]}>{WITHDRAWAL_STATUS_LABELS[w.status]}</Badge>
+                  <span className={`${styles.rowMeta} num`}>{formatDateTime(w.completedAt ?? w.requestedAt)}</span>
+                </div>
+                <p className={styles.rowTitle}>예치금 전액 출금 · 등록 계좌</p>
+                {w.status === 'FAILED' && w.failureReason ? <p className={styles.rowMeta}>{w.failureReason}</p> : null}
+              </div>
+              <div className={styles.rowSide}>
+                <span className={`${styles.amount} num`}>−{formatWon(w.amount)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState icon="wallet" title="아직 출금 내역이 없어요" description="출금하면 여기부터 기록돼요." />
+      )}
+      <Pagination
+        page={withdrawalPage}
+        totalPages={Math.ceil((withdrawalsQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+        onChange={setWithdrawalPage}
+      />
+
+      <ConfirmDialog
+        open={withdrawOpen}
+        title={`${formatWon(balance)}을 출금할까요?`}
+        confirmLabel="출금하기"
+        loading={withdraw.isPending}
+        onConfirm={() => withdraw.mutate()}
+        onClose={() => setWithdrawOpen(false)}
+      >
+        예치금 전액이 등록하신 계좌로 출금되고 잔액이 0원이 돼요. 정산금은 출금되지 않아요.
+        {cancelableCount > 0 ? (
+          <>
+            <br />
+            <strong>취소할 수 있는 충전 {cancelableCount}건이 있어요.</strong> 출금하면 이전 충전은 더 이상 취소할 수 없으니,
+            카드 환불을 원하시면 먼저 충전 취소를 해 주세요.
+          </>
+        ) : null}
+      </ConfirmDialog>
       <ConfirmDialog
         open={cancelTarget !== null}
         title={cancelTarget ? `${formatWon(cancelTarget.amount)} 충전을 취소할까요?` : ''}

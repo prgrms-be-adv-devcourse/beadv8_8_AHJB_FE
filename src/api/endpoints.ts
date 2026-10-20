@@ -28,7 +28,15 @@ import type {
 } from '@/types/auction'
 import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
-import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
+import type {
+  HoldingPage,
+  HoldingParams,
+  LedgerPage,
+  LedgerParams,
+  Wallet,
+  Withdrawal,
+  WithdrawalListParams,
+} from '@/types/wallet'
 import type {
   ChargeConfirmRequest,
   ChargeListParams,
@@ -173,6 +181,11 @@ export const walletApi = {
   /** 홀딩(묶인 돈 / 정산 예정). role 기본 BUYER, size 최대 50 */
   holdings: (params: HoldingParams = {}) =>
     http.get<HoldingPage>('wallet.holdings', '/api/v1/wallet/me/holdings', params),
+  /** 예치금 전액 출금(명목상). 잔액 → 0. 잔액 0 이면 WALLET601. 정산금은 출금되지 않는다 */
+  withdraw: () => http.post<Withdrawal>('wallet.withdraw', '/api/v1/wallet/me/withdrawals'),
+  /** 내 출금 내역. 최신순, size 최대 50 */
+  withdrawals: (params: WithdrawalListParams = {}) =>
+    http.get<PageResponse<Withdrawal>>('wallet.withdrawals', '/api/v1/wallet/me/withdrawals', params),
 }
 
 /** 결제 · 충전 (백엔드 PaymentApiController) */

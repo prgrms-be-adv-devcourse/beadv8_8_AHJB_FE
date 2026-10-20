@@ -1,7 +1,7 @@
 import type { AuctionDuration, Category, Manufacturer, ShippingFeeType } from '@/types/product'
 import type { FailureReason } from '@/types/auction'
 import type { Carrier, DeliveryCode } from '@/types/order'
-import type { TransactionType } from '@/types/wallet'
+import type { TransactionType, WithdrawalStatus } from '@/types/wallet'
 import type { ChargePurpose, ChargeStatus } from '@/types/payment'
 import type { AccountStatus, WarningReason } from '@/types/member'
 
@@ -117,6 +117,13 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   REFUND_PAY: '환불 지급',
   REFUND_RECEIVE: '환불 입금',
   REVERSAL: '정정',
+}
+
+/** 출금 상태 */
+export const WITHDRAWAL_STATUS_LABELS: Record<WithdrawalStatus, string> = {
+  REQUESTED: '송금 대기',
+  COMPLETED: '출금 완료',
+  FAILED: '출금 실패',
 }
 
 /** 충전 건 상태 */
