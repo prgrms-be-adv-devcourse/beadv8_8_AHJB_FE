@@ -38,11 +38,10 @@ export function OrderRefundCard({ refund, order, role }: OrderRefundCardProps) {
         <dt>처리</dt>
         <dd className="num">{refund.processedAt ? formatDateTime(refund.processedAt) : '판매자 확인 전'}</dd>
       </dl>
-      <p className={styles.muted}>
-        환불 금액은 낙찰가 기준이에요. 배송비 {formatWon(order.deliveryFee)} 포함 여부는 팀에서 정하는 중이고, 지금
-        목업은 지갑 홀딩 전액(낙찰가 + 배송비)을 돌려줘요.
-        {refund.status === 'COMPLETED' && role === 'buyer' ? ' 환불이 수락돼 환불 패널티(경고 1회)가 남았어요.' : ''}
-      </p>
+        <p className={styles.muted}>
+            환불 금액은 결제한 전액(낙찰가 + 배송비 {formatWon(order.deliveryFee)})이에요. 판매자가 수락하면 지갑으로 돌아와요.
+            {refund.status === 'COMPLETED' && role === 'buyer' ? ' 환불이 완료돼 환불 패널티(경고 1회)가 남았어요.' : ''}
+        </p>
     </section>
   )
 }

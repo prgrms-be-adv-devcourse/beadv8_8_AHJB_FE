@@ -3,6 +3,7 @@
 import { db, nextId, persist } from './db';
 import {
   acceptRefund,
+  completeRefund,
   confirmPurchase,
   latestAuctionOf,
   minBidPriceOf,
@@ -133,7 +134,7 @@ export function runTick(): void {
       if (refund && refund.status === 'REQUESTED') acceptRefund(refund, t);
     } else if (kind === 'refundComplete') {
       const refund = db.refunds.find((r) => r.id === id);
-      if (refund && refund.status === 'ACCEPTED') refund.status = 'COMPLETED';
+      if (refund && refund.status === 'ACCEPTED') completeRefund(refund, t);
     } else if (kind === 'rival') {
       // 데모 회원이 최고 입찰자인 경매에 가상 회원이 맞입찰
       const auction = db.auctions.find((a) => a.id === id);
