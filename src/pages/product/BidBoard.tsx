@@ -240,7 +240,8 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
     },
   })
 
-  const increment = auction.bidIncrement
+  // 진행 중이 아니면 백엔드가 null 을 주므로 현재가 기준 단위로 대신 표시
+  const increment = auction.bidIncrement ?? bidIncrementOf(auction.currentPrice)
   const bidPrice = parseDigits(bidInput)
   // 원본은 4번째 인자로 bidCount 를 넘기지만 검사 함수가 쓰지 않음
   const validationError = touched ? validateBid(bidPrice, auction.currentPrice, minBidPrice ?? 0) : null
@@ -469,7 +470,11 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             variant="highlight"
             size="lg"
             fullWidth
-            disabled={isLive && (me.isHighestBidder || remaining <= 0)}
+            // 최소 입찰가 미만·단위 불일치도 비활성 (즉시낙찰가 이상이면 허용). 비로그인은 눌러서 로그인으로
+            disabled={
+              isLive &&
+              (me.isHighestBidder || remaining <= 0 || (isLoggedIn && !!validationError && !reachesInstantWin))
+            }
             loading={bidMutation.isPending}
           >
             {isLoggedIn

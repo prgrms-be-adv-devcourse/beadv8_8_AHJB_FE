@@ -26,12 +26,13 @@ export function HomePage() {
   })
   const hotQuery = useQuery({
     queryKey: ['auctions', 'home', 'hot'],
-    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'BIDS', size: 10 }),
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'MOST_BIDS', size: 10 }),
     refetchInterval: 15_000,
   })
   const soonQuery = useQuery({
     queryKey: ['auctions', 'home', 'soon'],
-    queryFn: () => auctionApi.list({ status: 'SCHEDULED', sort: 'ENDING_SOON', size: 5 }),
+    // 곧 시작은 경매 생성 전이라 상품 API (시작 임박순)
+    queryFn: () => auctionApi.listByTab({ status: 'SCHEDULED', size: 5 }),
   })
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, enabled: isLoggedIn })
 
@@ -139,7 +140,7 @@ export function HomePage() {
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>입찰이 몰리는 경매</h2>
-          <Link to="/auctions?sort=BIDS" className={styles.more}>
+          <Link to="/auctions?sort=MOST_BIDS" className={styles.more}>
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>

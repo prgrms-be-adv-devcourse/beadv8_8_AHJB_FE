@@ -17,7 +17,6 @@ import {
   getPageParams,
   maskNickname,
   now,
-  numberOr,
   paginate,
   parseTime,
 } from '../utils';
@@ -37,84 +36,54 @@ function assertCanBid(auction: AuctionRecord, me: MemberRecord): void {
 }
 
 export function registerAuctionRoutes(): void {
+  // 백엔드 AuctionListUseCase 와 같은 규칙: 탭(진행 중/종료) + 카테고리 + 정렬(생략 시 탭별 기본값)
   route('GET', '/api/v1/auctions', ({ params }) => {
-    const keyword = (params.get('keyword') ?? '').trim().toLowerCase();
-    const status = params.get('status');
+    const status = params.get('status') === 'ENDED' ? 'ENDED' : 'IN_PROGRESS';
     const category = params.get('category');
-    const manufacturer = params.get('manufacturer');
-    const instantWinOnly = params.get('instantWin') === 'true';
-    const minPrice = numberOr(params.get('minPrice'), 0);
-    const maxPrice = numberOr(params.get('maxPrice'), Number.MAX_SAFE_INTEGER);
-    const sort = params.get('sort') ?? 'ENDING_SOON';
+    const sort = params.get('sort') ?? (status === 'ENDED' ? 'RECENTLY_ENDED' : 'ENDING_SOON');
     const { page, size } = getPageParams(params, 20);
 
     let items = db.products.filter((p) => !p.deleted).map(toAuctionSummary);
-    // status 미지정 = 진행중 + 예정
     items = items.filter((item) =>
       status === 'ENDED'
         ? item.status !== 'IN_PROGRESS' && item.status !== 'SCHEDULED'
-        : status === 'IN_PROGRESS' || status === 'SCHEDULED'
-          ? item.status === status
-          : item.status === 'IN_PROGRESS' || item.status === 'SCHEDULED',
+        : item.status === 'IN_PROGRESS',
     );
-    if (keyword)
-      items = items.filter((item) => {
-        const product = db.products.find((p) => p.id === item.productId) as ProductRecord;
-        return `${product.name} ${product.description} ${product.manufacturerEtc ?? ''}`
-          .toLowerCase()
-          .includes(keyword);
-      });
     if (category) items = items.filter((item) => item.category === category);
-    if (manufacturer) items = items.filter((item) => item.manufacturer === manufacturer);
-    if (instantWinOnly) items = items.filter((item) => item.instantWinPrice !== null && item.status !== 'FAILED');
-    items = items.filter((item) => item.currentPrice >= minPrice && item.currentPrice <= maxPrice);
 
-    /** 마감 임박순 키: 진행중(마감 빠른 순) → 예정(시작 빠른 순) → 종료(최근 종료 순) */
-    const endingSoonKey = (item: AuctionSummary) =>
-      item.status === 'IN_PROGRESS'
-        ? parseTime(item.endAt as string)
-        : item.status === 'SCHEDULED'
-          ? parseTime(item.startAt) + 1e13
-          : 2e13 - parseTime(item.endAt ?? item.startAt);
+    const endAtOf = (item: AuctionSummary) => parseTime(item.endAt ?? item.startAt);
     const comparators: Record<string, SummaryComparator> = {
-      ENDING_SOON: (a, b) => endingSoonKey(a) - endingSoonKey(b),
-      NEWEST: (a, b) => b.productId - a.productId,
+      ENDING_SOON: (a, b) => endAtOf(a) - endAtOf(b),
+      RECENTLY_ENDED: (a, b) => endAtOf(b) - endAtOf(a),
+      NEWEST: (a, b) => parseTime(b.startAt) - parseTime(a.startAt),
+      MOST_BIDS: (a, b) => b.bidCount - a.bidCount,
       PRICE_ASC: (a, b) => a.currentPrice - b.currentPrice,
       PRICE_DESC: (a, b) => b.currentPrice - a.currentPrice,
-      BIDS: (a, b) => b.bidCount - a.bidCount,
-      WISHES: (a, b) => b.wishCount - a.wishCount,
     };
     items.sort(comparators[sort] ?? comparators.ENDING_SOON);
-    return ok(paginate(items, page, size));
+    return ok({ ...paginate(items, page, size), serverTime: ldt(now()) });
   });
 
   // /auctions/:id/bids 보다 먼저 등록해야 한다
+  // 백엔드와 같이: 내가 입찰한 진행 중 경매만, 마감 임박순
   route('GET', '/api/v1/auctions/me/bids', (ctx) => {
     const me = requireMe(ctx);
-    const auctionIds = [...new Set(db.bids.filter((b) => b.bidderId === me.id).map((b) => b.auctionId))];
-    const items = auctionIds
-      .map((auctionId) => db.auctions.find((a) => a.id === auctionId) as AuctionRecord)
+    const auctionIds = new Set(db.bids.filter((b) => b.bidderId === me.id).map((b) => b.auctionId));
+    const items = db.auctions
+      .filter((auction) => auctionIds.has(auction.id) && auction.status === 'IN_PROGRESS')
+      .sort((a, b) => parseTime(a.endAt) - parseTime(b.endAt))
       .map((auction) => {
         const product = db.products.find((p) => p.id === auction.productId) as ProductRecord;
-        const myBids = db.bids.filter((b) => b.auctionId === auction.id && b.bidderId === me.id);
         return {
           auctionId: auction.id,
           productId: product.id,
           productName: product.name,
           thumbnailUrl: product.imageUrls[0] ?? null,
-          status: auction.status,
-          myHighestBid: Math.max(...myBids.map((b) => b.bidPrice)),
-          currentPrice: auction.winningPrice ?? currentPriceOf(auction),
+          currentPrice: currentPriceOf(auction),
           isHighestBidder: auction.highestBidderId === me.id,
           endAt: auction.endAt,
-          bidCount: auction.bidCount,
         };
-      })
-      .sort(
-        (a, b) =>
-          (a.status === 'IN_PROGRESS' ? 0 : 1) - (b.status === 'IN_PROGRESS' ? 0 : 1) ||
-          parseTime(a.endAt) - parseTime(b.endAt),
-      );
+      });
     return ok(items);
   });
 
@@ -131,8 +100,9 @@ export function registerAuctionRoutes(): void {
           startAt: auction.startAt,
           status: auction.status,
           currentPrice: currentPriceOf(auction),
-          bidIncrement: bidUnitOf(currentPriceOf(auction)),
-          minBidPrice: minBidPriceOf(auction),
+          // 백엔드와 같이 진행 중일 때만 입찰 단위·최소 입찰가를 준다
+          bidIncrement: auction.status === 'IN_PROGRESS' ? bidUnitOf(currentPriceOf(auction)) : null,
+          minBidPrice: auction.status === 'IN_PROGRESS' ? minBidPriceOf(auction) : null,
           bidCount: auction.bidCount,
           endAt: auction.endAt,
           winningPrice: auction.winningPrice,

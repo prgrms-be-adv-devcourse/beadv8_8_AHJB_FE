@@ -112,6 +112,14 @@ export const apiRegistry = {
     status: 'proposed',
     note: '상품명·사진·설명·배송·판매자·auctionId',
   },
+  'product.upcoming': {
+    method: 'GET',
+    path: '/api/v1/products/upcoming',
+    title: '곧 시작 목록',
+    owner: '송현수',
+    status: 'proposed',
+    note: '경매 생성 전 상품. category, page, size / 시작 임박순 (경로는 제안)',
+  },
   'product.mine': {
     method: 'GET',
     path: '/api/v1/products/me',
@@ -180,10 +188,10 @@ export const apiRegistry = {
   'auction.list': {
     method: 'GET',
     path: '/api/v1/auctions',
-    title: '경매 목록 · 검색',
+    title: '경매 목록 (진행 중 · 종료)',
     owner: '박신형',
-    status: 'proposed',
-    note: 'keyword, status, category, manufacturer, sort, page, size',
+    status: 'done',
+    note: 'status(IN_PROGRESS|ENDED), category, sort, page, size',
   },
   'auction.detail': {
     method: 'GET',
@@ -216,9 +224,10 @@ export const apiRegistry = {
   'auction.myBids': {
     method: 'GET',
     path: '/api/v1/auctions/me/bids',
-    title: '내 입찰 내역',
+    title: '입찰 중인 경매',
     owner: '박신형',
-    status: 'proposed',
+    status: 'done',
+    note: '진행 중만, 마감 임박순',
   },
   'auction.reopen': {
     method: 'POST',

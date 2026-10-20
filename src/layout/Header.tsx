@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cartApi, walletApi } from '@/api/endpoints'
@@ -9,15 +9,13 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { useNow } from '@/lib/clock'
 import { formatWon } from '@/lib/format'
-import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels'
+import { STATUS_TABS } from '@/pages/auctions/auctionListParams'
 import styles from './Header.module.css'
 
 /** 결제 기한이 이만큼 안 남았으면 장바구니 숫자를 강조 (6시간) */
 const PAYMENT_DUE_HOT_MS = 6 * 3600 * 1000
 
-type CategoryNavKey = 'ALL' | 'SCHEDULED' | 'ENDED' | string
-
-/** 상단 헤더: 로고, 검색, 사용자 메뉴, 카테고리 줄 (원본 tj) */
+/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 (원본 tj) */
 export function Header() {
   const { me, isLoggedIn, logout } = useAuth()
   const navigate = useNavigate()
@@ -25,7 +23,7 @@ export function Header() {
   const [searchParams] = useSearchParams()
   const toast = useToast()
   const now = useNow()
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '')
+  const [keyword, setKeyword] = useState('')
 
   const cartQuery = useQuery({
     queryKey: ['cart'],
@@ -40,28 +38,14 @@ export function Header() {
     (item) => Date.parse(item.paymentDueAt) - now < PAYMENT_DUE_HOT_MS,
   )
 
-  // 경매 목록에서는 주소의 검색어를 검색칸에 맞춘다
-  useEffect(() => {
-    if (location.pathname === '/auctions') setKeyword(searchParams.get('keyword') ?? '')
-  }, [location.pathname, searchParams])
-
+  // 검색 API 는 아직 없다 (경매 목록 keyword 는 이후 확장). 그때까지 안내만 한다
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const trimmed = keyword.trim()
-    navigate(trimmed ? `/auctions?keyword=${encodeURIComponent(trimmed)}` : '/auctions')
+    if (keyword.trim()) toast('검색은 준비 중이에요. 상단 탭과 카테고리로 둘러보세요.')
   }
 
-  const onAuctions = location.pathname === '/auctions'
-  const currentCategory = onAuctions ? searchParams.get('category') : null
-  const currentStatus = onAuctions ? searchParams.get('status') : null
-  const isActive = (key: CategoryNavKey) =>
-    onAuctions
-      ? key === 'ALL'
-        ? !currentCategory && !currentStatus && !searchParams.get('keyword')
-        : key === 'SCHEDULED' || key === 'ENDED'
-          ? currentStatus === key
-          : currentCategory === key
-      : false
+  // 경매 목록에서 현재 탭 (status 가 없으면 진행 중)
+  const currentStatus = location.pathname === '/auctions' ? (searchParams.get('status') ?? 'IN_PROGRESS') : null
 
   return (
     <header className={styles.header}>
@@ -148,26 +132,17 @@ export function Header() {
       </div>
       <nav className={styles.cats} aria-label="경매 분류">
         <div className={`container ${styles.catsInner}`}>
-          <Link to="/auctions" className={`${styles.cat} ${isActive('ALL') ? styles.catOn : ''}`}>
-            <span className={styles.liveDot} aria-hidden="true" />
-            진행 중 경매
-          </Link>
-          {CATEGORIES.map((category) => (
+          {STATUS_TABS.map((tab) => (
             <Link
-              key={category}
-              to={`/auctions?category=${category}`}
-              className={`${styles.cat} ${isActive(category) ? styles.catOn : ''}`}
+              key={tab.value}
+              to={tab.value === 'IN_PROGRESS' ? '/auctions' : `/auctions?status=${tab.value}`}
+              className={`${styles.cat} ${currentStatus === tab.value ? styles.catOn : ''}`}
+              aria-current={currentStatus === tab.value ? 'page' : undefined}
             >
-              {CATEGORY_LABELS[category]}
+              {tab.value === 'IN_PROGRESS' ? <span className={styles.liveDot} aria-hidden="true" /> : null}
+              {tab.label}
             </Link>
           ))}
-          <span className={styles.catSep} aria-hidden="true" />
-          <Link to="/auctions?status=SCHEDULED" className={`${styles.cat} ${isActive('SCHEDULED') ? styles.catOn : ''}`}>
-            곧 시작
-          </Link>
-          <Link to="/auctions?status=ENDED" className={`${styles.cat} ${isActive('ENDED') ? styles.catOn : ''}`}>
-            종료된 경매
-          </Link>
         </div>
       </nav>
     </header>

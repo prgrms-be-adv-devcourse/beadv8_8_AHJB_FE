@@ -11,7 +11,15 @@ import {
   wishCountOf,
 } from '../services';
 import type { AuctionDuration, FeeType, ProductRecord } from '../types';
-import { POLICY_VERSION, formatLocalDateTime as ldt, now, parseTime, shippingFeeOf } from '../utils';
+import {
+  POLICY_VERSION,
+  formatLocalDateTime as ldt,
+  getPageParams,
+  now,
+  paginate,
+  parseTime,
+  shippingFeeOf,
+} from '../utils';
 import { productAuctionStatus, toAuctionSummary } from '../views';
 
 interface ShippingInput {
@@ -173,6 +181,19 @@ export function registerProductRoutes(): void {
   });
 
   // /products/:id 보다 먼저 등록해야 한다
+  // 곧 시작(경매 생성 전) 목록. 상품 담당 미구현 API 의 목업 (경로는 제안). 시작 임박순
+  route('GET', '/api/v1/products/upcoming', ({ params }) => {
+    const category = params.get('category');
+    const { page, size } = getPageParams(params, 20);
+    let items = db.products
+      .filter((p) => !p.deleted)
+      .map(toAuctionSummary)
+      .filter((item) => item.status === 'SCHEDULED');
+    if (category) items = items.filter((item) => item.category === category);
+    items.sort((a, b) => parseTime(a.startAt) - parseTime(b.startAt));
+    return ok(paginate(items, page, size));
+  });
+
   route('GET', '/api/v1/products/me', (ctx) => {
     const me = requireMe(ctx);
     const items = db.products
