@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { isRealApi } from '@/api/config'
 import { productApi } from '@/api/endpoints'
 import { DevApiNote } from '@/components/DevApiNote'
 import { Checkbox, Field, Input, RadioCard, Select, Textarea } from '@/components/form/Field'
@@ -61,6 +62,8 @@ export function SellPage() {
   })
 
   const [images, setImages] = useState<string[]>([])
+  /** 업로드한 사진 URL → 서버가 준 imageId */
+  const [imageIdByUrl, setImageIdByUrl] = useState<Record<string, number>>({})
   const [uploading, setUploading] = useState(false)
   const [samplesOpen, setSamplesOpen] = useState(false)
   const [name, setName] = useState('')
@@ -163,10 +166,18 @@ export function SellPage() {
     if (remaining <= 0) return toast(`사진은 ${MAX_IMAGES}장까지 올릴 수 있어요.`, { tone: 'error' })
     setUploading(true)
     try {
-      const resized = await Promise.all(
-        [...files].slice(0, remaining).map((file) => resizeImage(file, UPLOAD_MAX_SIZE, UPLOAD_QUALITY)),
+      const uploaded = await Promise.all(
+        [...files].slice(0, remaining).map(async (file) => {
+          const dataUrl = await resizeImage(file, UPLOAD_MAX_SIZE, UPLOAD_QUALITY)
+          const blob = await (await fetch(dataUrl)).blob()
+          return productApi.uploadImage(blob, `${file.name.replace(/\.[^.]*$/, '')}.jpg`)
+        }),
       )
-      setImages((prev) => [...prev, ...resized])
+      setImageIdByUrl((prev) => ({
+        ...prev,
+        ...Object.fromEntries(uploaded.map(({ imageUrl, imageId }) => [imageUrl, imageId])),
+      }))
+      setImages((prev) => [...prev, ...uploaded.map(({ imageUrl }) => imageUrl)])
     } catch (error) {
       toast((error as Error).message, { tone: 'error' })
     } finally {
@@ -185,6 +196,23 @@ export function SellPage() {
       return
     }
 
+    // 실제 서버에는 업로드로 받은 imageId 를 보낸다. 목업은 id 가 없는 사진(목업 사진)도 순번으로 대신한다.
+    const imageIds = images.map((src, index) =>
+      imageIdByUrl[src] ?? (isRealApi('product.images') ? null : index + 1),
+    )
+    const hasImageWithoutId = imageIds.some((id) => id === null)
+    // 수정: 상품 상세 응답에는 imageId 가 없어서, 사진을 바꿨을 때만 새로 올린 사진들의 id 로 교체한다
+    const imagesChanged = !productQuery.data || images.join('\n') !== productQuery.data.imageUrls.join('\n')
+    if (imagesChanged && hasImageWithoutId) {
+      toast(
+        isEdit
+          ? '사진을 바꾸려면 기존 사진을 모두 지우고 새로 올려 주세요.'
+          : '목업 사진은 실제 서버에 올릴 수 없어요. 직접 사진을 올려 주세요.',
+        { tone: 'error' },
+      )
+      return
+    }
+
     // 검사를 통과했으므로 category / manufacturer 는 비어 있지 않다
     const body: ProductCreateRequest = {
       policyAgreed: agreed,
@@ -193,8 +221,7 @@ export function SellPage() {
       category: category as Category,
       manufacturer: manufacturer as Manufacturer,
       manufacturerEtc: manufacturer === 'ETC' ? manufacturerEtc.trim() : undefined,
-      // 목업: 이미지 업로드 API 가 없어 순번을 id 로 보낸다
-      imageIds: images.map((_, index) => index + 1),
+      imageIds: imageIds as number[],
       imageUrls: images,
       description: description.trim(),
       shipping: {
@@ -213,9 +240,9 @@ export function SellPage() {
     setSubmitting(true)
     try {
       if (productId) {
-        // 수정 API 는 정책 동의·이미지 id 를 받지 않는다
+        // 수정 API 는 정책 동의를 받지 않고, 사진을 안 바꿨으면 imageIds 를 빼서 기존 사진을 유지한다
         const { policyAgreed: _agreed, policyVersion: _version, imageIds: _imageIds, ...updateBody } = body
-        await productApi.update(productId, updateBody)
+        await productApi.update(productId, imagesChanged ? { ...updateBody, imageIds: body.imageIds } : updateBody)
         toast('수정했어요.', { tone: 'success' })
         await queryClient.invalidateQueries({ queryKey: ['product', productId] })
         navigate(`/products/${productId}`)
@@ -266,7 +293,7 @@ export function SellPage() {
             uploading={uploading}
             fileInputRef={fileInputRef}
             onFiles={handleFiles}
-            onOpenSamples={() => setSamplesOpen(true)}
+            onOpenSamples={isRealApi('product.images') ? undefined : () => setSamplesOpen(true)}
             error={errorOf('images')}
           />
 

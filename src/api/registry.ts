@@ -121,10 +121,11 @@ export const apiRegistry = {
   },
   'product.images': {
     method: 'POST',
-    path: '/api/v1/products/images/presigned',
-    title: '이미지 업로드 URL',
+    path: '/api/v1/products/images',
+    title: '이미지 업로드',
     owner: '송현수',
-    status: 'proposed',
+    status: 'done',
+    note: 'multipart file 1장 → { imageId, imageUrl }',
   },
   'qna.list': {
     method: 'GET',

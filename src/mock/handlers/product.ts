@@ -81,6 +81,15 @@ function findEditableProduct(ctx: HandlerContext): ProductRecord {
 }
 
 export function registerProductRoutes(): void {
+  // 실제 서버는 S3 에 저장하지만, 목업은 data URL 을 그대로 imageUrl 로 돌려준다
+  route('POST', '/api/v1/products/images', (ctx) => {
+    const me = requireMe(ctx);
+    if (!me.seller) fail('COMMON003');
+    const { file } = bodyOf<{ file?: string }>(ctx);
+    if (!file?.startsWith('data:image/')) fail('COMMON001');
+    return ok({ imageId: nextId('productImages'), imageUrl: file }, 201);
+  });
+
   route('POST', '/api/v1/products', (ctx) => {
     const me = requireMe(ctx);
     if (!me.seller) fail('COMMON003');

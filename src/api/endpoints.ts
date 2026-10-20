@@ -6,6 +6,7 @@ import type {
   MyProduct,
   ProductCreateRequest,
   ProductCreateResponse,
+  ProductImageUploadResponse,
   ProductDetail,
   ProductUpdateRequest,
   Qna,
@@ -78,6 +79,12 @@ export const productApi = {
     http.patch<null>('product.update', `/api/v1/products/${productId}`, body),
   /** 204 */
   remove: (productId: Id) => http.delete<null>('product.delete', `/api/v1/products/${productId}`),
+  /** 사진 1장 업로드 (판매자만). 받은 imageId 를 등록·수정의 imageIds 로 보낸다 */
+  uploadImage: (file: Blob, fileName: string) => {
+    const formData = new FormData()
+    formData.append('file', file, fileName)
+    return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
+  },
   /** 유찰·낙찰 무효 뒤 다음 회차 열기 */
   reopen: (productId: Id) =>
     http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),

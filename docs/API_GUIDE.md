@@ -33,7 +33,7 @@
 | `product.update` | PATCH `/api/v1/products/{productId}`               | `pages/sell/SellPage.tsx`                                        | ✅                                                                     |
 | `product.delete` | DELETE `/api/v1/products/{productId}`              | `pages/product/BidBoard.tsx`                                     | ✅                                                                     |
 | `product.mine`   | GET `/api/v1/products/me` 내가 올린 상품           | `pages/me/MyProductsPage.tsx`                                    | ❌                                                                     |
-| `product.images` | POST `/api/v1/products/images/presigned`           | (프론트 코드 없음)                                               | ❌ 지금은 사진을 data URL로 목업에 저장. 연동 시 업로드 코드 추가 필요 |
+| `product.images` | POST `/api/v1/products/images` 사진 1장 업로드     | `pages/sell/SellPage.tsx`                                        | ✅ multipart `file` → `{ imageId, imageUrl }`. 사진을 고르면 바로 올리고 `imageIds`로 등록 |
 | `qna.list`       | GET `/api/v1/products/{productId}/qnas`            | `pages/product/QnaSection.tsx`                                   | ✅                                                                     |
 | `qna.create`     | POST `/api/v1/products/{productId}/qnas` 질문·답글 | `pages/product/QnaSection.tsx`                                   | ✅                                                                     |
 | `qna.update`     | PATCH `/api/v1/qnas/{qnaId}`                       | (사용처 없음)                                                    | ✅                                                                     |
