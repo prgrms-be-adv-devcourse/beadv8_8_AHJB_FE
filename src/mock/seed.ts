@@ -795,7 +795,7 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
         winnerId: spec.winnerId,
         sellerId: product.sellerId,
         productId: product.id,
-        amount: spec.winningPrice,
+          amount: spec.winningPrice + order.deliveryFee,
         status: refunded ? 'COMPLETED' : 'REQUESTED',
         requestedAt: ldt(nowMs - spec.refundRequestedAgo),
         processedAt: refunded ? ldt(nowMs - (spec.refundProcessedAgo ?? 0)) : null,

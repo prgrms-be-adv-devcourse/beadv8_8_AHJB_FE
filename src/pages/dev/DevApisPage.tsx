@@ -78,10 +78,6 @@ export function DevApisPage() {
             정해요.
           </li>
           <li>
-            <strong>환불 금액</strong> — 환불 금액은 낙찰가인데 지갑 홀딩은 전액 환불(낙찰가 + 배송비)만
-            돼요(WALLET309). 배송비 포함 여부를 정해야 해요.
-          </li>
-          <li>
             <strong>다음 회차</strong> — 유찰·낙찰 무효 뒤 판매자가 다시 여는 API가 없어요. (회차 = Round)
           </li>
         </ul>
