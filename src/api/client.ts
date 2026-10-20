@@ -206,7 +206,6 @@ export function refreshSession(): Promise<boolean> {
       const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), { refreshToken }, null)
       const result = parseResponse<LoginResponse>(response)
       tokenStore.set(result.accessToken, result.refreshToken)
-      tokenStore.setProfile({ nickname: result.nickname, suspended: result.suspended })
       return true
     } catch {
       tokenStore.clear()

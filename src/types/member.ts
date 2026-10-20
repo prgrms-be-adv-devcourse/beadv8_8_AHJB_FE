@@ -34,10 +34,17 @@ export interface Me {
   seller: SellerAccount | null
   createdAt: string
   /**
-   * true 면 GET /member/me 없이 로그인 응답 + 토큰으로 만든 정보다.
+   * true 면 GET /member/me 없이 토큰 + 내 정보 요약(member/me/summary) + 로그인 이메일로 만든 정보다.
    * memberId·email·nickname·isSeller·accountStatus 만 믿을 수 있고 나머지는 빈 값이다.
    */
   partial?: boolean
+}
+
+/** GET /api/v1/member/me/summary */
+export interface MemberSummary {
+  nickname: string
+  seller: boolean
+  suspended: boolean
 }
 
 /** GET /api/v1/member/me/warnings 의 항목 */

@@ -73,7 +73,15 @@ export const apiRegistry = {
     title: '내 정보',
     owner: '차승환',
     status: 'proposed',
-    note: '없어도 됨: 로그인 응답 + 토큰으로 대체. 생기면 내 정보 화면 상세(이름·휴대폰·배송지·계좌) 표시',
+    note: '없어도 됨: 토큰 + member.summary 로 대체. 생기면 내 정보 화면 상세(이름·휴대폰·배송지·계좌) 표시',
+  },
+  'member.summary': {
+    method: 'GET',
+    path: '/api/v1/member/me/summary',
+    title: '내 정보 요약',
+    owner: '차승환',
+    status: 'done',
+    note: '닉네임·판매자 여부·정지 여부. member.me 가 없을 때 이 값으로 내 정보를 만든다',
   },
   'member.warnings': {
     method: 'GET',
