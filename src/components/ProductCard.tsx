@@ -26,7 +26,7 @@ export function ProductCard({ item, showWish = true }: ProductCardProps) {
   const isLive = item.status === 'IN_PROGRESS' && item.endAt
   const remaining = isLive
     ? Date.parse(item.endAt!) - now
-    : item.status === 'SCHEDULED'
+    : item.status === 'SCHEDULED' && item.startAt
       ? Date.parse(item.startAt) - now
       : 0
   const ended = item.status !== 'IN_PROGRESS' && item.status !== 'SCHEDULED'
@@ -55,10 +55,16 @@ export function ProductCard({ item, showWish = true }: ProductCardProps) {
             {item.category === 'LIMITED_EDITION' ? <Badge variant="outline">한정판</Badge> : null}
             {item.instantWinPrice && !ended ? <Badge variant="outline">즉시낙찰</Badge> : null}
           </div>
-          <h3 className={styles.title}>{item.productName}</h3>
+          <h3 className={styles.title}>{item.productName ?? '상품 정보 없음'}</h3>
           <p className={styles.meta}>
-            {MANUFACTURER_LABELS[item.manufacturer]} · {CATEGORY_LABELS[item.category]} ·{' '}
-            {item.shippingFee ? `배송비 ${formatWon(item.shippingFee)}` : '무료배송'}
+            {/* 경매 API 는 카테고리만 준다. 제조사·배송비는 상품 API(곧 시작·내 상품)에서만 */}
+            {[
+              item.manufacturer ? MANUFACTURER_LABELS[item.manufacturer] : null,
+              CATEGORY_LABELS[item.category],
+              item.shippingFee === undefined ? null : item.shippingFee ? `배송비 ${formatWon(item.shippingFee)}` : '무료배송',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
           <div className={styles.priceRow}>
             <span className={styles.priceLabel}>{ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가'}</span>

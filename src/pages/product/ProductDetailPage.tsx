@@ -83,11 +83,12 @@ export function ProductDetailPage() {
         <Icon name="chevronRight" size={12} />
         <Link to={`/auctions?category=${product.category}`}>{CATEGORY_LABELS[product.category]}</Link>
         <Icon name="chevronRight" size={12} />
-        <Link to={`/auctions?manufacturer=${product.manufacturer}`}>
+        {/* 제조사 필터는 목록에서 뺐다 (탭·카테고리만). 이름만 표시 */}
+        <span>
           {product.manufacturer === 'ETC'
             ? (product.manufacturerEtc ?? '기타')
             : MANUFACTURER_LABELS[product.manufacturer]}
-        </Link>
+        </span>
       </nav>
 
       <div className={styles.top}>
