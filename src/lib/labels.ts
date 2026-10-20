@@ -1,7 +1,7 @@
 import type { AuctionDuration, Category, Manufacturer, ShippingFeeType } from '@/types/product'
 import type { FailureReason } from '@/types/auction'
 import type { Carrier, DeliveryCode } from '@/types/order'
-import type { TransactionType, WithdrawalStatus } from '@/types/wallet'
+import type { LedgerEntry, TransactionType, WalletAccount, WithdrawalStatus } from '@/types/wallet'
 import type { ChargePurpose, ChargeStatus } from '@/types/payment'
 import type { AccountStatus, WarningReason } from '@/types/member'
 
@@ -117,6 +117,46 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   REFUND_PAY: '환불 지급',
   REFUND_RECEIVE: '환불 입금',
   REVERSAL: '정정',
+}
+
+/** 지갑 주머니 이름 */
+export const WALLET_ACCOUNT_LABELS: Record<WalletAccount, string> = {
+  DEPOSIT: '예치금',
+  SETTLEMENT: '정산금',
+}
+
+/** 사용자 지갑 내역에서 숨기는 원장 유형 (수수료·시스템 지갑 전용) */
+export const HIDDEN_LEDGER_TYPES: ReadonlySet<TransactionType> = new Set<TransactionType>([
+  'FEE_PAY',
+  'FEE_RECEIVE',
+  'HOLD_RECEIVE',
+  'SETTLEMENT_PAY',
+  'REFUND_PAY',
+])
+
+/**
+ * 원장 한 줄의 한글 설명. 백엔드 원장에는 설명 문구가 없어서 유형 + 참조로 만든다.
+ * 예) "토스페이먼츠 충전", "주문 결제", "환불 입금", "정산 입금"
+ */
+export function describeLedgerEntry(entry: LedgerEntry): string {
+  switch (entry.type) {
+    case 'CHARGE':
+      return '토스페이먼츠 충전'
+    case 'CHARGE_CANCEL':
+      return '충전 취소 (카드 환불)'
+    case 'WITHDRAWAL':
+      return '예치금 출금 (등록 계좌)'
+    case 'HOLD_PAY':
+      return '주문 결제'
+    case 'SETTLEMENT_RECEIVE':
+      return '판매 대금 정산 입금'
+    case 'REFUND_RECEIVE':
+      return '주문 환불 입금'
+    case 'REVERSAL':
+      return '기록 정정'
+    default:
+      return TRANSACTION_TYPE_LABELS[entry.type]
+  }
 }
 
 /** 출금 상태 */
