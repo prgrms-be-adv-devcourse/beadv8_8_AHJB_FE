@@ -1,7 +1,6 @@
-import { db, persist } from '../db';
-import { fail } from '../errors';
+import { db } from '../db';
 import { ok, route } from '../router';
-import { addTransaction, requireMe } from '../services';
+import { requireMe } from '../services';
 import { feeOf, getPageParams, paginate } from '../utils';
 import { toWalletView } from '../views';
 import type { HoldingRecord, TransactionRecord } from '../types';
@@ -117,15 +116,5 @@ export function registerWalletRoutes(): void {
       settleableTotal: sumOf(open.filter((v) => v.status === 'CONFIRMED')),
       ...paginate(filtered, page, size),
     });
-  });
-
-  /** [제거 예정] 예치금 충전: 1,000원 단위, 1,000원 ~ 2,000,000원. 토스 흐름으로 교체하면 삭제 */
-  route('POST', '/api/v1/wallet/me/charge', (ctx) => {
-    const me = requireMe(ctx);
-    const amount = Number((ctx.body as { amount?: unknown } | null | undefined)?.amount);
-    if (!Number.isInteger(amount) || amount < 1000 || amount > 2_000_000 || amount % 1000 !== 0) fail('COMMON001');
-    addTransaction(me.id, 'CHARGE', amount, 'CHARGE', null, '예치금 충전 (토스페이먼츠)');
-    persist();
-    return ok(toWalletView(me.id));
   });
 }
