@@ -5,7 +5,7 @@ import { authApi, memberApi } from '@/api/endpoints'
 import { tokenStore, type SessionProfile } from '@/api/tokenStore'
 import { decodeAccessToken } from '@/lib/jwt'
 import type { LoginRequest, LoginResponse } from '@/types/auth'
-import type { Me } from '@/types/member'
+import type { Me, MemberSummary } from '@/types/member'
 
 export interface AuthContextValue {
   /** 내 정보. 로그인 안 했거나 불러오는 중이면 null */
@@ -23,25 +23,31 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 /**
  * 내 정보를 어디서 가져올지.
  * - 로그인이 목업이거나 member.me 를 실제로 켰으면: GET /member/me (원본 방식)
- * - 로그인만 실제이고 member.me 는 꺼져 있으면: 로그인 응답 + 토큰으로 만든다.
- *   백엔드에 GET /member/me 가 없어서, 이 방식으로 로그인 상태·닉네임·판매자 여부를 판단한다.
+ * - 로그인만 실제이고 member.me 는 꺼져 있으면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지)
+ *   + 로그인 때 저장한 이메일로 만든다.
  */
 const USE_TOKEN_PROFILE = isRealApi('auth.login') && !isRealApi('member.me')
 
-/** 로그인 응답 + 토큰 → Me (partial) */
-function meFromToken(token: string, profile: SessionProfile | null): Me | null {
-  const claims = decodeAccessToken(token)
-  if (!claims || claims.memberId === null || !profile) return null
+/** 내 정보 요약 쿼리 키. 재발급으로 토큰이 바뀌어도 같은 회원이면 캐시를 그대로 쓰도록 회원 id 로 잡는다 */
+const summaryQueryKey = (memberId: number | null) => ['me', 'summary', memberId]
+
+/** 회원 id + 로그인 이메일 + 내 정보 요약 → Me (partial). 하나라도 없으면 null */
+function meFromSummary(
+  memberId: number | null,
+  profile: SessionProfile | null,
+  summary: MemberSummary | undefined,
+): Me | null {
+  if (memberId === null || !profile || !summary) return null
   return {
-    memberId: claims.memberId,
+    memberId,
     uuid: '',
     email: profile.email,
-    nickname: profile.nickname,
+    nickname: summary.nickname,
     username: '',
     phone: '',
     birthDate: null,
-    isSeller: claims.authorities.includes('ROLE_SELLER'),
-    accountStatus: profile.suspended ? 'SUSPENDED' : 'ACTIVE',
+    isSeller: summary.seller,
+    accountStatus: summary.suspended ? 'SUSPENDED' : 'ACTIVE',
     warningCount: 0,
     address: null,
     seller: null,
@@ -73,18 +79,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false,
   })
 
-  const tokenMe = useMemo(
-    () => (USE_TOKEN_PROFILE && token ? meFromToken(token, profile) : null),
-    [token, profile],
+  const memberId = useMemo(() => decodeAccessToken(token)?.memberId ?? null, [token])
+
+  const summaryQuery = useQuery({
+    queryKey: summaryQueryKey(memberId),
+    queryFn: memberApi.summary,
+    enabled: USE_TOKEN_PROFILE && memberId !== null,
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
+  const summaryMe = useMemo(
+    () => (USE_TOKEN_PROFILE && token ? meFromSummary(memberId, profile, summaryQuery.data) : null),
+    [token, memberId, profile, summaryQuery.data],
   )
-  const me = USE_TOKEN_PROFILE ? tokenMe : token ? (meQuery.data ?? null) : null
+  const me = USE_TOKEN_PROFILE ? summaryMe : token ? (meQuery.data ?? null) : null
 
   const login = useCallback(
     async (body: LoginRequest) => {
       const result = await authApi.login(body)
       tokenStore.set(result.accessToken, result.refreshToken)
-      tokenStore.setProfile({ email: body.email, nickname: result.nickname, suspended: result.suspended })
-      if (!USE_TOKEN_PROFILE) {
+      tokenStore.setProfile({ email: body.email })
+      if (USE_TOKEN_PROFILE) {
+        const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
+        await queryClient.fetchQuery({ queryKey: summaryQueryKey(loggedInId), queryFn: memberApi.summary })
+      } else {
         await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
       }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
@@ -113,11 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       me,
       isLoggedIn: !!token && !!me,
-      isLoading: !!token && !USE_TOKEN_PROFILE && meQuery.isLoading,
+      isLoading: !!token && (USE_TOKEN_PROFILE ? summaryQuery.isLoading : meQuery.isLoading),
       login,
       logout,
     }),
-    [token, me, meQuery.isLoading, login, logout],
+    [token, me, summaryQuery.isLoading, meQuery.isLoading, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,7 +1,7 @@
 import { http } from './client'
 import type { PageParams, PageResponse } from '@/types/common'
 import type { AvailabilityResponse, LoginRequest, LoginResponse, SignupRequest } from '@/types/auth'
-import type { Me, RegisterSellerRequest, Warning } from '@/types/member'
+import type { Me, MemberSummary, RegisterSellerRequest, Warning } from '@/types/member'
 import type {
   MyProduct,
   ProductCreateRequest,
@@ -63,6 +63,7 @@ export const authApi = {
 /** 회원 (원본 Fo) */
 export const memberApi = {
   me: () => http.get<Me>('member.me', '/api/v1/member/me'),
+  summary: () => http.get<MemberSummary>('member.summary', '/api/v1/member/me/summary'),
   warnings: () => http.get<Warning[]>('member.warnings', '/api/v1/member/me/warnings'),
   /** 201, 바디 없음 */
   registerSeller: (body: RegisterSellerRequest) =>

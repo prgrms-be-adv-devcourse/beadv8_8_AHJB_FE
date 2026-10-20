@@ -30,6 +30,15 @@ export function registerMemberRoutes(): void {
     });
   });
 
+  route('GET', '/api/v1/member/me/summary', (ctx) => {
+    const me = requireMe(ctx);
+    return ok({
+      nickname: me.nickname,
+      seller: !!me.seller,
+      suspended: me.accountStatus === 'SUSPENDED',
+    });
+  });
+
   route('GET', '/api/v1/member/me/warnings', (ctx) => {
     const me = requireMe(ctx);
     return ok(
