@@ -25,7 +25,7 @@ import type {
   InstantWinResponse,
   MyBid,
 } from '@/types/auction'
-import type { CartItem } from '@/types/cart'
+import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
 import type { Wallet, WalletTransaction } from '@/types/wallet'
 import type { Refund, RefundProcessResult } from '@/types/refund'
@@ -119,7 +119,8 @@ export const auctionApi = {
 /** 장바구니 (원본 Ga) */
 export const cartApi = {
   list: () => http.get<CartItem[]>('cart.list', '/api/v1/cart'),
-  pay: (productIds: number[]) => http.post<null>('cart.pay', '/api/v1/cart/payment', { productIds }),
+  pay: (productIds: number[]) =>
+    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds }),
 }
 
 /** 주문 (원본 js) */

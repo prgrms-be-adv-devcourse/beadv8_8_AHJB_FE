@@ -15,3 +15,8 @@ export interface CartItem {
   productName: string
   thumbnailUrl: string | null
 }
+
+export interface CartPaymentResult {
+  orderGroupId: number
+  isPaid: boolean
+}

@@ -16,10 +16,13 @@ import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { useNow } from '@/lib/clock'
 import { formatCountdown, formatDateTime, formatRelativeTime, formatWon } from '@/lib/format'
+import type { CartPaymentResult } from '@/types/cart'
 import styles from './CartPage.module.css'
 
 /** 결제 기한이 이만큼 안 남으면 강조 (6시간) */
 const DUE_HOT_MS = 6 * 3600000
+
+const SHORTAGE_MESSAGE = '예치금이 부족해요. 충전한 뒤 다시 결제해 주세요.'
 
 /** 장바구니 (/cart, 원본 wC) — 낙찰 상품 결제 */
 export function CartPage() {
@@ -50,10 +53,16 @@ export function CartPage() {
   const balance = walletQuery.data?.balance ?? 0
   const shortage = Math.max(0, payTotal - balance)
 
-  const payMutation = useMutation<null, ApiError>({
+  const payMutation = useMutation<CartPaymentResult | null, ApiError>({
     mutationFn: () => cartApi.pay(selected.map((item) => item.productId)),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setConfirmOpen(false)
+      if (result && !result.isPaid) {
+        setChargeOpen(true)
+        toast(SHORTAGE_MESSAGE, { tone: 'error' })
+        void queryClient.invalidateQueries({ queryKey: ['cart'] })
+        return
+      }
       toast(`${selected.length}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',
         action: { label: '구매 주문', to: '/me/orders' },
@@ -64,7 +73,7 @@ export function CartPage() {
     onError: (error) => {
       setConfirmOpen(false)
       if (error.code === 'WALLET201') setChargeOpen(true)
-      toast(error.code === 'WALLET201' ? '예치금이 부족해요. 충전한 뒤 다시 결제해 주세요.' : error.message, {
+      toast(error.code === 'WALLET201' ? SHORTAGE_MESSAGE : error.message, {
         tone: 'error',
       })
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
