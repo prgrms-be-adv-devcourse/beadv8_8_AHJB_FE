@@ -291,19 +291,26 @@ export function payCartItems(memberId: number, productIds: number[], at: number,
 }
 
 // ---------- 환불 ----------
-/** 환불 승인: 보관금 반환, 경매 실패 처리, 구매자 경고, 1.5초 뒤 환불 완료 */
+/** 환불 승인: 환불 ACCEPTED, 보관금 반환(지갑 환불). 1.5초 뒤 환불 완료 처리 */
 export function acceptRefund(refund: RefundRecord, at: number): void {
   refund.status = 'ACCEPTED';
   refund.processedAt = ldt(at);
   const order = findOrder(refund.orderId);
-  order.state = 'REFUNDED';
-  order.updatedAt = ldt(at);
   const holding = db.holdings.find((h) => h.orderId === order.id);
   const product = db.products.find((p) => p.id === order.productId) as ProductRecord;
   if (holding && holding.status === 'HELD') {
     holding.status = 'REFUNDED';
     addTransaction(order.winnerId, 'REFUND_RECEIVE', holding.amount, 'REFUND', refund.id, `${product.name} 환불`, at);
   }
+  db.pending[`refundComplete:${refund.id}`] = at + 1500;
+}
+
+/** 환불 완료(지갑 환불 완료 이벤트 역할): 환불 COMPLETED → 주문 REFUNDED, 경매 실패 처리, 구매자 경고 */
+export function completeRefund(refund: RefundRecord, at: number): void {
+  refund.status = 'COMPLETED';
+  const order = findOrder(refund.orderId);
+  order.state = 'REFUNDED';
+  order.updatedAt = ldt(at);
   const auction = db.auctions.find((a) => a.id === order.auctionId);
   if (auction) {
     auction.status = 'FAILED';
@@ -316,7 +323,6 @@ export function acceptRefund(refund: RefundRecord, at: number): void {
     orderId: order.id,
     createdAt: ldt(at),
   });
-  db.pending[`refundComplete:${refund.id}`] = at + 1500;
 }
 
 /** 환불 거절: 곧바로 구매확정 처리 */
