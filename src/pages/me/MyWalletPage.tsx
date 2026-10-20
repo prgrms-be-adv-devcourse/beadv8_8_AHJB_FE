@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
 import { paymentApi, walletApi } from '@/api/endpoints'
@@ -9,18 +10,34 @@ import { ChargeDialog } from '@/components/ChargeDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
+import { Chip } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { formatDateTime, formatWon } from '@/lib/format'
-import { CHARGE_PURPOSE_LABELS, CHARGE_STATUS_LABELS, WITHDRAWAL_STATUS_LABELS } from '@/lib/labels'
+import {
+  CHARGE_PURPOSE_LABELS,
+  CHARGE_STATUS_LABELS,
+  HIDDEN_LEDGER_TYPES,
+  WALLET_ACCOUNT_LABELS,
+  WITHDRAWAL_STATUS_LABELS,
+  describeLedgerEntry,
+} from '@/lib/labels'
 import type { Tone } from '@/lib/status'
 import type { ChargeStatus, ChargeSummary } from '@/types/payment'
 import type { Withdrawal, WithdrawalStatus } from '@/types/wallet'
 import styles from './MyPage.module.css'
 
-/** 충전 내역 한 페이지 크기 */
+/** 내역 한 페이지 크기 */
 const PAGE_SIZE = 10
+
+/** 카드 아래 내역 탭. 기본은 충전 내역 */
+type HistoryTab = 'charges' | 'withdrawals' | 'ledger'
+const HISTORY_TABS: Array<{ id: HistoryTab; label: string }> = [
+  { id: 'charges', label: '충전 내역' },
+  { id: 'withdrawals', label: '출금 내역' },
+  { id: 'ledger', label: '예치금 내역' },
+]
 
 /** 출금 상태별 배지 색 */
 const WITHDRAWAL_TONES: Record<WithdrawalStatus, Tone> = {
@@ -46,8 +63,10 @@ export function MyWalletPage() {
   const isSeller = !!me?.isSeller
   const [chargeOpen, setChargeOpen] = useState(false)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [tab, setTab] = useState<HistoryTab>('charges')
   const [page, setPage] = useState(0)
   const [withdrawalPage, setWithdrawalPage] = useState(0)
+  const [ledgerPage, setLedgerPage] = useState(0)
   const [cancelTarget, setCancelTarget] = useState<ChargeSummary | null>(null)
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
   // 판매자: 받을 예정 금액(정산 전 홀딩 합계). 합계만 필요해서 1건만 받는다
@@ -60,6 +79,14 @@ export function MyWalletPage() {
     queryKey: ['wallet', 'withdrawals', withdrawalPage],
     queryFn: () => walletApi.withdrawals({ page: withdrawalPage, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
+    enabled: tab === 'withdrawals',
+  })
+  // 예치금 내역: 원장을 은행 입출금 내역처럼. 수수료·시스템 지갑 전용 유형은 화면에서 숨긴다
+  const ledgerQuery = useQuery({
+    queryKey: ['wallet', 'ledger', ledgerPage],
+    queryFn: () => walletApi.ledger({ page: ledgerPage, size: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    enabled: tab === 'ledger',
   })
   const chargesQuery = useQuery({
     queryKey: ['wallet', 'charges', page],
@@ -109,6 +136,7 @@ export function MyWalletPage() {
         ids={[
           'wallet.me',
           'wallet.holdings',
+          'wallet.ledger',
           'wallet.withdraw',
           'wallet.withdrawals',
           'payment.chargeRequest',
@@ -161,101 +189,162 @@ export function MyWalletPage() {
         ) : null}
       </div>
 
-      <p className={styles.sectionTitle}>충전 내역</p>
-      {chargesQuery.isLoading ? (
-        <Spinner block />
-      ) : chargesQuery.isError ? (
-        <ErrorState message={chargesQuery.error.message} onRetry={() => void chargesQuery.refetch()} />
-      ) : chargesQuery.data?.content.length ? (
-        <div className={styles.list}>
-          {chargesQuery.data.content.map((charge) => {
-            const canCancel = charge.cancelable && balance >= charge.amount
-            return (
-              <div key={charge.chargeId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
-                <div className={styles.rowBody}>
-                  <div className={styles.rowTop}>
-                    <Badge tone={CHARGE_TONES[charge.status]}>{CHARGE_STATUS_LABELS[charge.status]}</Badge>
-                    <span className={`${styles.rowMeta} num`}>{formatDateTime(charge.approvedAt ?? charge.requestedAt)}</span>
-                  </div>
-                  <p className={styles.rowTitle}>
-                    {CHARGE_PURPOSE_LABELS[charge.purpose]}
-                    {charge.method ? ` · ${charge.method}` : ''}
-                  </p>
-                  <p className={styles.rowMeta}>
-                    {charge.status === 'ABORTED' && charge.failureMessage
-                      ? charge.failureMessage
-                      : charge.status === 'CHARGED' && charge.usedAmount > 0
-                        ? `${formatWon(charge.usedAmount)} 사용 · 일부 사용된 충전은 취소할 수 없어요`
-                        : charge.status === 'CHARGED' && !canCancel && charge.cancelable
-                          ? '잔액이 충전액보다 적어 지금은 취소할 수 없어요'
-                          : charge.status === 'REQUESTED'
-                            ? '결제창에서 결제가 끝나지 않았어요. 40분 뒤 자동으로 정리돼요'
-                            : null}
-                    {charge.receiptUrl ? (
-                      <>
-                        {' '}
-                        <a href={charge.receiptUrl} target="_blank" rel="noreferrer">
-                          영수증
-                        </a>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                <div className={styles.rowSide}>
-                  <span className={`${styles.amount} num ${charge.status === 'CHARGED' ? styles.plus : ''}`}>
-                    {charge.status === 'CANCELED' ? '−' : '+'}
-                    {formatWon(charge.amount)}
-                  </span>
-                  {canCancel ? (
-                    <Button variant="outline" size="sm" onClick={() => setCancelTarget(charge)}>
-                      충전 취소
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <EmptyState icon="wallet" title="아직 충전 내역이 없어요" description="충전하면 여기부터 기록돼요." />
-      )}
-      <Pagination
-        page={page}
-        totalPages={Math.ceil((chargesQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
-        onChange={setPage}
-      />
+      <div className={styles.tabs} style={{ marginTop: 'var(--space-20)' }}>
+        {HISTORY_TABS.map((t) => (
+          <Chip key={t.id} selected={tab === t.id} onClick={() => setTab(t.id)}>
+            {t.label}
+          </Chip>
+        ))}
+      </div>
 
-      <p className={styles.sectionTitle}>출금 내역</p>
-      {withdrawalsQuery.isLoading ? (
-        <Spinner block />
-      ) : withdrawalsQuery.isError ? (
-        <ErrorState message={withdrawalsQuery.error.message} onRetry={() => void withdrawalsQuery.refetch()} />
-      ) : withdrawalsQuery.data?.content.length ? (
-        <div className={styles.list}>
-          {withdrawalsQuery.data.content.map((w) => (
-            <div key={w.withdrawalId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
-              <div className={styles.rowBody}>
-                <div className={styles.rowTop}>
-                  <Badge tone={WITHDRAWAL_TONES[w.status]}>{WITHDRAWAL_STATUS_LABELS[w.status]}</Badge>
-                  <span className={`${styles.rowMeta} num`}>{formatDateTime(w.completedAt ?? w.requestedAt)}</span>
-                </div>
-                <p className={styles.rowTitle}>예치금 전액 출금 · 등록 계좌</p>
-                {w.status === 'FAILED' && w.failureReason ? <p className={styles.rowMeta}>{w.failureReason}</p> : null}
-              </div>
-              <div className={styles.rowSide}>
-                <span className={`${styles.amount} num`}>−{formatWon(w.amount)}</span>
-              </div>
+      {tab === 'charges' ? (
+        <>
+          {chargesQuery.isLoading ? (
+            <Spinner block />
+          ) : chargesQuery.isError ? (
+            <ErrorState message={chargesQuery.error.message} onRetry={() => void chargesQuery.refetch()} />
+          ) : chargesQuery.data?.content.length ? (
+            <div className={styles.list}>
+              {chargesQuery.data.content.map((charge) => {
+                const canCancel = charge.cancelable && balance >= charge.amount
+                return (
+                  <div key={charge.chargeId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+                    <div className={styles.rowBody}>
+                      <div className={styles.rowTop}>
+                        <Badge tone={CHARGE_TONES[charge.status]}>{CHARGE_STATUS_LABELS[charge.status]}</Badge>
+                        <span className={`${styles.rowMeta} num`}>{formatDateTime(charge.approvedAt ?? charge.requestedAt)}</span>
+                      </div>
+                      <p className={styles.rowTitle}>
+                        {CHARGE_PURPOSE_LABELS[charge.purpose]}
+                        {charge.method ? ` · ${charge.method}` : ''}
+                      </p>
+                      <p className={styles.rowMeta}>
+                        {charge.status === 'ABORTED' && charge.failureMessage
+                          ? charge.failureMessage
+                          : charge.status === 'CHARGED' && charge.usedAmount > 0
+                            ? `${formatWon(charge.usedAmount)} 사용 · 일부 사용된 충전은 취소할 수 없어요`
+                            : charge.status === 'CHARGED' && !canCancel && charge.cancelable
+                              ? '잔액이 충전액보다 적어 지금은 취소할 수 없어요'
+                              : charge.status === 'REQUESTED'
+                                ? '결제창에서 결제가 끝나지 않았어요. 40분 뒤 자동으로 정리돼요'
+                                : null}
+                        {charge.receiptUrl ? (
+                          <>
+                            {' '}
+                            <a href={charge.receiptUrl} target="_blank" rel="noreferrer">
+                              영수증
+                            </a>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className={styles.rowSide}>
+                      <span className={`${styles.amount} num ${charge.status === 'CHARGED' ? styles.plus : ''}`}>
+                        {charge.status === 'CANCELED' ? '−' : '+'}
+                        {formatWon(charge.amount)}
+                      </span>
+                      {canCancel ? (
+                        <Button variant="outline" size="sm" onClick={() => setCancelTarget(charge)}>
+                          충전 취소
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          ))}
-        </div>
       ) : (
-        <EmptyState icon="wallet" title="아직 출금 내역이 없어요" description="출금하면 여기부터 기록돼요." />
+            <EmptyState icon="wallet" title="아직 충전 내역이 없어요" description="충전하면 여기부터 기록돼요." />
+          )}
+          <Pagination
+            page={page}
+            totalPages={Math.ceil((chargesQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+            onChange={setPage}
+          />
+        </>
+      ) : tab === 'withdrawals' ? (
+        <>
+          {withdrawalsQuery.isLoading ? (
+            <Spinner block />
+          ) : withdrawalsQuery.isError ? (
+            <ErrorState message={withdrawalsQuery.error.message} onRetry={() => void withdrawalsQuery.refetch()} />
+          ) : withdrawalsQuery.data?.content.length ? (
+            <div className={styles.list}>
+              {withdrawalsQuery.data.content.map((w) => (
+                <div key={w.withdrawalId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+                  <div className={styles.rowBody}>
+                    <div className={styles.rowTop}>
+                      <Badge tone={WITHDRAWAL_TONES[w.status]}>{WITHDRAWAL_STATUS_LABELS[w.status]}</Badge>
+                      <span className={`${styles.rowMeta} num`}>{formatDateTime(w.completedAt ?? w.requestedAt)}</span>
+                    </div>
+                    <p className={styles.rowTitle}>예치금 전액 출금 · 등록 계좌</p>
+                    {w.status === 'FAILED' && w.failureReason ? <p className={styles.rowMeta}>{w.failureReason}</p> : null}
+                  </div>
+                  <div className={styles.rowSide}>
+                    <span className={`${styles.amount} num`}>−{formatWon(w.amount)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+      ) : (
+            <EmptyState icon="wallet" title="아직 출금 내역이 없어요" description="출금하면 여기부터 기록돼요." />
+          )}
+          <Pagination
+            page={withdrawalPage}
+            totalPages={Math.ceil((withdrawalsQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+            onChange={setWithdrawalPage}
+          />
+        </>
+      ) : (
+        <>
+          {ledgerQuery.isLoading ? (
+            <Spinner block />
+          ) : ledgerQuery.isError ? (
+            <ErrorState message={ledgerQuery.error.message} onRetry={() => void ledgerQuery.refetch()} />
+          ) : ledgerQuery.data?.content.some((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type)) ? (
+            <div className={styles.list}>
+              {ledgerQuery.data.content
+                .filter((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type))
+                .map((tx) => (
+                  <div key={tx.id} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+                    <div className={styles.rowBody}>
+                      <div className={styles.rowTop}>
+                        <Badge tone={tx.amount > 0 ? 'live' : 'neutral'}>{tx.amount > 0 ? '입금' : '출금'}</Badge>
+                        <span className={`${styles.rowMeta} num`}>{formatDateTime(tx.createdAt)}</span>
+                      </div>
+                      <p className={styles.rowTitle}>
+                        {describeLedgerEntry(tx)}
+                        {tx.referenceType === 'ORDER' && tx.referenceId != null ? (
+                          <>
+                            {' · '}
+                            <Link to={`/orders/${tx.referenceId}`}>주문 #{tx.referenceId}</Link>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className={styles.rowSide}>
+                      <span className={`${styles.amount} num ${tx.amount > 0 ? styles.plus : ''}`}>
+                        {tx.amount > 0 ? '+' : '−'}
+                        {formatWon(Math.abs(tx.amount))}
+                      </span>
+                      <span className={`${styles.rowMeta} num`}>
+                        {tx.account === 'SETTLEMENT' ? `${WALLET_ACCOUNT_LABELS.SETTLEMENT} 잔액` : '잔액'}{' '}
+                        {formatWon(tx.balanceAfter)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+      ) : (
+            <EmptyState icon="wallet" title="아직 예치금 내역이 없어요" description="충전·결제·환불이 생기면 여기부터 기록돼요." />
+          )}
+          <Pagination
+            page={ledgerPage}
+            totalPages={Math.ceil((ledgerQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+            onChange={setLedgerPage}
+          />
+        </>
       )}
-      <Pagination
-        page={withdrawalPage}
-        totalPages={Math.ceil((withdrawalsQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
-        onChange={setWithdrawalPage}
-      />
 
       <ConfirmDialog
         open={withdrawOpen}
