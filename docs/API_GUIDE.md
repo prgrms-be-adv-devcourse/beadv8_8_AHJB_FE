@@ -77,15 +77,41 @@
 | ----------------- | -------------------------------------- | --------------------------------- | --------------------------------- |
 | `delivery.status` | GET `/api/v1/order/{orderId}/delivery` | `pages/order/OrderDetailPage.tsx` | ⚠️ 택배사·송장번호 필드 확인 필요 |
 
-## payment (예치금·충전)
+## payment (예치금·결제·충전)
 
-타입 `types/wallet.ts`
+타입 `types/wallet.ts` (연동 시 백엔드 DTO 기준으로 수정 예정)
 
-| 전환 키               | API                                       | 화면                                                                        | 상태                                                                                  |
-| --------------------- | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `wallet.me`           | GET `/api/v1/wallet/me` 잔액              | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ⚠️ 백엔드 응답 `{ balance, settlementBalance }` → 타입 비교 필요                      |
-| `wallet.transactions` | GET `/api/v1/wallet/me/transactions` 내역 | `pages/me/MyWalletPage.tsx`                                                 | ⚠️ 백엔드는 `/wallet/me/ledger`, `/wallet/me/holdings` → 프론트 경로·타입 수정        |
-| `wallet.charge`       | POST `/api/v1/wallet/me/charge` 충전      | `components/ChargeDialog.tsx`                                               | ⚠️ 백엔드는 토스 `/payments/charges` → `/payments/charges/confirm` → 프론트 흐름 수정 |
+전환 키는 백엔드 `WalletApiController`(`/api/v1/wallet`) · `PaymentApiController`(`/api/v1/payments`) 기준으로 등록했어요. 상태 ✅는 백엔드에 있다는 뜻이고, 프론트 연동은 아직 안 됐어요. 화면 열에 "(없음)"이면 새 화면이나 컴포넌트가 필요해요.
+
+### 지갑 (`/api/v1/wallet`)
+
+| 전환 키              | API                                                      | 화면                                                                        | 상태                                                                                                    |
+| -------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `wallet.me`          | GET `/api/v1/wallet/me` 잔액                             | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ⚠️ 응답 `{ balance, settlementBalance }`. 프론트 `Wallet` 의 `walletId`·`heldAmount` 없음 → 타입 수정 |
+| `wallet.ledger`      | GET `/api/v1/wallet/me/ledger` 원장(입출금 내역)         | `pages/me/MyWalletPage.tsx`                                                 | ⚠️ 기존 `/wallet/me/transactions` 대체. `id`·`account` 등 필드명·enum 다름 → 경로·타입 수정            |
+| `wallet.holdings`    | GET `/api/v1/wallet/me/holdings` 홀딩(묶인 돈·정산 예정) | (없음) `MyWalletPage` "에스크로 보관 중" 카드가 `heldTotal` 사용 예정       | ✅ `role=BUYER\|SELLER`, `status` 필터                                                                   |
+| `wallet.withdraw`    | POST `/api/v1/wallet/me/withdrawals` 전액 출금(명목상)   | `pages/me/MyWalletPage.tsx` "출금 (준비 중)" 버튼                           | ✅ 실제 송금 없음. 잔액 0 이면 `WALLET601`                                                              |
+| `wallet.withdrawals` | GET `/api/v1/wallet/me/withdrawals` 출금 내역            | (없음)                                                                      | ✅                                                                                                      |
+
+### 충전 · 결제 (`/api/v1/payments`)
+
+| 전환 키                 | API                                                       | 화면                                      | 상태                                                                                                           |
+| ----------------------- | --------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `payment.chargeRequest` | POST `/api/v1/payments/charges` 충전 요청                 | `components/ChargeDialog.tsx`             | ⚠️ 기존 `/wallet/me/charge` 한 번 호출을 대체. 응답 `pgOrderId`·`amount`·`orderName` 을 토스 SDK 에 넘김     |
+| `payment.chargeConfirm` | POST `/api/v1/payments/charges/confirm` 충전 승인         | (없음) 토스 successUrl 복귀 페이지 필요   | ⚠️ `{ pgOrderId, paymentKey, amount }`. 토스 SDK · 성공/실패 라우트 추가 필요                                 |
+| `payment.chargeCancel`  | POST `/api/v1/payments/charges/{chargeId}/cancel` 충전 취소 | (없음) 충전 내역 화면에서 호출 예정       | ✅ `cancelable: true` 인 건만. 잔액이 충전액보다 적으면 `CHARGE005`                                           |
+| `payment.charges`       | GET `/api/v1/payments/charges/me` 충전 내역               | (없음)                                    | ✅ size 최대 50                                                                                                |
+| `payment.chargeDetail`  | GET `/api/v1/payments/charges/{chargeId}` 충전 상세       | (없음)                                    | ✅ 상태 · 결제수단 · `receiptUrl` · 실패 사유                                                                  |
+| `payment.list`          | GET `/api/v1/payments/me` 결제 내역(주문 묶음 단위)       | (없음)                                    | ✅ `walletUsedAmount`(예치금) + `chargeAmount`(카드 부족분). size 최대 50                                      |
+| `payment.detail`        | GET `/api/v1/payments/me/{paymentId}` 결제 상세           | (없음)                                    | ✅ 주문별 금액 · 환불 여부 · 연결된 충전 건                                                                    |
+| `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | (없음) `pages/cart/CartPage.tsx` 흐름과 연결 | ⚠️ 부족분 토스 결제 후 승인 · 충전 · 홀딩 한 번에. 현재 프론트는 `cart.pay` 실패 → 충전 모달 흐름이라 주문 팀과 조율 필요 |
+| `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 부족 금액 표시  | ✅ `{ balance, walletUseAmount, shortage, needsCharge }`. 지금은 프론트가 직접 계산                           |
+
+### 제거 예정
+
+`wallet.transactions`, `wallet.charge` 는 백엔드에 없는 API 예요. `endpoints.ts`·`ChargeDialog`·`MyWalletPage` 가 아직 참조해서 `registry.ts` 에 `[제거 예정]` 으로 남겨 뒀고, 위 키로 옮기면서 삭제할 거예요.
+
+에러 응답은 공통 `{ isSuccess, errorCode, message }` 에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `retryable` 로 "다시 결제하기" 분기를 하려면 `api/client.ts` 의 `ApiError` 확장이 필요해요. 잔액 부족은 `WALLET201`.
 
 ## refund (환불)
 
