@@ -53,6 +53,7 @@ type ErrorKey =
   | 'recipientPhone'
   | 'zipcode'
   | 'address'
+  | 'addressDetail'
   | 'terms'
 
 /** 회원가입 (/signup, 원본 qP) */
@@ -127,14 +128,23 @@ export function SignupPage() {
       : '닉네임을 입력해 주세요.',
     username: form.username.trim() ? null : '실명을 입력해 주세요.',
     phone: PHONE_PATTERN.test(digitsOnly(form.phone)) ? null : '휴대폰 번호를 확인해 주세요. (01012345678)',
-    recipient: recipient.trim() ? null : '받는 분을 입력해 주세요.',
+    recipient: recipient.trim()
+      ? recipient.length > 50
+        ? '받는 분은 50자까지예요.'
+        : null
+      : '받는 분을 입력해 주세요.',
     recipientPhone: PHONE_PATTERN.test(recipientPhone) ? null : '받는 분 연락처를 확인해 주세요.',
     zipcode: form.zipcode.trim()
       ? form.zipcode.length > 10
         ? '우편번호는 10자까지예요.'
         : null
       : '우편번호를 입력해 주세요.',
-    address: form.address.trim() ? null : '주소를 입력해 주세요.',
+    address: form.address.trim()
+      ? form.address.length > 255
+        ? '주소는 255자까지예요.'
+        : null
+      : '주소를 입력해 주세요.',
+    addressDetail: form.addressDetail.length > 255 ? '상세 주소는 255자까지예요.' : null,
     terms: !terms.service || !terms.privacy ? '필수 약관에 동의해 주세요.' : null,
   }
 
@@ -165,17 +175,32 @@ export function SignupPage() {
           addressDetail: form.addressDetail.trim() || undefined,
         },
       })
-      await login({ email: form.email, password: form.password })
-      toast(`가입을 환영해요, ${form.nickname}님! 예치금을 충전하면 바로 입찰할 수 있어요.`, {
-        tone: 'success',
-        action: { label: '충전하기', to: '/me/wallet' },
-      })
-      navigate(params.get('redirect') || '/', { replace: true })
     } catch (err) {
-      setServerError((err as ApiError).message)
+      const apiError = err as ApiError
+      // 중복은 해당 칸에 보여준다 (칸을 벗어나지 않고 바로 제출하면 서버에서 걸린다)
+      if (apiError.code === 'MEMBER001') setEmailCheck({ status: 'taken', value: form.email })
+      else if (apiError.code === 'MEMBER002') setNicknameCheck({ status: 'taken', value: form.nickname })
+      else setServerError(apiError.message)
+      setSubmitting(false)
+      return
+    }
+
+    const redirect = params.get('redirect')
+    try {
+      await login({ email: form.email, password: form.password })
+    } catch {
+      // 계정은 이미 만들어졌으니 다시 가입하지 않도록 로그인 화면으로 보낸다
+      toast('가입이 완료됐어요. 로그인해 주세요.', { tone: 'success' })
+      navigate(`/login${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`, { replace: true })
+      return
     } finally {
       setSubmitting(false)
     }
+    toast(`가입을 환영해요, ${form.nickname}님! 예치금을 충전하면 바로 입찰할 수 있어요.`, {
+      tone: 'success',
+      action: { label: '충전하기', to: '/me/wallet' },
+    })
+    navigate(redirect || '/', { replace: true })
   }
 
   const passwordConfirmForced = form.passwordConfirm.length >= form.password.length && form.passwordConfirm.length > 0
@@ -322,6 +347,7 @@ export function SignupPage() {
                     id={id}
                     aria-describedby={describedBy}
                     value={form.recipient}
+                    maxLength={50}
                     onChange={bind('recipient')}
                     invalid={!!visibleError('recipient')}
                   />
@@ -365,6 +391,7 @@ export function SignupPage() {
                   placeholder="도로명 주소"
                   aria-describedby={describedBy}
                   value={form.address}
+                  maxLength={255}
                   onChange={bind('address')}
                   invalid={!!visibleError('address')}
                 />
@@ -373,9 +400,17 @@ export function SignupPage() {
           </div>
 
           <div className={styles.grid2}>
-            <Field label="상세 주소" optional>
-              {(id) => (
-                <Input id={id} placeholder="동 · 호수" value={form.addressDetail} onChange={bind('addressDetail')} />
+            <Field label="상세 주소" optional error={visibleError('addressDetail')}>
+              {(id, describedBy) => (
+                <Input
+                  id={id}
+                  placeholder="동 · 호수"
+                  aria-describedby={describedBy}
+                  value={form.addressDetail}
+                  maxLength={255}
+                  onChange={bind('addressDetail')}
+                  invalid={!!visibleError('addressDetail')}
+                />
               )}
             </Field>
             <Field label="배송지 별칭" optional>
