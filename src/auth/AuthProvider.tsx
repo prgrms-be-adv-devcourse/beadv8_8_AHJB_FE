@@ -22,11 +22,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
  * 내 정보를 어디서 가져올지.
- * - 로그인이 목업이거나 member.me 를 실제로 켰으면: GET /member/me (원본 방식)
- * - 로그인만 실제이고 member.me 는 꺼져 있으면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지)
- *   + 로그인 때 저장한 이메일로 만든다.
+ * - 로그인이 목업이면: 목업 GET /member/me (원본 방식)
+ * - 로그인이 실제면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지) + 로그인 때 저장한 이메일로 만든다.
+ *   실제 GET /member/me 는 회원 정보 화면용 상세(MemberDetail)라 여기서는 쓰지 않는다.
  */
-const USE_TOKEN_PROFILE = isRealApi('auth.login') && !isRealApi('member.me')
+const USE_TOKEN_PROFILE = isRealApi('auth.login')
 
 /** 내 정보 요약 쿼리 키. 재발급으로 토큰이 바뀌어도 같은 회원이면 캐시를 그대로 쓰도록 회원 id 로 잡는다 */
 const summaryQueryKey = (memberId: number | null) => ['me', 'summary', memberId]
@@ -49,8 +49,6 @@ function meFromSummary(
     isSeller: summary.seller,
     accountStatus: summary.suspended ? 'SUSPENDED' : 'ACTIVE',
     warningCount: 0,
-    address: null,
-    seller: null,
     createdAt: '',
     partial: true,
   }
