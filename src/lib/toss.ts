@@ -7,6 +7,20 @@ export const CHARGE_FAIL_PATH = '/me/wallet/charge/fail'
 export const ORDER_PAYMENT_SUCCESS_PATH = '/cart/payment/success'
 export const ORDER_PAYMENT_FAIL_PATH = '/cart/payment/fail'
 
+/**
+ * 결제창에서 돌아온 뒤 이동할 곳을 successUrl/failUrl 쿼리(returnTo)에 실어 보낸다.
+ * 토스는 우리가 준 URL 뒤에 자기 쿼리(paymentKey 등)를 덧붙이므로 기존 쿼리가 보존된다.
+ */
+export function withReturnTo(path: string, returnTo?: string | null): string {
+  return returnTo ? `${path}?returnTo=${encodeURIComponent(returnTo)}` : path
+}
+
+/** returnTo 쿼리를 읽는다. 외부 주소로 보내지 않도록 '/' 로 시작하는 내부 경로만 허용하고, 아니면 fallback */
+export function readReturnTo(search: URLSearchParams, fallback: string): string {
+  const value = search.get('returnTo')
+  return value && value.startsWith('/') && !value.startsWith('//') ? value : fallback
+}
+
 /** 사용자가 결제창을 닫았을 때 SDK 가 던지는 에러 코드. 에러로 보여 주지 않는다 */
 export const TOSS_USER_CANCEL = 'USER_CANCEL'
 

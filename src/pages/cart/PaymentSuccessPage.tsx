@@ -32,6 +32,11 @@ export function PaymentSuccessPage() {
       if (!params) throw new Error('결제 정보가 없어요.')
       return paymentApi.confirmPayment({ pgOrderId: params.orderId, paymentKey: params.paymentKey, amount: params.amount })
     },
+    // 승인이 실패해도 토스 승인·충전까지는 됐을 수 있으니 잔액은 서버 기준으로 다시 불러온다
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+      void queryClient.invalidateQueries({ queryKey: ['cart'] })
+    },
     onSuccess: (payment) => {
       toast(`${payment.orderCount}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',

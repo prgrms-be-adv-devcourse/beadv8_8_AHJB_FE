@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { LinkButton } from '@/components/Button'
 import { EmptyState } from '@/components/EmptyState'
-import { readTossFailParams } from '@/lib/toss'
+import { readReturnTo, readTossFailParams } from '@/lib/toss'
 import styles from '../MyPage.module.css'
 
 /**
@@ -11,6 +11,7 @@ import styles from '../MyPage.module.css'
 export function ChargeFailPage() {
   const [search] = useSearchParams()
   const { code, message } = readTossFailParams(search)
+  const returnTo = readReturnTo(search, '/me/wallet')
   const canceledByUser = code === 'PAY_PROCESS_CANCELED'
 
   return (
@@ -34,8 +35,8 @@ export function ChargeFailPage() {
           )
         }
         action={
-          <LinkButton to="/me/wallet" variant="highlight" size="sm">
-            예치금으로 돌아가기
+          <LinkButton to={returnTo} variant="highlight" size="sm">
+            {returnTo === '/cart' ? '장바구니로 돌아가기' : '예치금으로 돌아가기'}
           </LinkButton>
         }
       />

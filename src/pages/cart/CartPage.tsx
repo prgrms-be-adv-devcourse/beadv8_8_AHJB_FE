@@ -116,7 +116,10 @@ export function CartPage() {
     },
     onError: (error) => {
       setConfirmOpen(false)
+      // 서버 쪽 잔액·장바구니가 바뀌었을 수 있으니(부분 처리) 화면 값을 서버 기준으로 다시 맞춘다
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+      void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })
       // 결제창을 닫은 건 에러가 아니다. 만들어진 주문은 다시 결제하기로 이어가거나 1시간 뒤 정리된다
       if (tossErrorCode(error) === TOSS_USER_CANCEL) {
         toast('결제창을 닫았어요. 다시 결제하기를 누르면 이어서 결제할 수 있어요.')
@@ -305,7 +308,12 @@ export function CartPage() {
         <br />
         상품마다 주문이 하나씩 만들어지고, 판매자가 송장을 등록하면 배송이 시작돼요.
       </ConfirmDialog>
-      <ChargeDialog open={chargeOpen} onClose={() => setChargeOpen(false)} suggested={shortage || undefined} />
+      <ChargeDialog
+        open={chargeOpen}
+        onClose={() => setChargeOpen(false)}
+        suggested={shortage || undefined}
+        returnTo="/cart"
+      />
     </div>
   )
 }
