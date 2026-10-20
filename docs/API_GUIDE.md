@@ -79,17 +79,17 @@
 
 ## payment (예치금·결제·충전)
 
-타입 `types/wallet.ts` (연동 시 백엔드 DTO 기준으로 수정 예정)
+타입 `types/wallet.ts` (백엔드 DTO 기준)
 
-전환 키는 백엔드 `WalletApiController`(`/api/v1/wallet`) · `PaymentApiController`(`/api/v1/payments`) 기준으로 등록했어요. 상태 ✅는 백엔드에 있다는 뜻이고, 프론트 연동은 아직 안 됐어요. 화면 열에 "(없음)"이면 새 화면이나 컴포넌트가 필요해요.
+전환 키는 백엔드 `WalletApiController`(`/api/v1/wallet`) · `PaymentApiController`(`/api/v1/payments`) 기준이에요. 상태 ✅는 백엔드에 있고 프론트가 그 응답 형태로 맞춰져 있다는 뜻, ⚠️는 백엔드엔 있지만 프론트 타입·흐름 수정이 남았다는 뜻이에요. 화면 열에 "(없음)"이면 새 화면이나 컴포넌트가 필요해요.
 
 ### 지갑 (`/api/v1/wallet`)
 
 | 전환 키              | API                                                      | 화면                                                                        | 상태                                                                                                    |
 | -------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `wallet.me`          | GET `/api/v1/wallet/me` 잔액                             | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ⚠️ 응답 `{ balance, settlementBalance }`. 프론트 `Wallet` 의 `walletId`·`heldAmount` 없음 → 타입 수정 |
-| `wallet.ledger`      | GET `/api/v1/wallet/me/ledger` 원장(입출금 내역)         | `pages/me/MyWalletPage.tsx`                                                 | ⚠️ 기존 `/wallet/me/transactions` 대체. `id`·`account` 등 필드명·enum 다름 → 경로·타입 수정            |
-| `wallet.holdings`    | GET `/api/v1/wallet/me/holdings` 홀딩(묶인 돈·정산 예정) | (없음) `MyWalletPage` "에스크로 보관 중" 카드가 `heldTotal` 사용 예정       | ✅ `role=BUYER\|SELLER`, `status` 필터                                                                   |
+| `wallet.me`          | GET `/api/v1/wallet/me` 잔액                             | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ✅ `{ balance, settlementBalance }`. 정산금은 MyWalletPage 예치금 카드 아래에 표시(0이면 숨김)       |
+| `wallet.ledger`      | GET `/api/v1/wallet/me/ledger` 원장(입출금 내역)         | (없음) 운영·추적용. 사용자 내역 화면은 `payment.list`·`payment.charges` 로 만들 예정 | ✅ API 함수·타입·목업만 있음. size 최대 50                                                             |
+| `wallet.holdings`    | GET `/api/v1/wallet/me/holdings` 홀딩(묶인 돈·정산 예정) | `pages/me/MyWalletPage.tsx` "에스크로 보관 중" 카드 (`role=BUYER`, `heldTotal`) | ✅ `role=BUYER\|SELLER`, `status` 필터. 홀딩 목록 화면은 아직 없음                                     |
 | `wallet.withdraw`    | POST `/api/v1/wallet/me/withdrawals` 전액 출금(명목상)   | `pages/me/MyWalletPage.tsx` "출금 (준비 중)" 버튼                           | ✅ 실제 송금 없음. 잔액 0 이면 `WALLET601`                                                              |
 | `wallet.withdrawals` | GET `/api/v1/wallet/me/withdrawals` 출금 내역            | (없음)                                                                      | ✅                                                                                                      |
 
@@ -109,7 +109,9 @@
 
 ### 제거 예정
 
-`wallet.transactions`, `wallet.charge` 는 백엔드에 없는 API 예요. `endpoints.ts`·`ChargeDialog`·`MyWalletPage` 가 아직 참조해서 `registry.ts` 에 `[제거 예정]` 으로 남겨 뒀고, 위 키로 옮기면서 삭제할 거예요.
+`wallet.charge`(POST `/api/v1/wallet/me/charge`) 는 백엔드에 없는 목업 전용 API 예요. `ChargeDialog` 가 아직 참조해서 `registry.ts` 에 `[제거 예정]` 으로 남겨 뒀고, 충전 흐름(`payment.chargeRequest` → 토스 결제창 → `payment.chargeConfirm`)으로 옮기면서 삭제할 거예요. `wallet.transactions` 는 `wallet.ledger` 로 옮기고 삭제했어요.
+
+목업(`src/mock/handlers/wallet.ts`)은 백엔드와 같은 경로·응답 형태로 맞춰 뒀어요. 다만 목업은 주머니가 하나라 `settlementBalance` 는 항상 0, 원장 `account` 는 항상 `DEPOSIT` 이에요.
 
 에러 응답은 공통 `{ isSuccess, errorCode, message }` 에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `retryable` 로 "다시 결제하기" 분기를 하려면 `api/client.ts` 의 `ApiError` 확장이 필요해요. 잔액 부족은 `WALLET201`.
 

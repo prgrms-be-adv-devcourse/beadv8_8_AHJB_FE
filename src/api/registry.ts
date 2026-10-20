@@ -309,7 +309,7 @@ export const apiRegistry = {
     title: '내 원장(입출금 내역)',
     owner: '김지유',
     status: 'done',
-    note: 'account(DEPOSIT|SETTLEMENT), type, page, size(최대 50). wallet.transactions 를 대체',
+    note: 'account(DEPOSIT|SETTLEMENT), type, page, size(최대 50)',
   },
   'wallet.holdings': {
     method: 'GET',
@@ -406,16 +406,8 @@ export const apiRegistry = {
     status: 'done',
     note: '?amount= → { balance, walletUseAmount, shortage, needsCharge }. 저장 안 함',
   },
-  // 아래 두 키는 백엔드에 없음. endpoints.ts · ChargeDialog · MyWalletPage 가 아직 참조하므로
-  // 연동 작업에서 wallet.ledger / payment.chargeRequest+chargeConfirm 으로 바꾼 뒤 삭제한다.
-  'wallet.transactions': {
-    method: 'GET',
-    path: '/api/v1/wallet/me/transactions',
-    title: '[제거 예정] 예치금 내역',
-    owner: '김지유',
-    status: 'proposed',
-    note: '백엔드 없음 → wallet.ledger 로 대체',
-  },
+  // 아래 키는 백엔드에 없음. ChargeDialog 가 아직 참조하므로
+  // 충전 연동(payment.chargeRequest → 토스 결제창 → payment.chargeConfirm)에서 교체한 뒤 삭제한다.
   'wallet.charge': {
     method: 'POST',
     path: '/api/v1/wallet/me/charge',
