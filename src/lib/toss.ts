@@ -1,4 +1,4 @@
-import { ANONYMOUS, loadTossPayments, type TossPaymentsSDK } from '@tosspayments/tosspayments-sdk'
+import { ANONYMOUS, loadTossPayments, type TossPaymentsPayment, type TossPaymentsSDK } from '@tosspayments/tosspayments-sdk'
 
 /** 토스 결제창에서 돌아오는 프론트 경로. successUrl / failUrl 은 절대 URL 이어야 해서 origin 을 붙여 쓴다 */
 export const CHARGE_SUCCESS_PATH = '/me/wallet/charge/success'
@@ -8,6 +8,8 @@ export const CHARGE_FAIL_PATH = '/me/wallet/charge/fail'
 export const TOSS_USER_CANCEL = 'USER_CANCEL'
 
 let sdkPromise: Promise<TossPaymentsSDK> | null = null
+/** 지금 열려 있는(또는 열었다가 페이지가 떠난) 결제창. 뒤로가기(bfcache 복원) 때 닫기 위해 들고 있는다 */
+let currentPayment: TossPaymentsPayment | null = null
 
 /** 토스 SDK 를 한 번만 로드한다. 클라이언트 키가 없으면 설정 안내 에러 */
 function loadSdk(): Promise<TossPaymentsSDK> {
@@ -39,15 +41,44 @@ export interface TossPaymentWindowParams {
  */
 export async function openTossPaymentWindow(params: TossPaymentWindowParams): Promise<void> {
   const toss = await loadSdk()
+  await closeTossPaymentWindow()
   const payment = toss.payment({ customerKey: ANONYMOUS })
-  await payment.requestPayment({
-    method: 'CARD',
-    amount: { currency: 'KRW', value: params.amount },
-    orderId: params.pgOrderId,
-    orderName: params.orderName,
-    successUrl: window.location.origin + (params.successPath ?? CHARGE_SUCCESS_PATH),
-    failUrl: window.location.origin + (params.failPath ?? CHARGE_FAIL_PATH),
-    customerEmail: params.customerEmail ?? undefined,
+  currentPayment = payment
+  try {
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: params.amount },
+      orderId: params.pgOrderId,
+      orderName: params.orderName,
+      successUrl: window.location.origin + (params.successPath ?? CHARGE_SUCCESS_PATH),
+      failUrl: window.location.origin + (params.failPath ?? CHARGE_FAIL_PATH),
+      customerEmail: params.customerEmail ?? undefined,
+    })
+  } finally {
+    // 취소·오류로 결제창이 닫혔다. 성공 리다이렉트는 여기 오지 않으므로 currentPayment 가 남아 bfcache 복원 때 정리된다
+    if (currentPayment === payment) currentPayment = null
+  }
+}
+
+/** 열려 있는 결제창을 닫는다. 열린 창이 없어도 안전하다 */
+export async function closeTossPaymentWindow(): Promise<void> {
+  const payment = currentPayment
+  currentPayment = null
+  if (!payment) return
+  try {
+    await payment.destroy()
+  } catch {
+    /* 이미 닫힌 창. 무시 */
+  }
+}
+
+/**
+ * 결제창을 띄운 채 successUrl/failUrl 로 떠났다가 브라우저 뒤로가기로 돌아오면, 브라우저가 페이지를 통째로 복원(bfcache)해서
+ * 세션이 끝난 토스 결제창("이미 종료된 세션입니다")이 닫히지 않은 채 남는다. 복원 시점에 결제창을 닫는다.
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) void closeTossPaymentWindow()
   })
 }
 

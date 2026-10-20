@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { isRealApi } from '@/api/config'
 import { paymentApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
 import { formatAmountInput, formatWon, parseDigits } from '@/lib/format'
-import { TOSS_USER_CANCEL, openTossPaymentWindow, tossErrorCode } from '@/lib/toss'
+import { TOSS_USER_CANCEL, closeTossPaymentWindow, openTossPaymentWindow, tossErrorCode } from '@/lib/toss'
 import type { ChargeSummary } from '@/types/payment'
 import { Button } from './Button'
 import { DevApiNote } from './DevApiNote'
@@ -93,6 +93,21 @@ export function ChargeDialog({ open, onClose, suggested, onCharged }: ChargeDial
       toast(err.message, { tone: 'error' })
     },
   })
+
+  // 결제창 → 성공/실패 페이지로 갔다가 뒤로가기로 돌아오면(bfcache 복원) 이 컴포넌트는 "결제창 열림·요청 진행 중" 상태 그대로 살아난다.
+  // 남아 있는 결제창을 닫고 진행 중 표시를 풀어서 금액 입력 모달로 되돌린다.
+  const resetCharge = useRef(charge.reset)
+  resetCharge.current = charge.reset
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return
+      void closeTossPaymentWindow()
+      setTossOpen(false)
+      resetCharge.current()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
 
   return (
     <Dialog
