@@ -29,6 +29,7 @@ import type {
 import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
 import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
+import type { ChargeConfirmRequest, ChargeSummary } from '@/types/payment'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
 import type {
@@ -165,8 +166,16 @@ export const walletApi = {
   /** 홀딩(묶인 돈 / 정산 예정). role 기본 BUYER, size 최대 50 */
   holdings: (params: HoldingParams = {}) =>
     http.get<HoldingPage>('wallet.holdings', '/api/v1/wallet/me/holdings', params),
-  /** [제거 예정] 목업 전용 충전. 토스 흐름(payment.chargeRequest → chargeConfirm)으로 교체 예정 */
-  charge: (amount: number) => http.post<Wallet>('wallet.charge', '/api/v1/wallet/me/charge', { amount }),
+}
+
+/** 결제 · 충전 (백엔드 PaymentApiController) */
+export const paymentApi = {
+  /** 충전 요청. 응답의 pgOrderId / amount / orderName 을 토스 결제창에 넘긴다 */
+  requestCharge: (amount: number) =>
+    http.post<ChargeSummary>('payment.chargeRequest', '/api/v1/payments/charges', { amount }),
+  /** 충전 승인. 토스 successUrl 쿼리(paymentKey, orderId, amount)를 그대로 넘긴다. 멱등 */
+  confirmCharge: (body: ChargeConfirmRequest) =>
+    http.post<ChargeSummary>('payment.chargeConfirm', '/api/v1/payments/charges/confirm', body),
 }
 
 /** 환불 (원본 cd) */

@@ -25,7 +25,7 @@ export function MyWalletPage() {
       <p className={styles.headSub}>
         입찰한 경매가 낙찰되면 예치금으로 결제해요. 결제 금액은 구매확정 전까지 찐막이 보관(에스크로)해요.
       </p>
-      <DevApiNote ids={['wallet.me', 'wallet.holdings', 'wallet.charge']} />
+      <DevApiNote ids={['wallet.me', 'wallet.holdings', 'payment.chargeRequest', 'payment.chargeConfirm']} />
 
       <div className={styles.summaryCards}>
         <div className={`${styles.sumCard} ${styles.sumCardDark}`}>

@@ -97,8 +97,8 @@
 
 | 전환 키                 | API                                                       | 화면                                      | 상태                                                                                                           |
 | ----------------------- | --------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `payment.chargeRequest` | POST `/api/v1/payments/charges` 충전 요청                 | `components/ChargeDialog.tsx`             | ⚠️ 기존 `/wallet/me/charge` 한 번 호출을 대체. 응답 `pgOrderId`·`amount`·`orderName` 을 토스 SDK 에 넘김     |
-| `payment.chargeConfirm` | POST `/api/v1/payments/charges/confirm` 충전 승인         | (없음) 토스 successUrl 복귀 페이지 필요   | ⚠️ `{ pgOrderId, paymentKey, amount }`. 토스 SDK · 성공/실패 라우트 추가 필요                                 |
+| `payment.chargeRequest` | POST `/api/v1/payments/charges` 충전 요청                 | `components/ChargeDialog.tsx`             | ✅ 응답 `pgOrderId`·`amount`·`orderName` 을 토스 결제창(`lib/toss.ts`)에 넘김. 목업이면 결제창 없이 바로 승인까지 |
+| `payment.chargeConfirm` | POST `/api/v1/payments/charges/confirm` 충전 승인         | `pages/me/wallet/ChargeSuccessPage.tsx` (`/me/wallet/charge/success`) | ✅ 토스 successUrl 쿼리 `paymentKey`·`orderId`·`amount` 를 그대로 전달. 실패는 `/me/wallet/charge/fail`      |
 | `payment.chargeCancel`  | POST `/api/v1/payments/charges/{chargeId}/cancel` 충전 취소 | (없음) 충전 내역 화면에서 호출 예정       | ✅ `cancelable: true` 인 건만. 잔액이 충전액보다 적으면 `CHARGE005`                                           |
 | `payment.charges`       | GET `/api/v1/payments/charges/me` 충전 내역               | (없음)                                    | ✅ size 최대 50                                                                                                |
 | `payment.chargeDetail`  | GET `/api/v1/payments/charges/{chargeId}` 충전 상세       | (없음)                                    | ✅ 상태 · 결제수단 · `receiptUrl` · 실패 사유                                                                  |
@@ -107,11 +107,13 @@
 | `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | (없음) `pages/cart/CartPage.tsx` 흐름과 연결 | ⚠️ 부족분 토스 결제 후 승인 · 충전 · 홀딩 한 번에. 현재 프론트는 `cart.pay` 실패 → 충전 모달 흐름이라 주문 팀과 조율 필요 |
 | `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 부족 금액 표시  | ✅ `{ balance, walletUseAmount, shortage, needsCharge }`. 지금은 프론트가 직접 계산                           |
 
-### 제거 예정
+### 충전(토스 결제창) 로컬 확인
 
-`wallet.charge`(POST `/api/v1/wallet/me/charge`) 는 백엔드에 없는 목업 전용 API 예요. `ChargeDialog` 가 아직 참조해서 `registry.ts` 에 `[제거 예정]` 으로 남겨 뒀고, 충전 흐름(`payment.chargeRequest` → 토스 결제창 → `payment.chargeConfirm`)으로 옮기면서 삭제할 거예요. `wallet.transactions` 는 `wallet.ledger` 로 옮기고 삭제했어요.
+`payment.chargeRequest`·`payment.chargeConfirm` 을 실제로 켜면 토스 결제창이 뜨기 때문에 클라이언트 키가 필요해요. `.env.development.local` 에 `VITE_TOSS_CLIENT_KEY=test_ck_...`(토스 개발자센터 테스트 키)를 넣고, 백엔드 `TOSS_PAYMENTS_SECRET_KEY` 에 같은 상점의 테스트 시크릿 키가 있어야 승인까지 돼요. 흐름은 `ChargeDialog` → 충전 요청 → 결제창 → `/me/wallet/charge/success` 에서 승인 → `/me/wallet` 복귀예요. 결제창을 닫으면 `/me/wallet/charge/fail` 로 오고, 백엔드에 남은 REQUESTED 충전 건은 스케줄러가 40분 뒤 정리하니 프론트가 할 일은 없어요.
 
-목업(`src/mock/handlers/wallet.ts`)은 백엔드와 같은 경로·응답 형태로 맞춰 뒀어요. 다만 목업은 주머니가 하나라 `settlementBalance` 는 항상 0, 원장 `account` 는 항상 `DEPOSIT` 이에요.
+결제·지갑 API 의 실패 응답에는 공통 필드에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `api/client.ts` 의 `ApiError` 가 이 값을 같은 이름으로 담아 주니 결제 화면에서는 `error.retryable` 로 "다시 시도" 분기를 하면 돼요.
+
+목업(`src/mock/handlers/wallet.ts`, `payment.ts`)은 백엔드와 같은 경로·응답 형태로 맞춰 뒀어요. 다만 목업은 주머니가 하나라 `settlementBalance` 는 항상 0, 원장 `account` 는 항상 `DEPOSIT` 이고, 충전 건은 메모리에만 있어 새로고침하면 사라져요(승인된 금액은 잔액에 남아요). 백엔드에 없던 `wallet.transactions`·`wallet.charge` 키는 삭제했어요.
 
 에러 응답은 공통 `{ isSuccess, errorCode, message }` 에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `retryable` 로 "다시 결제하기" 분기를 하려면 `api/client.ts` 의 `ApiError` 확장이 필요해요. 잔액 부족은 `WALLET201`.
 

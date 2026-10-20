@@ -424,16 +424,6 @@ export const apiRegistry = {
     status: 'done',
     note: '?amount= → { balance, walletUseAmount, shortage, needsCharge }. 저장 안 함',
   },
-  // 아래 키는 백엔드에 없음. ChargeDialog 가 아직 참조하므로
-  // 충전 연동(payment.chargeRequest → 토스 결제창 → payment.chargeConfirm)에서 교체한 뒤 삭제한다.
-  'wallet.charge': {
-    method: 'POST',
-    path: '/api/v1/wallet/me/charge',
-    title: '[제거 예정] 예치금 충전',
-    owner: '김지유',
-    status: 'proposed',
-    note: '백엔드 없음 → payment.chargeRequest → 토스 결제창 → payment.chargeConfirm 으로 대체',
-  },
   'refund.detail': {
     method: 'GET',
     path: '/api/v1/refunds/{refundId}',

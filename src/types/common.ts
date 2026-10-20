@@ -5,11 +5,20 @@ export interface ApiSuccessBody<T> {
   data: T
 }
 
-/** 백엔드 공통 실패 응답 */
+/**
+ * 백엔드 공통 실패 응답.
+ * 결제·지갑 API 는 여기에 retryable / pgCode / pgMessage 를 더해 준다 (백엔드 PaymentErrorResponse). 다른 도메인은 없다.
+ */
 export interface ApiErrorBody {
   isSuccess: false
   errorCode: string
   message: string
+  /** 사용자가 "다시 시도" 로 해결할 수 있는 실패인지 (결제 API 전용) */
+  retryable?: boolean
+  /** 토스가 돌려준 실패 코드 (PG 에러일 때만) */
+  pgCode?: string | null
+  /** 토스가 돌려준 실패 메시지 (PG 에러일 때만) */
+  pgMessage?: string | null
 }
 
 export type ApiBody<T = unknown> = ApiSuccessBody<T> | ApiErrorBody
