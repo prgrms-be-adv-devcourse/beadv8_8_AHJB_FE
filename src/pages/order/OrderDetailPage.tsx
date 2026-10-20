@@ -52,7 +52,7 @@ export function OrderDetailPage() {
     queryKey: ['delivery', orderId, order?.state],
     queryFn: () => orderApi.delivery(orderId),
     enabled: hasDelivery,
-    refetchInterval: order?.state === 'SHIPPING' ? 5000 : false,
+    retry: false,
   })
 
   const refundQuery = useQuery({
