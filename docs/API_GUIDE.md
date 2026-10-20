@@ -63,7 +63,7 @@
 | 전환 키         | API                                              | 화면                                           | 상태                                                                 |
 | --------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------- |
 | `cart.list`     | GET `/api/v1/cart` 낙찰 상품                     | `pages/cart/CartPage.tsx`, `layout/Header.tsx` | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
-| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ✅ 잔액 부족이면 200 `isPaid:false` → `WALLET201`처럼 충전 창 표시    |
+| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ✅ 잔액 부족이면 200 `isPaid:false` + `data`(결제창 파라미터) → 토스 결제창에서 부족분 카드 결제 → `payment.confirm` |
 | `order.winner`  | GET `/api/v1/order/winner` 구매 목록             | `pages/me/MyOrdersPage.tsx`                    | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
 | `order.seller`  | GET `/api/v1/order/seller` 판매 목록             | `pages/me/MySalesPage.tsx`                     | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
 | `order.detail`  | GET `/api/v1/order/{orderId}` 주문 상세          | `pages/order/OrderDetailPage.tsx`              | ⚠️ `productName`, `thumbnailUrl` 없음. `confirmExpiredAt`은 백엔드 #193부터. 판매자 화면은 `?as=seller`로 구분 |
@@ -104,8 +104,12 @@
 | `payment.chargeDetail`  | GET `/api/v1/payments/charges/{chargeId}` 충전 상세       | (없음)                                    | ✅ 상태 · 결제수단 · `receiptUrl` · 실패 사유                                                                  |
 | `payment.list`          | GET `/api/v1/payments/me` 결제 내역(주문 묶음 단위)       | (없음)                                    | ✅ `walletUsedAmount`(예치금) + `chargeAmount`(카드 부족분). size 최대 50                                      |
 | `payment.detail`        | GET `/api/v1/payments/me/{paymentId}` 결제 상세           | (없음)                                    | ✅ 주문별 금액 · 환불 여부 · 연결된 충전 건                                                                    |
-| `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | (없음) `pages/cart/CartPage.tsx` 흐름과 연결 | ⚠️ 부족분 토스 결제 후 승인 · 충전 · 홀딩 한 번에. 현재 프론트는 `cart.pay` 실패 → 충전 모달 흐름이라 주문 팀과 조율 필요 |
-| `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 부족 금액 표시  | ✅ `{ balance, walletUseAmount, shortage, needsCharge }`. 지금은 프론트가 직접 계산                           |
+| `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | `pages/cart/PaymentSuccessPage.tsx` (`/cart/payment/success`) | ✅ `cart.pay`의 `data.pgOrderId`·`chargeAmount`로 결제창 → successUrl 쿼리를 그대로 전달. 승인 · 충전 · 홀딩 한 번에. 실패는 `/cart/payment/fail` |
+| `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 결제 요약(예치금으로 / 카드로) | ✅ 선택 금액이 바뀔 때 조회. 응답 전엔 잔액으로 직접 계산한 값 표시                                           |
+
+### 주문 결제(부족분 카드 결제) 흐름
+
+장바구니 결제하기 → `cart.pay` → 예치금이 충분하면 `isPaid:true` 로 끝. 부족하면 `isPaid:false` 와 `data { paymentId, totalPrice, chargeAmount, pgOrderId, orderName }` 가 와요. 프론트는 `data` 로 토스 결제창을 띄우고(금액은 총액이 아니라 **부족분 `chargeAmount`**), `/cart/payment/success` 에서 `payment.confirm` 을 호출하면 백엔드가 토스 승인 → 부족분 충전 → 주문 대금 홀딩까지 한 번에 끝내요. 주문 상태는 결제 완료 이벤트로 PAID 가 돼요. 결제창을 닫으면 주문은 결제 대기로 남고 다시 결제하기로 이어가요(백엔드 `cart.pay` 멱등 처리 · 1시간 뒤 주문 정리는 주문 팀 반영 예정). 승인 실패 코드 `CHARGE004`·`PG00x` 는 `retryable:true`(다시 결제하기), `PAYMENT005`(주문 만료) 는 `retryable:false`(카드 자동 취소 안내)예요.
 
 ### 충전(토스 결제창) 로컬 확인
 

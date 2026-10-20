@@ -3,6 +3,9 @@ import { ANONYMOUS, loadTossPayments, type TossPaymentsPayment, type TossPayment
 /** 토스 결제창에서 돌아오는 프론트 경로. successUrl / failUrl 은 절대 URL 이어야 해서 origin 을 붙여 쓴다 */
 export const CHARGE_SUCCESS_PATH = '/me/wallet/charge/success'
 export const CHARGE_FAIL_PATH = '/me/wallet/charge/fail'
+/** 주문 결제(장바구니, 부족분 카드 결제)에서 돌아오는 경로 */
+export const ORDER_PAYMENT_SUCCESS_PATH = '/cart/payment/success'
+export const ORDER_PAYMENT_FAIL_PATH = '/cart/payment/fail'
 
 /** 사용자가 결제창을 닫았을 때 SDK 가 던지는 에러 코드. 에러로 보여 주지 않는다 */
 export const TOSS_USER_CANCEL = 'USER_CANCEL'
