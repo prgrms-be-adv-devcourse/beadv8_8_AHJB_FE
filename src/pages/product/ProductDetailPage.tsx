@@ -214,6 +214,7 @@ export function ProductDetailPage() {
               auctionId={auction.auctionId}
               bidCount={auction.bidCount}
               live={auction.status === 'IN_PROGRESS'}
+              won={auction.status === 'WON' || auction.status === 'PAID' || auction.status === 'COMPLETED'}
             />
           ) : null}
           <QnaSection productId={product.productId} isMine={product.isMine} />

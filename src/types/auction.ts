@@ -46,7 +46,8 @@ export interface AuctionInfo {
   startAt: string
   status: AuctionStatus
   currentPrice: number
-  bidIncrement: number
+  /** 진행 중이 아니면 백엔드가 null 을 줌 */
+  bidIncrement: number | null
   /** 종료된 경매는 백엔드가 null 을 줄 수 있음 */
   minBidPrice: number | null
   bidCount: number

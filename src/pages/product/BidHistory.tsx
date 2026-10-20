@@ -16,6 +16,8 @@ interface BidHistoryProps {
   bidCount: number
   /** 진행 중이면 5초마다 새로고침, 1위 표시가 '최고' */
   live: boolean
+  /** 낙찰된 경매(WON·PAID·COMPLETED)면 1위에 '낙찰' 표시. 유찰·미결제·환불이면 표시 안 함 */
+  won: boolean
 }
 
 /**
@@ -24,7 +26,7 @@ interface BidHistoryProps {
  * 백엔드 size 최대 50 제한 때문에 page 0, 1, 2 … 를 size 10 으로 받아 이어 붙인다.
  * 진행 중 5초 폴링·입찰 수 변화 시 새로고침은 불러온 페이지 전체를 다시 받는다.
  */
-export function BidHistory({ auctionId, bidCount, live }: BidHistoryProps) {
+export function BidHistory({ auctionId, bidCount, live, won }: BidHistoryProps) {
   const query = useInfiniteQuery({
     queryKey: ['auction', auctionId, 'bids'],
     queryFn: ({ pageParam }) => auctionApi.bids(auctionId, { page: pageParam, size: PAGE_SIZE }),
@@ -91,7 +93,7 @@ export function BidHistory({ auctionId, bidCount, live }: BidHistoryProps) {
                 <tr key={bid.bidId} className={`${i === 0 ? styles.top : ''} ${bid.isMine ? styles.mine : ''}`}>
                   <td>
                     <span className={styles.who}>
-                      {i === 0 ? <span className={styles.crown}>{live ? '최고' : '낙찰'}</span> : null}
+                      {i === 0 && (live || won) ? <span className={styles.crown}>{live ? '최고' : '낙찰'}</span> : null}
                       {bid.isMine ? '나' : bid.bidderNickname}
                     </span>
                   </td>

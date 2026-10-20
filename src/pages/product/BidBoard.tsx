@@ -240,7 +240,8 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
     },
   })
 
-  const increment = auction.bidIncrement
+  // 진행 중이 아니면 백엔드가 null 을 주므로 현재가 기준 단위로 대신 표시
+  const increment = auction.bidIncrement ?? bidIncrementOf(auction.currentPrice)
   const bidPrice = parseDigits(bidInput)
   // 원본은 4번째 인자로 bidCount 를 넘기지만 검사 함수가 쓰지 않음
   const validationError = touched ? validateBid(bidPrice, auction.currentPrice, minBidPrice ?? 0) : null

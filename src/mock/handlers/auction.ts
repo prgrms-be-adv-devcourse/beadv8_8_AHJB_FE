@@ -131,8 +131,9 @@ export function registerAuctionRoutes(): void {
           startAt: auction.startAt,
           status: auction.status,
           currentPrice: currentPriceOf(auction),
-          bidIncrement: bidUnitOf(currentPriceOf(auction)),
-          minBidPrice: minBidPriceOf(auction),
+          // 백엔드와 같이 진행 중일 때만 입찰 단위·최소 입찰가를 준다
+          bidIncrement: auction.status === 'IN_PROGRESS' ? bidUnitOf(currentPriceOf(auction)) : null,
+          minBidPrice: auction.status === 'IN_PROGRESS' ? minBidPriceOf(auction) : null,
           bidCount: auction.bidCount,
           endAt: auction.endAt,
           winningPrice: auction.winningPrice,
