@@ -102,12 +102,18 @@ export const DELIVERY_PROGRESS_CODES: DeliveryCode[] = [
   'DELIVERED',
 ]
 
-/** 예치금 거래 유형 (원본 Gx) */
+/** 원장 거래 유형 (원본 Gx). 백엔드 WalletTransactionType 전체. 원장 화면은 없고 충전·결제 내역 연동 시 참고용 */
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   CHARGE: '충전',
   CHARGE_CANCEL: '충전 취소',
+  WITHDRAWAL: '출금',
   HOLD_PAY: '결제',
+  HOLD_RECEIVE: '결제 보관',
+  SETTLEMENT_PAY: '정산 지급',
   SETTLEMENT_RECEIVE: '정산 입금',
+  FEE_PAY: '수수료 지급',
+  FEE_RECEIVE: '수수료 입금',
+  REFUND_PAY: '환불 지급',
   REFUND_RECEIVE: '환불 입금',
   REVERSAL: '정정',
 }

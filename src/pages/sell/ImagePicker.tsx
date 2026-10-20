@@ -12,7 +12,8 @@ interface ImagePickerProps {
   uploading: boolean
   fileInputRef: RefObject<HTMLInputElement>
   onFiles: (files: FileList | null) => void
-  onOpenSamples: () => void
+  /** 없으면 목업 사진 버튼을 숨긴다 (실제 업로드를 켰을 때) */
+  onOpenSamples?: () => void
   error: string | null
 }
 
@@ -82,9 +83,11 @@ export function ImagePicker({
         <p className={styles.help} style={{ flex: 1 }}>
           정면·뒷면·구성품·흠집을 찍어 주세요. 첫 장이 목록 대표 사진이에요. 최대 10장.
         </p>
-        <Button type="button" size="sm" variant="outline" onClick={onOpenSamples}>
-          목업 사진 고르기
-        </Button>
+        {onOpenSamples ? (
+          <Button type="button" size="sm" variant="outline" onClick={onOpenSamples}>
+            목업 사진 고르기
+          </Button>
+        ) : null}
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
     </section>

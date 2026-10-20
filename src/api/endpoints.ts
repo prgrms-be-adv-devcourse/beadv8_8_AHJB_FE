@@ -6,6 +6,7 @@ import type {
   MyProduct,
   ProductCreateRequest,
   ProductCreateResponse,
+  ProductImageUploadResponse,
   ProductDetail,
   ProductUpdateRequest,
   Qna,
@@ -25,9 +26,9 @@ import type {
   InstantWinResponse,
   MyBid,
 } from '@/types/auction'
-import type { CartItem } from '@/types/cart'
+import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
-import type { Wallet, WalletTransaction } from '@/types/wallet'
+import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
 import type {
@@ -84,6 +85,12 @@ export const productApi = {
    */
   upcoming: (params: Pick<AuctionListParams, 'category' | 'page' | 'size'>) =>
     http.get<AuctionListResponse>('product.upcoming', '/api/v1/products/upcoming', { ...params }),
+  /** 사진 1장 업로드 (판매자만). 받은 imageId 를 등록·수정의 imageIds 로 보낸다 */
+  uploadImage: (file: Blob, fileName: string) => {
+    const formData = new FormData()
+    formData.append('file', file, fileName)
+    return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
+  },
   /** 유찰·낙찰 무효 뒤 다음 회차 열기 */
   reopen: (productId: Id) =>
     http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),
@@ -131,7 +138,8 @@ export const auctionApi = {
 /** 장바구니 (원본 Ga) */
 export const cartApi = {
   list: () => http.get<CartItem[]>('cart.list', '/api/v1/cart'),
-  pay: (productIds: number[]) => http.post<null>('cart.pay', '/api/v1/cart/payment', { productIds }),
+  pay: (productIds: number[]) =>
+    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds }),
 }
 
 /** 주문 (원본 js) */
@@ -147,11 +155,16 @@ export const orderApi = {
   delivery: (orderId: Id) => http.get<DeliveryStatus>('delivery.status', `/api/v1/order/${orderId}/delivery`),
 }
 
-/** 예치금 (원본 Mi) */
+/** 지갑 (원본 Mi). 백엔드 WalletApiController */
 export const walletApi = {
+  /** 잔액. balance = 예치금, settlementBalance = 정산금 */
   me: () => http.get<Wallet>('wallet.me', '/api/v1/wallet/me'),
-  transactions: (params: PageParams = {}) =>
-    http.get<PageResponse<WalletTransaction>>('wallet.transactions', '/api/v1/wallet/me/transactions', params),
+  /** 원장(입출금 내역). 최신순, size 최대 50 */
+  ledger: (params: LedgerParams = {}) => http.get<LedgerPage>('wallet.ledger', '/api/v1/wallet/me/ledger', params),
+  /** 홀딩(묶인 돈 / 정산 예정). role 기본 BUYER, size 최대 50 */
+  holdings: (params: HoldingParams = {}) =>
+    http.get<HoldingPage>('wallet.holdings', '/api/v1/wallet/me/holdings', params),
+  /** [제거 예정] 목업 전용 충전. 토스 흐름(payment.chargeRequest → chargeConfirm)으로 교체 예정 */
   charge: (amount: number) => http.post<Wallet>('wallet.charge', '/api/v1/wallet/me/charge', { amount }),
 }
 
