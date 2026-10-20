@@ -27,7 +27,7 @@ import type {
 } from '@/types/auction'
 import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
-import type { Wallet, WalletTransaction } from '@/types/wallet'
+import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
 import type {
@@ -136,11 +136,16 @@ export const orderApi = {
   delivery: (orderId: Id) => http.get<DeliveryStatus>('delivery.status', `/api/v1/order/${orderId}/delivery`),
 }
 
-/** 예치금 (원본 Mi) */
+/** 지갑 (원본 Mi). 백엔드 WalletApiController */
 export const walletApi = {
+  /** 잔액. balance = 예치금, settlementBalance = 정산금 */
   me: () => http.get<Wallet>('wallet.me', '/api/v1/wallet/me'),
-  transactions: (params: PageParams = {}) =>
-    http.get<PageResponse<WalletTransaction>>('wallet.transactions', '/api/v1/wallet/me/transactions', params),
+  /** 원장(입출금 내역). 최신순, size 최대 50 */
+  ledger: (params: LedgerParams = {}) => http.get<LedgerPage>('wallet.ledger', '/api/v1/wallet/me/ledger', params),
+  /** 홀딩(묶인 돈 / 정산 예정). role 기본 BUYER, size 최대 50 */
+  holdings: (params: HoldingParams = {}) =>
+    http.get<HoldingPage>('wallet.holdings', '/api/v1/wallet/me/holdings', params),
+  /** [제거 예정] 목업 전용 충전. 토스 흐름(payment.chargeRequest → chargeConfirm)으로 교체 예정 */
   charge: (amount: number) => http.post<Wallet>('wallet.charge', '/api/v1/wallet/me/charge', { amount }),
 }
 

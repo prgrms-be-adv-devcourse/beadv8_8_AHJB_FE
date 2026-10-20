@@ -128,13 +128,14 @@ export const toRefundProcessView = (refund: RefundRecord) => ({
   processedAt: refund.processedAt,
 });
 
-/** 내 지갑: 보관금 = HELD + CONFIRMED 홀딩 합계 */
+/**
+ * 내 지갑 (백엔드 BalanceResponseDto 형태).
+ * 목업은 주머니가 하나라 정산금도 balance 에 합쳐져 있고 settlementBalance 는 항상 0 이다.
+ * 보관 중 금액(heldTotal)은 /wallet/me/holdings 에서 준다.
+ */
 export function toWalletView(memberId: number) {
   return {
-    walletId: 3000 + memberId,
     balance: walletOf(memberId).balance,
-    heldAmount: db.holdings
-      .filter((h) => h.winnerId === memberId && (h.status === 'HELD' || h.status === 'CONFIRMED'))
-      .reduce((acc, h) => acc + h.amount, 0),
+    settlementBalance: 0,
   };
 }
