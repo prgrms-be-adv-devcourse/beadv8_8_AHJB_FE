@@ -41,6 +41,12 @@ export interface ChargeSummary {
   failureMessage: string | null
 }
 
+/** GET /api/v1/payments/charges/me 파라미터. 최신순, size 최대 50 */
+export interface ChargeListParams {
+  page?: number
+  size?: number
+}
+
 /** POST /api/v1/payments/charges 요청 */
 export interface ChargeRequest {
   amount: number

@@ -29,7 +29,14 @@ import type {
 import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
 import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
-import type { ChargeConfirmRequest, ChargeSummary, PaymentConfirmRequest, PaymentQuote, PaymentSummary } from '@/types/payment'
+import type {
+  ChargeConfirmRequest,
+  ChargeListParams,
+  ChargeSummary,
+  PaymentConfirmRequest,
+  PaymentQuote,
+  PaymentSummary,
+} from '@/types/payment'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
 import type {
@@ -176,6 +183,15 @@ export const paymentApi = {
   /** 충전 승인. 토스 successUrl 쿼리(paymentKey, orderId, amount)를 그대로 넘긴다. 멱등 */
   confirmCharge: (body: ChargeConfirmRequest) =>
     http.post<ChargeSummary>('payment.chargeConfirm', '/api/v1/payments/charges/confirm', body),
+  /** 내 충전 내역 (수동 충전 + 주문 부족분 충전). 최신순 */
+  charges: (params: ChargeListParams = {}) =>
+    http.get<PageResponse<ChargeSummary>>('payment.charges', '/api/v1/payments/charges/me', params),
+  /** 충전 1건 상세 */
+  chargeDetail: (chargeId: number) =>
+    http.get<ChargeSummary>('payment.chargeDetail', `/api/v1/payments/charges/${chargeId}`),
+  /** 충전 취소. cancelable 인 건만. 예치금에서 차감한 뒤 토스 결제를 취소한다 */
+  cancelCharge: (chargeId: number) =>
+    http.post<ChargeSummary>('payment.chargeCancel', `/api/v1/payments/charges/${chargeId}/cancel`),
   /** 주문 결제 승인. 토스 승인 → 부족분 충전 → 주문 대금 홀딩까지 한 번에. 멱등 */
   confirmPayment: (body: PaymentConfirmRequest) =>
     http.post<PaymentSummary>('payment.confirm', '/api/v1/payments/confirm', body),

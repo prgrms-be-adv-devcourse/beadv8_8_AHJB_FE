@@ -2,7 +2,7 @@ import { persist } from '../db';
 import { fail } from '../errors';
 import { ok, route, type HandlerContext } from '../router';
 import { addTransaction, payCartItems, requireMe, walletOf } from '../services';
-import { formatLocalDateTime as ldt, now } from '../utils';
+import { formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 
 // 백엔드 PaymentApiController 와 같은 경로·응답 형태.
 // 목업은 토스 결제창을 거치지 않으므로 ChargeDialog / CartPage 가 요청 직후 바로 승인을 부른다.
@@ -23,6 +23,7 @@ interface MockCharge {
   requestedAt: string;
   approvedAt: string | null;
   usedAt: string | null;
+  canceledAt: string | null;
   /** FOR_PAYMENT 전용: 주문 결제 정보 */
   payment: MockPayment | null;
 }
@@ -61,7 +62,7 @@ function toChargeSummary(charge: MockCharge) {
     requestedAt: charge.requestedAt,
     approvedAt: charge.approvedAt,
     usedAt: charge.usedAt,
-    canceledAt: null,
+    canceledAt: charge.canceledAt,
     failureCode: null,
     failureMessage: null,
   };
@@ -96,6 +97,7 @@ function newCharge(memberId: number, amount: number, purpose: ChargePurpose, at:
     requestedAt: ldt(at),
     approvedAt: null,
     usedAt: null,
+    canceledAt: null,
     payment,
   };
   charges.set(charge.pgOrderId, charge);
@@ -147,6 +149,12 @@ function findChargeForConfirm(ctx: HandlerContext): { charge: MockCharge; amount
   if (!charge) fail('CHARGE001');
   if (charge.memberId !== me.id) fail('CHARGE007');
   return { charge, amount };
+}
+
+function findChargeById(chargeId: number): MockCharge {
+  const charge = [...charges.values()].find((c) => c.chargeId === chargeId);
+  if (!charge) fail('CHARGE001');
+  return charge;
 }
 
 export function registerPaymentRoutes(): void {
@@ -201,6 +209,40 @@ export function registerPaymentRoutes(): void {
     payment.paidAt = ldt(at);
     persist();
     return ok(toPaymentSummary(payment));
+  });
+
+  /** 내 충전 내역 (최신순). /charges/:chargeId 보다 먼저 등록해 'me' 가 id 로 잡히지 않게 한다 */
+  route('GET', '/api/v1/payments/charges/me', (ctx) => {
+    const me = requireMe(ctx);
+    const { page, size } = getPageParams(ctx.params, 20);
+    const mine = [...charges.values()]
+      .filter((c) => c.memberId === me.id)
+      .sort((a, b) => b.chargeId - a.chargeId)
+      .map(toChargeSummary);
+    return ok(paginate(mine, page, size));
+  });
+
+  /** 충전 상세 */
+  route('GET', '/api/v1/payments/charges/:chargeId', (ctx) => {
+    const me = requireMe(ctx);
+    const charge = findChargeById(Number(ctx.pathParams.chargeId));
+    if (charge.memberId !== me.id) fail('CHARGE007');
+    return ok(toChargeSummary(charge));
+  });
+
+  /** 충전 취소: CHARGED 이고 안 쓰인 건만. 예치금에서 차감(CHARGE_CANCEL) 후 CANCELED. 잔액이 모자라면 거절 */
+  route('POST', '/api/v1/payments/charges/:chargeId/cancel', (ctx) => {
+    const me = requireMe(ctx);
+    const charge = findChargeById(Number(ctx.pathParams.chargeId));
+    if (charge.memberId !== me.id) fail('CHARGE007');
+    if (charge.status !== 'CHARGED') fail('CHARGE005');
+    if (walletOf(me.id).balance < charge.amount) fail('WALLET201');
+    const at = now();
+    addTransaction(me.id, 'CHARGE_CANCEL', -charge.amount, 'CHARGE', charge.chargeId, '충전 취소 (토스페이먼츠 환불)', at);
+    charge.status = 'CANCELED';
+    charge.canceledAt = ldt(at);
+    persist();
+    return ok(toChargeSummary(charge));
   });
 
   /** 결제 전 견적: 지금 잔액으로 amount 를 결제하면 예치금/카드가 각각 얼마인지. 저장하지 않는다 */

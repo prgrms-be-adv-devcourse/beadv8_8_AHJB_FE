@@ -2,6 +2,7 @@ import type { AuctionDuration, Category, Manufacturer, ShippingFeeType } from '@
 import type { FailureReason } from '@/types/auction'
 import type { Carrier, DeliveryCode } from '@/types/order'
 import type { TransactionType } from '@/types/wallet'
+import type { ChargePurpose, ChargeStatus } from '@/types/payment'
 import type { AccountStatus, WarningReason } from '@/types/member'
 
 /** 카테고리 이름 (원본 $n) */
@@ -116,6 +117,21 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   REFUND_PAY: '환불 지급',
   REFUND_RECEIVE: '환불 입금',
   REVERSAL: '정정',
+}
+
+/** 충전 건 상태 */
+export const CHARGE_STATUS_LABELS: Record<ChargeStatus, string> = {
+  REQUESTED: '결제 대기',
+  CHARGED: '충전 완료',
+  USED: '주문에 사용',
+  CANCELED: '충전 취소',
+  ABORTED: '결제 안 됨',
+}
+
+/** 충전 목적 */
+export const CHARGE_PURPOSE_LABELS: Record<ChargePurpose, string> = {
+  MANUAL: '예치금 충전',
+  FOR_PAYMENT: '주문 결제 부족분',
 }
 
 /** 경고 사유 (원본 Xx) */
