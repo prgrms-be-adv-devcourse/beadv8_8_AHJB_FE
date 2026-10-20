@@ -22,7 +22,11 @@ interface ProductCardProps {
 /** 경매 상품 카드 (원본 bo) */
 export function ProductCard({ item, showWish = true }: ProductCardProps) {
   const now = useNow()
-  const badge = auctionStatusBadge(item.status, item.endAt, now)
+  // 무산 사유가 없으면 입찰 0건 = 유찰로 본다 (목록 API 에 failureReason 추가 전까지)
+  const failureReason = item.failureReason ?? (item.status === 'FAILED' && item.bidCount === 0 ? 'NO_BID' : null)
+  const badge = auctionStatusBadge(item.status, item.endAt, now, failureReason)
+  /** 유찰은 낙찰가가 없어서 시작가를 보여 준다 */
+  const noBidFailed = failureReason === 'NO_BID'
   const isLive = item.status === 'IN_PROGRESS' && item.endAt
   const remaining = isLive
     ? Date.parse(item.endAt!) - now
@@ -67,7 +71,7 @@ export function ProductCard({ item, showWish = true }: ProductCardProps) {
               .join(' · ')}
           </p>
           <div className={styles.priceRow}>
-            <span className={styles.priceLabel}>{ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가'}</span>
+            <span className={styles.priceLabel}>{noBidFailed ? '시작가' : ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가'}</span>
             <span className={`${styles.price} num`}>{formatWon(item.currentPrice)}</span>
             <span className={`${styles.bids} num`}>
               {item.bidCount ? `입찰 ${item.bidCount}` : ''}

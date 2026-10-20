@@ -43,6 +43,8 @@ export interface AuctionSummary {
   shippingFee?: number
   /** 곧 시작 카드의 '○○ 후 시작'에 필요 */
   startAt?: string
+  /** 무산 사유. 경매 목록 API 에 추가 예정, 없으면 카드가 입찰 수로 유찰을 추정 */
+  failureReason?: FailureReason | null
 }
 
 /** GET /api/v1/auctions 응답 (페이지 + 서버 시각) */

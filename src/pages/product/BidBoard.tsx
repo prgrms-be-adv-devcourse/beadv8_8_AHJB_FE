@@ -470,7 +470,11 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             variant="highlight"
             size="lg"
             fullWidth
-            disabled={isLive && (me.isHighestBidder || remaining <= 0)}
+            // 최소 입찰가 미만·단위 불일치도 비활성 (즉시낙찰가 이상이면 허용). 비로그인은 눌러서 로그인으로
+            disabled={
+              isLive &&
+              (me.isHighestBidder || remaining <= 0 || (isLoggedIn && !!validationError && !reachesInstantWin))
+            }
             loading={bidMutation.isPending}
           >
             {isLoggedIn
