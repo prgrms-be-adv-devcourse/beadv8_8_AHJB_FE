@@ -83,10 +83,16 @@ export interface ProductCreateResponse {
   productId: number
 }
 
-/** PATCH /api/v1/products/{productId} */
-export type ProductUpdateRequest = Partial<
-  Omit<ProductCreateRequest, 'policyAgreed' | 'policyVersion' | 'imageIds'>
->
+/** POST /api/v1/products/images (multipart, 파일 1장) */
+export interface ProductImageUploadResponse {
+  /** 상품 등록·수정의 imageIds 로 보낸다 */
+  imageId: number
+  /** 미리보기용 */
+  imageUrl: string
+}
+
+/** PATCH /api/v1/products/{productId}. imageIds 를 보내면 이미지 목록 전체를 교체한다 */
+export type ProductUpdateRequest = Partial<Omit<ProductCreateRequest, 'policyAgreed' | 'policyVersion'>>
 
 /** POST /api/v1/products/{productId}/rounds */
 export interface ReopenResponse {

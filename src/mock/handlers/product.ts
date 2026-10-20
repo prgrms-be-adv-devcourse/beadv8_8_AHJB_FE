@@ -11,7 +11,15 @@ import {
   wishCountOf,
 } from '../services';
 import type { AuctionDuration, FeeType, ProductRecord } from '../types';
-import { POLICY_VERSION, formatLocalDateTime as ldt, now, parseTime, shippingFeeOf } from '../utils';
+import {
+  POLICY_VERSION,
+  formatLocalDateTime as ldt,
+  getPageParams,
+  now,
+  paginate,
+  parseTime,
+  shippingFeeOf,
+} from '../utils';
 import { productAuctionStatus, toAuctionSummary } from '../views';
 
 interface ShippingInput {
@@ -81,6 +89,15 @@ function findEditableProduct(ctx: HandlerContext): ProductRecord {
 }
 
 export function registerProductRoutes(): void {
+  // 실제 서버는 S3 에 저장하지만, 목업은 data URL 을 그대로 imageUrl 로 돌려준다
+  route('POST', '/api/v1/products/images', (ctx) => {
+    const me = requireMe(ctx);
+    if (!me.seller) fail('COMMON003');
+    const { file } = bodyOf<{ file?: string }>(ctx);
+    if (!file?.startsWith('data:image/')) fail('COMMON001');
+    return ok({ imageId: nextId('productImages'), imageUrl: file }, 201);
+  });
+
   route('POST', '/api/v1/products', (ctx) => {
     const me = requireMe(ctx);
     if (!me.seller) fail('COMMON003');
@@ -164,6 +181,19 @@ export function registerProductRoutes(): void {
   });
 
   // /products/:id 보다 먼저 등록해야 한다
+  // 곧 시작(경매 생성 전) 목록. 상품 담당 미구현 API 의 목업 (경로는 제안). 시작 임박순
+  route('GET', '/api/v1/products/upcoming', ({ params }) => {
+    const category = params.get('category');
+    const { page, size } = getPageParams(params, 20);
+    let items = db.products
+      .filter((p) => !p.deleted)
+      .map(toAuctionSummary)
+      .filter((item) => item.status === 'SCHEDULED');
+    if (category) items = items.filter((item) => item.category === category);
+    items.sort((a, b) => parseTime(a.startAt) - parseTime(b.startAt));
+    return ok(paginate(items, page, size));
+  });
+
   route('GET', '/api/v1/products/me', (ctx) => {
     const me = requireMe(ctx);
     const items = db.products

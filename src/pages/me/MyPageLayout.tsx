@@ -59,7 +59,8 @@ export function MyPageLayout() {
     { label: '결제 대기', value: cartQuery.data?.length, to: '/cart', hot: true },
     {
       label: '입찰 중',
-      value: bidsQuery.data?.filter((bid) => bid.status === 'IN_PROGRESS').length,
+      // 백엔드가 진행 중 경매만 주므로 개수 = 응답 길이
+      value: bidsQuery.data?.length,
       to: '/me/bids',
     },
     isSeller

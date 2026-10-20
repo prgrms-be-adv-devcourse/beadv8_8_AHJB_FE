@@ -76,8 +76,27 @@ async function sendToMock(
   token: string | null,
 ): Promise<RawResponse> {
   const { handleMockRequest } = await import('@/mock/server')
-  const response = await handleMockRequest({ method, path, params, body, token })
+  const mockBody = body instanceof FormData ? await formDataToMockBody(body) : body
+  const response = await handleMockRequest({ method, path, params, body: mockBody, token })
   return { status: response.status, body: response.body as RawResponse['body'] }
+}
+
+/** 목업 핸들러는 동기라서 FormData 의 파일을 미리 data URL 로 바꿔 평범한 객체로 넘긴다 */
+async function formDataToMockBody(formData: FormData): Promise<Record<string, string>> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of formData.entries()) {
+    result[key] = typeof value === 'string' ? value : await blobToDataUrl(value)
+  }
+  return result
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('파일을 읽지 못했어요.'))
+    reader.onload = () => resolve(String(reader.result))
+    reader.readAsDataURL(blob)
+  })
 }
 
 /** 실제 서버로 보낸다 (의도된 변경 #2) */
@@ -90,8 +109,10 @@ async function sendToServer(
 ): Promise<RawResponse> {
   const queryString = params.toString()
   const url = `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ''}`
+  const isFormData = body instanceof FormData
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  // FormData 는 브라우저가 boundary 를 포함한 multipart Content-Type 을 직접 붙인다.
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
 
   let response: Response
@@ -99,7 +120,7 @@ async function sendToServer(
     response = await fetch(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
     throw new ApiError('NETWORK', '서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.', 0)

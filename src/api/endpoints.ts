@@ -6,6 +6,7 @@ import type {
   MyProduct,
   ProductCreateRequest,
   ProductCreateResponse,
+  ProductImageUploadResponse,
   ProductDetail,
   ProductUpdateRequest,
   Qna,
@@ -19,7 +20,7 @@ import type {
 import type {
   AuctionDetail,
   AuctionListParams,
-  AuctionSummary,
+  AuctionListResponse,
   Bid,
   BidResponse,
   InstantWinResponse,
@@ -79,6 +80,18 @@ export const productApi = {
     http.patch<null>('product.update', `/api/v1/products/${productId}`, body),
   /** 204 */
   remove: (productId: Id) => http.delete<null>('product.delete', `/api/v1/products/${productId}`),
+  /**
+   * 곧 시작(경매 생성 전) 목록. 경매 행이 없어서 상품 도메인이 제공한다 (미구현, 경로는 제안).
+   * status 는 보내지 않는다. 카테고리·페이지만.
+   */
+  upcoming: (params: Pick<AuctionListParams, 'category' | 'page' | 'size'>) =>
+    http.get<AuctionListResponse>('product.upcoming', '/api/v1/products/upcoming', { ...params }),
+  /** 사진 1장 업로드 (판매자만). 받은 imageId 를 등록·수정의 imageIds 로 보낸다 */
+  uploadImage: (file: Blob, fileName: string) => {
+    const formData = new FormData()
+    formData.append('file', file, fileName)
+    return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
+  },
   /** 유찰·낙찰 무효 뒤 다음 회차 열기 */
   reopen: (productId: Id) =>
     http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),
@@ -105,8 +118,14 @@ export const wishApi = {
 
 /** 경매 (원본 dr) */
 export const auctionApi = {
+  /** 진행 중·종료 목록. 곧 시작은 productApi.upcoming (listByTab 이 골라 준다) */
   list: (params: AuctionListParams) =>
-    http.get<PageResponse<AuctionSummary>>('auction.list', '/api/v1/auctions', { ...params }),
+    http.get<AuctionListResponse>('auction.list', '/api/v1/auctions', { ...params }),
+  /** 탭에 맞는 API 로 목록 조회: 곧 시작 → 상품 API, 나머지 → 경매 API */
+  listByTab: (params: AuctionListParams) =>
+    params.status === 'SCHEDULED'
+      ? productApi.upcoming({ category: params.category, page: params.page, size: params.size })
+      : auctionApi.list(params),
   detail: (auctionId: Id) => http.get<AuctionDetail>('auction.detail', `/api/v1/auctions/${auctionId}`),
   bids: (auctionId: Id, params: PageParams = {}) =>
     http.get<PageResponse<Bid>>('auction.bids', `/api/v1/auctions/${auctionId}/bids`, params),
