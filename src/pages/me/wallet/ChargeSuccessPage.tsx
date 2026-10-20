@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { formatWon } from '@/lib/format'
-import { readTossSuccessParams } from '@/lib/toss'
+import { readReturnTo, readTossSuccessParams } from '@/lib/toss'
 import type { ChargeSummary } from '@/types/payment'
 import styles from '../MyPage.module.css'
 
@@ -24,6 +24,8 @@ export function ChargeSuccessPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const params = readTossSuccessParams(search)
+  // 장바구니에서 충전을 시작했으면 /cart 로, 아니면 예치금 화면으로 돌아간다
+  const returnTo = readReturnTo(search, '/me/wallet')
   const started = useRef(false)
 
   const confirm = useMutation<ChargeSummary, ApiError>({
@@ -31,10 +33,15 @@ export function ChargeSuccessPage() {
       if (!params) throw new Error('결제 정보가 없어요.')
       return paymentApi.confirmCharge({ pgOrderId: params.orderId, paymentKey: params.paymentKey, amount: params.amount })
     },
+    // 승인이 실패해도 토스 승인·충전까지는 됐을 수 있으니 잔액은 서버 기준으로 다시 불러온다
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+      void queryClient.invalidateQueries({ queryKey: ['cart'] })
+    },
     onSuccess: (charge) => {
       toast(`${formatWon(charge.amount)} 충전했어요.`, { tone: 'success' })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
-      navigate('/me/wallet', { replace: true })
+      navigate(returnTo, { replace: true })
     },
   })
 
@@ -46,8 +53,8 @@ export function ChargeSuccessPage() {
   }, [])
 
   const backButton = (
-    <LinkButton to="/me/wallet" variant="highlight" size="sm">
-      예치금으로 돌아가기
+    <LinkButton to={returnTo} variant="highlight" size="sm">
+      {returnTo === '/cart' ? '장바구니로 돌아가기' : '예치금으로 돌아가기'}
     </LinkButton>
   )
 

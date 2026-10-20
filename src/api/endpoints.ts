@@ -29,7 +29,7 @@ import type {
 import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
 import type { HoldingPage, HoldingParams, LedgerPage, LedgerParams, Wallet } from '@/types/wallet'
-import type { ChargeConfirmRequest, ChargeSummary } from '@/types/payment'
+import type { ChargeConfirmRequest, ChargeSummary, PaymentConfirmRequest, PaymentQuote, PaymentSummary } from '@/types/payment'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
 import type {
@@ -176,6 +176,11 @@ export const paymentApi = {
   /** 충전 승인. 토스 successUrl 쿼리(paymentKey, orderId, amount)를 그대로 넘긴다. 멱등 */
   confirmCharge: (body: ChargeConfirmRequest) =>
     http.post<ChargeSummary>('payment.chargeConfirm', '/api/v1/payments/charges/confirm', body),
+  /** 주문 결제 승인. 토스 승인 → 부족분 충전 → 주문 대금 홀딩까지 한 번에. 멱등 */
+  confirmPayment: (body: PaymentConfirmRequest) =>
+    http.post<PaymentSummary>('payment.confirm', '/api/v1/payments/confirm', body),
+  /** 결제 전 견적: 지금 잔액으로 amount 를 결제하면 예치금/카드가 각각 얼마인지 */
+  quote: (amount: number) => http.get<PaymentQuote>('payment.quote', '/api/v1/payments/quote', { amount }),
 }
 
 /** 환불 (원본 cd) */

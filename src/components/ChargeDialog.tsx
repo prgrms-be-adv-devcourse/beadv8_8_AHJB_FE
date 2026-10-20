@@ -4,7 +4,15 @@ import { isRealApi } from '@/api/config'
 import { paymentApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
 import { formatAmountInput, formatWon, parseDigits } from '@/lib/format'
-import { TOSS_USER_CANCEL, closeTossPaymentWindow, openTossPaymentWindow, tossErrorCode } from '@/lib/toss'
+import {
+  CHARGE_FAIL_PATH,
+  CHARGE_SUCCESS_PATH,
+  TOSS_USER_CANCEL,
+  closeTossPaymentWindow,
+  openTossPaymentWindow,
+  tossErrorCode,
+  withReturnTo,
+} from '@/lib/toss'
 import type { ChargeSummary } from '@/types/payment'
 import { Button } from './Button'
 import { DevApiNote } from './DevApiNote'
@@ -21,6 +29,8 @@ interface ChargeDialogProps {
   /** 모자란 금액. 있으면 1,000원 단위로 올려 미리 채운다 */
   suggested?: number
   onCharged?: () => void
+  /** 토스 결제창을 거쳐 충전을 마친 뒤 돌아올 경로. 기본은 예치금 화면(/me/wallet). 장바구니에서 열면 /cart */
+  returnTo?: string
 }
 
 /**
@@ -30,7 +40,7 @@ interface ChargeDialogProps {
  *       결제창으로 페이지가 이동하므로 이 컴포넌트에서 끝나지 않는다.
  * 목업: 결제창 없이 충전 요청 → 바로 승인(POST /payments/charges/confirm)까지 끝낸다.
  */
-export function ChargeDialog({ open, onClose, suggested, onCharged }: ChargeDialogProps) {
+export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: ChargeDialogProps) {
   const toast = useToast()
   const queryClient = useQueryClient()
   const [amountText, setAmountText] = useState('')
@@ -73,6 +83,8 @@ export function ChargeDialog({ open, onClose, suggested, onCharged }: ChargeDial
           amount: requested.amount,
           orderName: requested.orderName,
           customerEmail: tokenStore.getProfile()?.email,
+          successPath: withReturnTo(CHARGE_SUCCESS_PATH, returnTo),
+          failPath: withReturnTo(CHARGE_FAIL_PATH, returnTo),
         })
       } finally {
         // 결제창이 닫혔다(취소·오류). 금액 입력 모달을 다시 보여 준다
