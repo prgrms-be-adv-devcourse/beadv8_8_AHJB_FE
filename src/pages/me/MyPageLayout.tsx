@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet } from 'react-router-dom'
-import { auctionApi, cartApi, orderApi, walletApi } from '@/api/endpoints'
+import { auctionApi, cartApi, memberApi, orderApi, walletApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/Badge'
 import { Icon, type IconName } from '@/components/Icon'
@@ -49,6 +49,9 @@ export function MyPageLayout() {
     enabled: isSeller,
   })
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
+  // 회원 정보 화면과 같은 키라 캐시를 같이 쓴다
+  const warningsQuery = useQuery({ queryKey: ['me', 'warnings'], queryFn: memberApi.warnings, enabled: !!me })
+  const warningCount = warningsQuery.data?.warningCount ?? 0
   const wishedIds = useWishedProductIds()
 
   const salesTodoCount = (salesQuery.data ?? []).filter(
@@ -87,7 +90,7 @@ export function MyPageLayout() {
             <p style={{ display: 'flex', gap: 4, marginTop: 4 }}>
               <Badge variant="outline">구매자</Badge>
               {isSeller ? <Badge tone="won">판매자</Badge> : null}
-              {me && me.warningCount > 0 ? <Badge tone="closing">경고 {me.warningCount}</Badge> : null}
+              {warningCount > 0 ? <Badge tone="closing">경고 {warningCount}</Badge> : null}
             </p>
           </div>
         </div>

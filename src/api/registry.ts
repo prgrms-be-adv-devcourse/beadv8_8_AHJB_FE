@@ -70,10 +70,18 @@ export const apiRegistry = {
   'member.me': {
     method: 'GET',
     path: '/api/v1/member/me',
-    title: '내 정보',
+    title: '내 정보 상세',
     owner: '차승환',
-    status: 'proposed',
-    note: '없어도 됨: 토큰 + member.summary 로 대체. 생기면 내 정보 화면 상세(이름·휴대폰·배송지·계좌) 표시',
+    status: 'done',
+    note: '회원 정보 화면 기본 정보(이름·휴대폰·생년월일·배송지·가입일). 헤더용 내 정보는 토큰 + member.summary 로 만든다',
+  },
+  'member.seller': {
+    method: 'GET',
+    path: '/api/v1/member/me/seller',
+    title: '판매자 정보',
+    owner: '차승환',
+    status: 'done',
+    note: '정산 계좌(마스킹)·등록일. 판매자일 때만 부른다',
   },
   'member.summary': {
     method: 'GET',
@@ -86,9 +94,9 @@ export const apiRegistry = {
   'member.warnings': {
     method: 'GET',
     path: '/api/v1/member/me/warnings',
-    title: '내 경고 이력',
+    title: '계정 상태 · 경고 이력',
     owner: '차승환',
-    status: 'proposed',
+    status: 'done',
   },
   'product.create': {
     method: 'POST',

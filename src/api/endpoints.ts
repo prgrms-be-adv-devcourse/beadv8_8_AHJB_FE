@@ -1,7 +1,14 @@
 import { http } from './client'
 import type { PageParams, PageResponse } from '@/types/common'
 import type { AvailabilityResponse, LoginRequest, LoginResponse, SignupRequest } from '@/types/auth'
-import type { Me, MemberSummary, RegisterSellerRequest, Warning } from '@/types/member'
+import type {
+  AccountStatusInfo,
+  Me,
+  MemberDetail,
+  MemberSummary,
+  RegisterSellerRequest,
+  SellerInfo,
+} from '@/types/member'
 import type {
   MyProduct,
   ProductCreateRequest,
@@ -62,9 +69,13 @@ export const authApi = {
 
 /** 회원 (원본 Fo) */
 export const memberApi = {
+  /** 목업 전용: 로그인이 목업일 때 AuthProvider 가 내 정보(Me)를 만든다. 목업 /member/me 는 detail 필드도 같이 준다 */
   me: () => http.get<Me>('member.me', '/api/v1/member/me'),
+  /** 회원 정보 화면의 기본 정보 */
+  detail: () => http.get<MemberDetail>('member.me', '/api/v1/member/me'),
   summary: () => http.get<MemberSummary>('member.summary', '/api/v1/member/me/summary'),
-  warnings: () => http.get<Warning[]>('member.warnings', '/api/v1/member/me/warnings'),
+  seller: () => http.get<SellerInfo>('member.seller', '/api/v1/member/me/seller'),
+  warnings: () => http.get<AccountStatusInfo>('member.warnings', '/api/v1/member/me/warnings'),
   /** 201, 바디 없음 */
   registerSeller: (body: RegisterSellerRequest) =>
     http.post<null>('member.registerSeller', '/api/v1/member/me/seller', body),

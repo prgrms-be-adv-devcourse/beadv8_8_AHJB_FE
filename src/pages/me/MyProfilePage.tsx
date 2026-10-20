@@ -8,22 +8,29 @@ import { DevApiNote } from '@/components/DevApiNote'
 import { useToast } from '@/components/Toast'
 import { formatDotDate, formatPhone } from '@/lib/format'
 import { ACCOUNT_STATUS_LABELS, WARNING_REASON_LABELS } from '@/lib/labels'
+import type { WarningReason } from '@/types/member'
 import styles from './MyPage.module.css'
 
-/** 회원 정보 /me/profile (원본 JI) */
+/** 경고 사유. 백엔드는 문자열로 주므로 모르는 값이면 그대로 보여준다 */
+function warningReasonLabel(reason: string): string {
+  return WARNING_REASON_LABELS[reason as WarningReason] ?? reason
+}
+
+/** 회원 정보 /me/profile (원본 JI). 블럭마다 API 를 따로 부른다 */
 export function MyProfilePage() {
   const { me, logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
-  const warningsQuery = useQuery({
-    queryKey: ['me', 'warnings'],
-    queryFn: memberApi.warnings,
-    // member/me 없이 로그인한 경우(partial)는 경고 이력 API 도 아직 없어서 부르지 않는다
-    enabled: !!me && !me.partial,
-  })
+  const detailQuery = useQuery({ queryKey: ['me', 'detail'], queryFn: memberApi.detail, enabled: !!me })
+  const sellerQuery = useQuery({ queryKey: ['me', 'seller'], queryFn: memberApi.seller, enabled: !!me?.isSeller })
+  const statusQuery = useQuery({ queryKey: ['me', 'warnings'], queryFn: memberApi.warnings, enabled: !!me })
 
   if (!me) return null
-  const address = me.address
+  const detail = detailQuery.data
+  const seller = sellerQuery.data
+  const status = statusQuery.data
+  // 상태 API 를 받기 전에는 내 정보 요약의 정지 여부로 보여준다
+  const accountStatus = status?.accountStatus ?? me.accountStatus
 
   return (
     <>
@@ -41,41 +48,35 @@ export function MyProfilePage() {
           로그아웃
         </Button>
       </div>
-      <DevApiNote ids={['member.me', 'member.warnings', 'auth.logout']} />
-      {me.partial ? (
-        <p className={styles.hint}>
-          회원 상세 정보(이름, 휴대폰, 배송지, 정산 계좌, 경고 이력)는 백엔드 조회 API가 아직 없어서 표시되지 않아요.
-        </p>
-      ) : null}
+      <DevApiNote ids={['member.me', 'member.seller', 'member.warnings', 'auth.logout']} />
+      {detailQuery.isError ? <p className={styles.hint}>회원 정보를 불러오지 못했어요.</p> : null}
       <dl className={styles.infoGrid}>
         <dt>닉네임</dt>
-        <dd>{me.nickname}</dd>
+        <dd>{detail?.nickname ?? me.nickname}</dd>
         <dt>이메일</dt>
-        <dd>{me.email}</dd>
+        <dd>{detail?.email ?? me.email}</dd>
         <dt>이름</dt>
-        <dd>{me.username || '-'}</dd>
+        <dd>{detail?.username || '-'}</dd>
         <dt>휴대폰</dt>
-        <dd className="num">{me.phone ? formatPhone(me.phone) : '-'}</dd>
+        <dd className="num">{detail?.phone ? formatPhone(detail.phone) : '-'}</dd>
         <dt>생년월일</dt>
-        <dd className="num">{me.birthDate ? formatDotDate(me.birthDate) : '-'}</dd>
+        <dd className="num">{detail?.birthDate ? formatDotDate(detail.birthDate) : '-'}</dd>
         <dt>기본 배송지</dt>
         <dd>
-          {address ? (
+          {detail?.address ? (
             <>
-              {address.alias ? <Badge variant="outline">{address.alias}</Badge> : null} {address.recipient} ·{' '}
-              <span className="num">{formatPhone(address.recipientPhone)}</span>
-              <br />({address.zipcode}) {address.address} {address.addressDetail ?? ''}
+              {detail.addressAlias ? <Badge variant="outline">{detail.addressAlias}</Badge> : null} {detail.address}
             </>
           ) : (
             '-'
           )}
         </dd>
         <dt>가입일</dt>
-        <dd className="num">{me.createdAt ? formatDotDate(me.createdAt) : '-'}</dd>
+        <dd className="num">{detail?.signUpDate ? formatDotDate(detail.signUpDate) : '-'}</dd>
       </dl>
 
       <p className={styles.sectionTitle}>판매자</p>
-      {me.seller || me.isSeller ? (
+      {me.isSeller ? (
         <dl className={styles.infoGrid}>
           <dt>상태</dt>
           <dd>
@@ -83,8 +84,10 @@ export function MyProfilePage() {
           </dd>
           <dt>정산 계좌</dt>
           <dd className="num">
-            {me.seller ? `${me.seller.bank} ${me.seller.accountNumberMasked} · ${me.seller.accountHolder}` : '-'}
+            {seller ? `${seller.bank} ${seller.accountNumberMasked} · ${seller.accountHolder}` : '-'}
           </dd>
+          <dt>등록일</dt>
+          <dd className="num">{seller?.registeredAt ? formatDotDate(seller.registeredAt) : '-'}</dd>
         </dl>
       ) : (
         <div className={styles.danger}>
@@ -102,19 +105,23 @@ export function MyProfilePage() {
       <dl className={styles.infoGrid}>
         <dt>계정 상태</dt>
         <dd>
-          <Badge tone={me.accountStatus === 'ACTIVE' ? 'live' : 'closing'}>
-            {ACCOUNT_STATUS_LABELS[me.accountStatus]}
+          <Badge tone={accountStatus === 'ACTIVE' ? 'live' : 'closing'}>
+            {ACCOUNT_STATUS_LABELS[accountStatus] ?? accountStatus}
           </Badge>
+          {status?.suspendedUntil ? (
+            <span className={styles.hint}> · {formatDotDate(status.suspendedUntil)}까지</span>
+          ) : null}
         </dd>
         <dt>경고</dt>
         <dd className="num">
-          {me.partial ? '-' : `${me.warningCount}회`} <span className={styles.hint}>· 용어집 기준: 누적 1–2회는 활동 정지, 3회면 계정 차단</span>
+          {status ? `${status.warningCount}회` : '-'}{' '}
+          <span className={styles.hint}>· 용어집 기준: 누적 1–2회는 활동 정지, 3회면 계정 차단</span>
         </dd>
-        {(warningsQuery.data ?? []).map((warning) => (
+        {(status?.warnings ?? []).map((warning) => (
           <div key={warning.warningId} style={{ display: 'contents' }}>
             <dt className="num">{formatDotDate(warning.createdAt)}</dt>
             <dd>
-              {WARNING_REASON_LABELS[warning.reason]}
+              {warningReasonLabel(warning.reason)}
               {warning.orderId ? ` · 주문 ${warning.orderId}` : ''}
             </dd>
           </div>
