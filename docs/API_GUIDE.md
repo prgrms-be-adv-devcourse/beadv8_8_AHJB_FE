@@ -62,11 +62,11 @@
 
 | 전환 키         | API                                              | 화면                                           | 상태                                                                 |
 | --------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `cart.list`     | GET `/api/v1/cart` 낙찰 상품                     | `pages/cart/CartPage.tsx`, `layout/Header.tsx` | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ⚠️ 잔액 부족 시 `isPaid:false` 응답 → 프론트는 `WALLET201` 에러 기대 |
-| `order.winner`  | GET `/api/v1/order/winner` 구매 목록             | `pages/me/MyOrdersPage.tsx`                    | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `order.seller`  | GET `/api/v1/order/seller` 판매 목록             | `pages/me/MySalesPage.tsx`                     | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `order.detail`  | GET `/api/v1/order/{orderId}` 주문 상세          | `pages/order/OrderDetailPage.tsx`              | ⚠️ `confirmExpiredAt` 필요. 판매자 화면은 `?as=seller`로 구분        |
+| `cart.list`     | GET `/api/v1/cart` 낙찰 상품                     | `pages/cart/CartPage.tsx`, `layout/Header.tsx` | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ✅ 잔액 부족이면 200 `isPaid:false` → `WALLET201`처럼 충전 창 표시    |
+| `order.winner`  | GET `/api/v1/order/winner` 구매 목록             | `pages/me/MyOrdersPage.tsx`                    | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `order.seller`  | GET `/api/v1/order/seller` 판매 목록             | `pages/me/MySalesPage.tsx`                     | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `order.detail`  | GET `/api/v1/order/{orderId}` 주문 상세          | `pages/order/OrderDetailPage.tsx`              | ⚠️ `productName`, `thumbnailUrl` 없음. `confirmExpiredAt`은 백엔드 #193부터. 판매자 화면은 `?as=seller`로 구분 |
 | `order.confirm` | POST `/api/v1/order/{orderId}/confirm-purchase`  | `components/order/useOrderActions.ts`          | ✅                                                                   |
 | `order.refund`  | POST `/api/v1/order/{orderId}/request-refund`    | `components/order/useOrderActions.ts`          | ✅                                                                   |
 | `order.send`    | POST `/api/v1/order/{orderId}/send-product` 발송 | `components/order/useOrderActions.ts`          | ✅                                                                   |
@@ -75,7 +75,7 @@
 
 | 전환 키           | API                                    | 화면                              | 상태                              |
 | ----------------- | -------------------------------------- | --------------------------------- | --------------------------------- |
-| `delivery.status` | GET `/api/v1/order/{orderId}/delivery` | `pages/order/OrderDetailPage.tsx` | ⚠️ 택배사·송장번호 필드 확인 필요 |
+| `delivery.status` | GET `/api/v1/order/{orderId}/delivery` | `pages/order/OrderDetailPage.tsx` | ✅ 주문 상세에 들어올 때 한 번 조회. `carrier`·`waybill`은 백엔드 #193부터 |
 
 ## payment (예치금·결제·충전)
 
