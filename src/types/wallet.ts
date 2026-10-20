@@ -3,6 +3,8 @@
  * - GET /api/v1/wallet/me           → Wallet
  * - GET /api/v1/wallet/me/ledger    → LedgerPage
  * - GET /api/v1/wallet/me/holdings  → HoldingPage
+ * - POST /api/v1/wallet/me/withdrawals → Withdrawal (전액 출금, 명목상)
+ * - GET /api/v1/wallet/me/withdrawals  → PageResponse<Withdrawal>
  */
 
 /** 지갑 안의 잔액 구분. DEPOSIT = 예치금(결제에 쓰는 돈), SETTLEMENT = 정산금(판매 대금, 예치금과 분리 보관) */
@@ -119,6 +121,28 @@ export interface HoldingParams {
   /** 기본 BUYER */
   role?: HoldingRole
   status?: HoldingStatus
+  page?: number
+  /** 최대 50 */
+  size?: number
+}
+
+/** 출금 상태. 지금은 실제 송금이 없어 요청 즉시 COMPLETED 로 기록된다 */
+export type WithdrawalStatus = 'REQUESTED' | 'COMPLETED' | 'FAILED'
+
+/** 출금 1건 (백엔드 WithdrawalDto) */
+export interface Withdrawal {
+  withdrawalId: number
+  amount: number
+  /** 어느 주머니에서 나갔는지. 지금은 DEPOSIT(예치금)만 */
+  account: WalletAccount
+  status: WithdrawalStatus
+  requestedAt: string
+  completedAt: string | null
+  failedAt: string | null
+  failureReason: string | null
+}
+
+export interface WithdrawalListParams {
   page?: number
   /** 최대 50 */
   size?: number

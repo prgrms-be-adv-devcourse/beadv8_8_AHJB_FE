@@ -1,9 +1,26 @@
-import { db } from '../db';
+import { db, persist } from '../db';
 import { ok, route } from '../router';
-import { requireMe } from '../services';
-import { feeOf, getPageParams, paginate } from '../utils';
+import { addTransaction, requireMe, walletOf } from '../services';
+import { feeOf, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 import { toWalletView } from '../views';
 import type { HoldingRecord, TransactionRecord } from '../types';
+import { fail } from '../errors';
+
+/** 출금 기록 (백엔드 WithdrawalDto). 명목상 출금이라 DB 에 넣지 않고 메모리에만 둔다 */
+interface MockWithdrawal {
+  withdrawalId: number;
+  memberId: number;
+  amount: number;
+  account: 'DEPOSIT';
+  status: 'REQUESTED' | 'COMPLETED' | 'FAILED';
+  requestedAt: string;
+  completedAt: string | null;
+  failedAt: string | null;
+  failureReason: string | null;
+}
+const withdrawals: MockWithdrawal[] = [];
+let withdrawalSeq = 1;
+const toWithdrawalView = ({ memberId: _memberId, ...w }: MockWithdrawal) => w;
 
 // 백엔드 WalletApiController 와 같은 경로·응답 형태. 목업 DB 레코드는 그대로 두고 응답 시점에 변환한다.
 
@@ -19,7 +36,9 @@ type HoldingRole = 'BUYER' | 'SELLER';
 function toReference(tx: TransactionRecord): { referenceType: ReferenceType; referenceId: number | null } {
   switch (tx.referenceType) {
     case 'CHARGE':
-      return { referenceType: 'PAYMENT', referenceId: tx.referenceId };
+      return tx.type === 'WITHDRAWAL'
+        ? { referenceType: 'WITHDRAWAL', referenceId: tx.referenceId }
+        : { referenceType: 'PAYMENT', referenceId: tx.referenceId };
     case 'ORDER':
       return { referenceType: 'ORDER', referenceId: tx.referenceId };
     case 'REFUND': {
@@ -116,5 +135,39 @@ export function registerWalletRoutes(): void {
       settleableTotal: sumOf(open.filter((v) => v.status === 'CONFIRMED')),
       ...paginate(filtered, page, size),
     });
+  });
+
+  /** 예치금 전액 출금(명목상): 잔액 → 0, 원장 WITHDRAWAL, 즉시 COMPLETED. 잔액 0 이면 WALLET601 */
+  route('POST', '/api/v1/wallet/me/withdrawals', (ctx) => {
+    const me = requireMe(ctx);
+    const amount = walletOf(me.id).balance;
+    if (amount <= 0) fail('WALLET601');
+    const at = now();
+    const w: MockWithdrawal = {
+      withdrawalId: withdrawalSeq++,
+      memberId: me.id,
+      amount,
+      account: 'DEPOSIT',
+      status: 'COMPLETED',
+      requestedAt: ldt(at),
+      completedAt: ldt(at),
+      failedAt: null,
+      failureReason: null,
+    };
+    withdrawals.push(w);
+    addTransaction(me.id, 'WITHDRAWAL', -amount, 'CHARGE', w.withdrawalId, '예치금 전액 출금 (등록 계좌)', at);
+    persist();
+    return ok(toWithdrawalView(w), 201);
+  });
+
+  /** 내 출금 내역 (최신순) */
+  route('GET', '/api/v1/wallet/me/withdrawals', (ctx) => {
+    const me = requireMe(ctx);
+    const { page, size } = getPageParams(ctx.params, 20);
+    const mine = withdrawals
+      .filter((w) => w.memberId === me.id)
+      .sort((a, b) => b.withdrawalId - a.withdrawalId)
+      .map(toWithdrawalView);
+    return ok(paginate(mine, page, size));
   });
 }
