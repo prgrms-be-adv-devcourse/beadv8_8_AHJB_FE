@@ -22,7 +22,7 @@ export function SendProductDialog({ order, onClose }: SendProductDialogProps) {
   const [waybillText, setWaybillText] = useState('')
   const [touched, setTouched] = useState(false)
   const waybill = waybillText.replace(/\D/g, '')
-  const error = touched && !WAYBILL_PATTERN.test(waybill) ? '운송장 번호는 숫자 9–14자리예요. (DELIVERY_005)' : null
+  const error = touched && !WAYBILL_PATTERN.test(waybill) ? '운송장 번호는 숫자 9–14자리예요.' : null
 
   return (
     <Dialog

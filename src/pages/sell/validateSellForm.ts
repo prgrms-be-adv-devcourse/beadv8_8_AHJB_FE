@@ -50,21 +50,21 @@ export function validateSellForm(v: SellFormValues): SellErrors {
     category: v.category ? null : '카테고리를 골라 주세요.',
     manufacturer: v.manufacturer
       ? v.manufacturer === 'ETC' && !v.manufacturerEtc.trim()
-        ? '제조사 이름을 직접 입력해 주세요. (PRODUCT006)'
+        ? '제조사 이름을 직접 입력해 주세요.'
         : null
       : '제조사를 골라 주세요.',
     description: v.description.trim().length < 10 ? '구성품·상태·동작 여부를 10자 이상 적어 주세요.' : null,
-    customFee: v.shippingFeeType === 'CUSTOM' && !v.customFeeText ? '배송비를 입력해 주세요. (PRODUCT006)' : null,
+    customFee: v.shippingFeeType === 'CUSTOM' && !v.customFeeText ? '배송비를 입력해 주세요.' : null,
     startingPrice: v.startingPrice < 1000 ? '시작가는 1,000원 이상이에요.' : null,
     instantWinPrice:
       v.instantWinPriceText && v.instantWinPrice <= v.startingPrice
-        ? '즉시낙찰가는 시작가보다 커야 해요. (PRODUCT005)'
+        ? '즉시낙찰가는 시작가보다 커야 해요.'
         : null,
     // NaN(빈 값/잘못된 값) 은 비교가 false 라 통과하지만, 빈 값은 !customEndAtText 로 걸린다
     customEndAt:
       v.duration === 'CUSTOM' && (!v.customEndAtText || v.endAt <= v.startAt + 3600 * 1000)
         ? '종료 시각은 경매 시작(등록 1시간 뒤)보다 1시간 이상 뒤여야 해요.'
         : null,
-    agreed: v.agreed ? null : '판매 정책에 동의해 주세요. (PRODUCT004)',
+    agreed: v.agreed ? null : '판매 정책에 동의해 주세요.',
   }
 }

@@ -354,7 +354,7 @@ export function MyReviewsPage() {
         onConfirm={() => deleteTarget && remove.mutate(deleteTarget.reviewId)}
         onClose={() => setDeleteTarget(null)}
       >
-        지운 뒤에는 같은 주문에 후기를 다시 쓸 수 없어요(REVIEW003).
+        지운 뒤에는 같은 주문에 후기를 다시 쓸 수 없어요.
       </ConfirmDialog>
     </>
   )

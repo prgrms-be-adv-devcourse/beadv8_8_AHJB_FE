@@ -94,7 +94,7 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
             <span>
               등록 후 1시간 동안만 수정·삭제할 수 있어요.{' '}
               <strong className="num">{untilStart > 0 ? formatCountdown(untilStart) : '0:00'}</strong> 뒤엔 경매가
-              자동으로 열리고 더는 고칠 수 없어요(PRODUCT008).
+              자동으로 열리고 더는 고칠 수 없어요.
             </span>
           </div>
           <div className={styles.ownerActions}>
@@ -382,13 +382,13 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
         <div className={`${pageStyles.notice} ${pageStyles.noticeInfo}`}>
           <Icon name="info" size={16} />
           <span>
-            내 경매예요. 판매자는 자기 경매에 입찰할 수 없어요(AUCTION004). 질문이 오면 아래 Q&A에서 답글을 달아 주세요.
+            내 경매예요. 판매자는 자기 경매에 입찰할 수 없어요. 질문이 오면 아래 Q&A에서 답글을 달아 주세요.
           </span>
         </div>
       ) : me.isHighestBidder ? (
         <div className={`${pageStyles.notice} ${pageStyles.noticeGood}`}>
           <Icon name="check" size={16} />
-          <span>지금 최고 입찰자예요. 다른 회원이 더 높게 입찰하기 전에는 다시 입찰할 수 없어요(AUCTION005).</span>
+          <span>지금 최고 입찰자예요. 다른 회원이 더 높게 입찰하기 전에는 다시 입찰할 수 없어요.</span>
         </div>
       ) : hasMyBid ? (
         <div className={`${pageStyles.notice} ${pageStyles.noticeWarn}`}>
