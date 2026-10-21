@@ -2,6 +2,7 @@ import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
 import type { LoginResponse } from '@/types/auth'
 import { API_BASE_URL, isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
+import { toUserMessage } from './errorMessages'
 
 /** 결제·지갑 API 가 실패 응답에 더해 주는 정보 (백엔드 PaymentErrorResponse). 다른 도메인 응답에는 없다 */
 export interface PaymentErrorInfo {
@@ -224,7 +225,8 @@ function toApiError(body: ApiErrorBody, status: number): ApiError {
     typeof body.retryable === 'boolean'
       ? { retryable: body.retryable, pgCode: body.pgCode ?? null, pgMessage: body.pgMessage ?? null }
       : undefined
-  return new ApiError(body.errorCode ?? `HTTP${status}`, body.message ?? DEFAULT_ERROR_MESSAGE, status, payment)
+  const code = body.errorCode ?? `HTTP${status}`
+  return new ApiError(code, toUserMessage(code, status, body.message ?? DEFAULT_ERROR_MESSAGE), status, payment)
 }
 
 /** HTTP 메서드별 단축 함수 (원본 Te). 첫 인자는 registry 키 */
