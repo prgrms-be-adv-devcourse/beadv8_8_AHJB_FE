@@ -194,25 +194,33 @@ export function registerProductRoutes(): void {
     return ok(paginate(items, page, size));
   });
 
+  // 백엔드와 같이 상품 정보 + 경매 상태·종료 사유만 (WON·PAID·COMPLETED → SOLD)
   route('GET', '/api/v1/products/me', (ctx) => {
     const me = requireMe(ctx);
-    const items = db.products
+    const content = db.products
       .filter((p) => p.sellerId === me.id && !p.deleted)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((product) => {
         const latest = latestAuctionOf(product);
-        const order = latest ? db.orders.find((o) => o.auctionId === latest.id) : undefined;
+        const summary = toAuctionSummary(product);
+        const status = productAuctionStatus(product, latest);
         return {
-          ...toAuctionSummary(product),
-          round: product.round,
+          productId: summary.productId,
+          auctionId: summary.auctionId,
+          productName: summary.productName,
+          thumbnailUrl: summary.thumbnailUrl,
+          category: summary.category,
+          startPrice: product.startingPrice,
+          instantWinPrice: product.instantWinPrice,
+          status: ['WON', 'PAID', 'COMPLETED'].includes(status) ? 'SOLD' : status,
           auctionScheduledAt: product.auctionScheduledAt,
-          editable:
-            productAuctionStatus(product, latest) === 'SCHEDULED' && parseTime(product.auctionScheduledAt) > now(),
-          failureReason: latest && latest.round === product.round ? latest.failureReason : null,
-          orderId: order?.id ?? null,
+          auctionEndAt: summary.endAt,
+          failureReason: status === 'FAILED' && latest ? latest.failureReason : null,
+          editable: status === 'SCHEDULED' && parseTime(product.auctionScheduledAt) > now(),
+          createdAt: product.createdAt,
         };
       });
-    return ok(items);
+    return ok({ content, serverTime: ldt(now()) });
   });
 
   route('GET', '/api/v1/products/:id', (ctx) => {

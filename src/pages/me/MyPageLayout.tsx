@@ -23,7 +23,7 @@ const MENU_ITEMS: MenuItem[] = [
   { to: '/me/orders', label: '구매 주문', icon: 'truck', group: '구매' },
   { to: '/me/reviews', label: '후기', icon: 'star', group: '구매' },
   { to: '/me/wishes', label: '찜', icon: 'heart', group: '구매' },
-  { to: '/me/products', label: '내 경매', icon: 'tag', group: '판매', sellerOnly: true },
+  { to: '/me/products', label: '내 상품', icon: 'tag', group: '판매', sellerOnly: true },
   { to: '/me/sales', label: '판매 주문', icon: 'box', group: '판매', sellerOnly: true },
   { to: '/me/settlements', label: '정산', icon: 'receipt', group: '판매', sellerOnly: true },
   { to: '/me/wallet', label: '예치금', icon: 'wallet', group: '지갑' },

@@ -1,5 +1,6 @@
 import type { AuctionStatus, FailureReason } from '@/types/auction'
 import type { OrderState } from '@/types/order'
+import type { ProductAuctionStatus } from '@/types/product'
 import type { RefundStatus } from '@/types/refund'
 import type { SettlementStatus } from '@/types/settlement'
 import { FAILURE_REASON_LABELS } from './labels'
@@ -44,6 +45,16 @@ export function auctionStatusBadge(
     case 'FAILED':
       return { tone: 'ended', label: failureReason ? FAILURE_REASON_LABELS[failureReason] : '종료' }
   }
+}
+
+/** 내 상품의 경매 상태 배지. 낙찰(SOLD) 외에는 경매 상태 배지와 같다 */
+export function productAuctionStatusBadge(
+  status: ProductAuctionStatus,
+  endAt: string | null,
+  now: number,
+  failureReason: FailureReason | null,
+): StatusMeta {
+  return status === 'SOLD' ? { tone: 'won', label: '낙찰' } : auctionStatusBadge(status, endAt, now, failureReason)
 }
 
 export interface OrderStateMeta extends StatusMeta {
