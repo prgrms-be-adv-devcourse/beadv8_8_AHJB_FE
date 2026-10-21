@@ -41,11 +41,14 @@ export function OrderActionDialogs({ kind, order, refundId, onClose }: OrderActi
         onConfirm={() => actions.requestRefund.mutate(order.id, { onSettled: onClose })}
         onClose={onClose}
       >
-        주문당 한 번만 요청할 수 있어요. 판매자가 <strong style={{ color: 'var(--text)' }}>수락하면</strong> 예치금으로
-        돌려받고 <strong style={{ color: 'var(--text)' }}>환불 패널티(경고 1회)</strong>
-        {
-          '가 남아요. 판매자가 거절하면 바로 구매확정돼요. 반품 방법은 거래 채팅으로 판매자와 정해 주세요.'
-        }
+        주문당 한 번만 요청할 수 있어요. 판매자가 <strong style={{ color: 'var(--text)' }}>수락하면</strong>{' '}
+        <strong style={{ color: 'var(--text)' }}>환불 패널티(경고 1회)</strong>가 남고, 판매자가 거절하면 바로 구매확정돼요.
+        반품 방법은 거래 채팅으로 판매자와 정해 주세요.
+        <br />
+        <br />
+        <strong style={{ color: 'var(--text)' }}>환불금 {formatWon(total)}은 카드가 아니라 예치금으로 돌아와요.</strong> 돌아온
+        예치금은 바로 다음 결제에 쓸 수 있고, 카드로 돌려받고 싶으면 예치금 화면에서 출금하면 돼요. 환불로 돌아온 금액은 충전
+        취소 대상이 아니에요.
       </ConfirmDialog>
       <ConfirmDialog
         open={kind === 'accept'}

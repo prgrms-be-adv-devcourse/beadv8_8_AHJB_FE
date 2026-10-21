@@ -22,6 +22,7 @@ const PUBLIC_GET_PATTERNS = [
   /^\/api\/v1\/auctions$/,
   /^\/api\/v1\/auctions\/\d+$/,
   /^\/api\/v1\/auctions\/\d+\/bids$/,
+  /^\/api\/v1\/products\/upcoming$/,
   /^\/api\/v1\/products\/\d+$/,
   /^\/api\/v1\/products\/\d+\/qnas$/,
 ];

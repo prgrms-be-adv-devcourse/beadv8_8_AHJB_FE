@@ -181,7 +181,7 @@ export function registerProductRoutes(): void {
   });
 
   // /products/:id 보다 먼저 등록해야 한다
-  // 곧 시작(경매 생성 전) 목록. 상품 담당 미구현 API 의 목업 (경로는 제안). 시작 임박순
+  // 곧 시작(경매 생성 전) 목록. 시작 임박순
   route('GET', '/api/v1/products/upcoming', ({ params }) => {
     const category = params.get('category');
     const { page, size } = getPageParams(params, 20);

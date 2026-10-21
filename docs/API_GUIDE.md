@@ -28,6 +28,7 @@
 
 | 전환 키          | API                                                | 화면                                                             | 상태                                                                   |
 | ---------------- | -------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `product.upcoming` | GET `/api/v1/products/upcoming` 곧 시작 목록 | `pages/home/HomePage.tsx`, `pages/auctions/AuctionListPage.tsx` (`?status=SCHEDULED`) | ✅ `category`, `page`, `size`(최대 50). 시작 임박순 고정, 키워드·제조사·정렬 필터 없음. 비로그인 조회 가능 |
 | `product.detail` | GET `/api/v1/products/{productId}` 상품 상세       | `pages/product/ProductDetailPage.tsx`, `pages/sell/SellPage.tsx` | ✅ 응답에 `auctionId` 필요 (경매 상세가 이걸로 조회)                   |
 | `product.create` | POST `/api/v1/products` 상품 등록(+경매 조건)      | `pages/sell/SellPage.tsx`                                        | ✅                                                                     |
 | `product.update` | PATCH `/api/v1/products/{productId}`               | `pages/sell/SellPage.tsx`                                        | ✅                                                                     |

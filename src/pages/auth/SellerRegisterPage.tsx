@@ -47,7 +47,8 @@ export function SellerRegisterPage() {
       if (isRealApi('auth.login')) await refreshSession()
       await queryClient.invalidateQueries({ queryKey: ['me'] })
       toast('판매자로 등록했어요. 이제 경매를 올릴 수 있어요.', { tone: 'success' })
-      navigate(params.get('redirect') || '/sell', { replace: true })
+      // 어디서 들어왔든 등록을 마치면 회원 정보에서 판매자 정보를 확인하게 한다
+      navigate('/me/profile', { replace: true })
     } catch (err) {
       setServerError((err as ApiError).message)
     } finally {

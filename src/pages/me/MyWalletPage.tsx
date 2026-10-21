@@ -94,6 +94,8 @@ export function MyWalletPage() {
     placeholderData: keepPreviousData,
   })
   const balance = walletQuery.data?.balance ?? 0
+  // 결제창만 열고 나온 건(REQUESTED)은 사용자에겐 "충전"이 아니므로 숨긴다. 백엔드 스케줄러가 알아서 정리한다
+  const visibleCharges = chargesQuery.data?.content.filter((c) => c.status !== 'REQUESTED') ?? []
   /** 출금하면 이전 충전을 취소할 수 없게 되므로, 지금 취소할 수 있는 충전 건 수를 모달에서 알려 준다 */
   const cancelableCount = chargesQuery.data?.content.filter((c) => c.cancelable && balance >= c.amount).length ?? 0
 
@@ -203,9 +205,9 @@ export function MyWalletPage() {
             <Spinner block />
           ) : chargesQuery.isError ? (
             <ErrorState message={chargesQuery.error.message} onRetry={() => void chargesQuery.refetch()} />
-          ) : chargesQuery.data?.content.length ? (
+          ) : visibleCharges.length ? (
             <div className={styles.list}>
-              {chargesQuery.data.content.map((charge) => {
+              {visibleCharges.map((charge) => {
                 const canCancel = charge.cancelable && balance >= charge.amount
                 return (
                   <div key={charge.chargeId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
@@ -225,9 +227,7 @@ export function MyWalletPage() {
                             ? `${formatWon(charge.usedAmount)} 사용 · 일부 사용된 충전은 취소할 수 없어요`
                             : charge.status === 'CHARGED' && !canCancel && charge.cancelable
                               ? '잔액이 충전액보다 적어 지금은 취소할 수 없어요'
-                              : charge.status === 'REQUESTED'
-                                ? '결제창에서 결제가 끝나지 않았어요. 40분 뒤 자동으로 정리돼요'
-                                : null}
+                              : null}
                         {charge.receiptUrl ? (
                           <>
                             {' '}
