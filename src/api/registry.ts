@@ -136,14 +136,6 @@ export const apiRegistry = {
     status: 'done',
     note: '상품명·사진·설명·배송·판매자·auctionId',
   },
-  'product.upcoming': {
-    method: 'GET',
-    path: '/api/v1/products/upcoming',
-    title: '곧 시작 목록',
-    owner: '송현수',
-    status: 'done',
-    note: '경매 생성 전 상품. category, page, size / 시작 임박순 (경로는 제안)',
-  },
   'product.mine': {
     method: 'GET',
     path: '/api/v1/products/me',
