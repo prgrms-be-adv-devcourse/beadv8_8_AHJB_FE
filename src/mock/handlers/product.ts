@@ -11,7 +11,15 @@ import {
   wishCountOf,
 } from '../services';
 import type { AuctionDuration, FeeType, ProductRecord } from '../types';
-import { POLICY_VERSION, formatLocalDateTime as ldt, now, parseTime, shippingFeeOf } from '../utils';
+import {
+  POLICY_VERSION,
+  getPageParams,
+  formatLocalDateTime as ldt,
+  now,
+  paginate,
+  parseTime,
+  shippingFeeOf,
+} from '../utils';
 import { productAuctionStatus, toAuctionSummary } from '../views';
 
 interface ShippingInput {
@@ -192,6 +200,18 @@ export function registerProductRoutes(): void {
         };
       });
     return ok(items);
+  });
+
+  // 곧 시작: 경매 시작 전 상품을 시작 임박순으로 (/products/:id 보다 먼저 등록)
+  route('GET', '/api/v1/products/upcoming', ({ params }) => {
+    const category = params.get('category');
+    const { page, size } = getPageParams(params, 20);
+    const items = db.products
+      .filter((p) => !p.deleted)
+      .map(toAuctionSummary)
+      .filter((item) => item.status === 'SCHEDULED' && (!category || item.category === category))
+      .sort((a, b) => parseTime(a.startAt) - parseTime(b.startAt));
+    return ok({ ...paginate(items, page, Math.min(size, 50)), serverTime: ldt() });
   });
 
   route('GET', '/api/v1/products/:id', (ctx) => {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { auctionApi } from '@/api/endpoints'
+import { auctionApi, productApi } from '@/api/endpoints'
 import { Button } from '@/components/Button'
 import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
@@ -35,7 +35,11 @@ export function AuctionListPage() {
 
   const listQuery = useQuery({
     queryKey: ['auctions', 'list', params],
-    queryFn: () => auctionApi.list(params),
+    // '곧 시작' 탭은 상품 API 로 조회한다 (카테고리·페이지만 지원, 시작 임박순 고정)
+    queryFn: () =>
+      params.status === 'SCHEDULED'
+        ? productApi.upcoming({ category: params.category, page: params.page, size: params.size })
+        : auctionApi.list(params),
     placeholderData: keepPreviousData,
     refetchInterval: 15_000,
   })
@@ -144,7 +148,7 @@ export function AuctionListPage() {
           </div>
         </div>
 
-        <DevApiNote ids={['auction.list', 'wish.add', 'wish.list']} className={styles.note} />
+        <DevApiNote ids={['auction.list', 'product.upcoming', 'wish.add', 'wish.list']} className={styles.note} />
 
         {activeFilters.length ? (
           <div className={styles.active}>

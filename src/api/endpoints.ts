@@ -14,6 +14,8 @@ import type {
   QnaListParams,
   QnaListResponse,
   ReopenResponse,
+  UpcomingListParams,
+  UpcomingListResponse,
   WishListResponse,
   WishToggleResponse,
 } from '@/types/product'
@@ -71,6 +73,9 @@ export const memberApi = {
 
 /** 상품 (원본 ws) */
 export const productApi = {
+  /** 곧 시작 (경매 시작 전 상품, 시작 임박순). 비로그인 조회 가능 */
+  upcoming: (params: UpcomingListParams = {}) =>
+    http.get<UpcomingListResponse>('product.upcoming', '/api/v1/products/upcoming', params),
   detail: (productId: Id) => http.get<ProductDetail>('product.detail', `/api/v1/products/${productId}`),
   mine: () => http.get<MyProduct[]>('product.mine', '/api/v1/products/me'),
   create: (body: ProductCreateRequest) =>

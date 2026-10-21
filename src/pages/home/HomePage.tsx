@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { auctionApi, cartApi } from '@/api/endpoints'
+import { auctionApi, cartApi, productApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
 import { DevApiNote } from '@/components/DevApiNote'
@@ -31,7 +31,7 @@ export function HomePage() {
   })
   const soonQuery = useQuery({
     queryKey: ['auctions', 'home', 'soon'],
-    queryFn: () => auctionApi.list({ status: 'SCHEDULED', sort: 'ENDING_SOON', size: 5 }),
+    queryFn: () => productApi.upcoming({ size: 5 }),
   })
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, enabled: isLoggedIn })
 
@@ -94,7 +94,7 @@ export function HomePage() {
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>
-        <DevApiNote ids={['auction.list']} className={styles.note} />
+        <DevApiNote ids={['auction.list', 'product.upcoming']} className={styles.note} />
         <div className="grid-products">
           {endingQuery.isLoading
             ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)

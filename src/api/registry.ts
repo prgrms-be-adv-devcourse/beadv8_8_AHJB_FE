@@ -104,6 +104,14 @@ export const apiRegistry = {
     owner: '송현수',
     status: 'done',
   },
+  'product.upcoming': {
+    method: 'GET',
+    path: '/api/v1/products/upcoming',
+    title: '곧 시작 목록',
+    owner: '송현수',
+    status: 'done',
+    note: 'category, page, size(최대 50). 시작 임박순. 키워드·제조사·정렬 필터는 없음',
+  },
   'product.detail': {
     method: 'GET',
     path: '/api/v1/products/{productId}',
