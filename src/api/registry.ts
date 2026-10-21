@@ -125,7 +125,7 @@ export const apiRegistry = {
     path: '/api/v1/products/{productId}',
     title: '상품 상세',
     owner: '송현수',
-    status: 'proposed',
+    status: 'done',
     note: '상품명·사진·설명·배송·판매자·auctionId',
   },
   'product.upcoming': {

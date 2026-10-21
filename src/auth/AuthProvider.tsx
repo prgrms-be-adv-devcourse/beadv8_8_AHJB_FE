@@ -14,9 +14,12 @@ export interface AuthContextValue {
   isLoggedIn: boolean
   /** 토큰은 있는데 내 정보를 불러오는 중 */
   isLoading: boolean
-  login: (body: LoginRequest) => Promise<LoginResponse>
+  login: (body: LoginRequest) => Promise<LoginResult>
   logout: () => Promise<void>
 }
+
+/** 로그인 결과. 닉네임·정지 여부는 로그인 직후 불러온 내 정보 기준이다 */
+export type LoginResult = LoginResponse & { nickname: string }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -98,14 +101,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authApi.login(body)
       tokenStore.set(result.accessToken, result.refreshToken)
       tokenStore.setProfile({ email: body.email })
+      // 실제 로그인 응답에는 닉네임이 없어서 닉네임·정지 여부는 방금 불러온 내 정보에서 채운다
+      let nickname: string
+      let suspended: boolean
       if (USE_TOKEN_PROFILE) {
         const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
-        await queryClient.fetchQuery({ queryKey: summaryQueryKey(loggedInId), queryFn: memberApi.summary })
+        const summary = await queryClient.fetchQuery({
+          queryKey: summaryQueryKey(loggedInId),
+          queryFn: memberApi.summary,
+        })
+        nickname = summary.nickname
+        suspended = summary.suspended
       } else {
-        await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+        const mockMe = await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+        nickname = mockMe.nickname
+        suspended = mockMe.accountStatus === 'SUSPENDED'
       }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
-      return result
+      return { ...result, nickname, suspended }
     },
     [queryClient],
   )
