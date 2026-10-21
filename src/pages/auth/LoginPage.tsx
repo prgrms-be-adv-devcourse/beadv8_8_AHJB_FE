@@ -9,22 +9,6 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import styles from './Auth.module.css'
 
-/** 체험용 계정 (원본 NP) */
-const DEMO_ACCOUNTS = [
-  {
-    email: 'demo@jjinmak.kr',
-    password: 'jjinmak1234!',
-    label: '찐막러',
-    desc: '구매자 + 판매자 · 장바구니, 주문, 판매, 정산이 다 있어요',
-  },
-  {
-    email: 'buyer@jjinmak.kr',
-    password: 'jjinmak1234!',
-    label: '첫구매',
-    desc: '판매자 등록 전 구매자 · 환불 요청 1건',
-  },
-]
-
 /** 로그인 (/login, 원본 VP) */
 export function LoginPage() {
   const { login, isLoggedIn } = useAuth()
@@ -79,25 +63,6 @@ export function LoginPage() {
         <div className={styles.head}>
           <h1 className={styles.title}>로그인</h1>
           <p className={styles.sub}>이번이 진짜 마지막 구매일까요?</p>
-        </div>
-
-        <div className={styles.demoList}>
-          <span className={styles.demoTitle}>체험용 계정 (비밀번호 jjinmak1234!)</span>
-          {DEMO_ACCOUNTS.map((account) => (
-            <div key={account.email} className={styles.demoRow}>
-              <span>
-                <strong>{account.label}</strong> · {account.desc}
-              </span>
-              <Button
-                size="sm"
-                variant="solid"
-                disabled={submitting}
-                onClick={() => void submitLogin(account.email, account.password)}
-              >
-                로그인
-              </Button>
-            </div>
-          ))}
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>

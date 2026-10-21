@@ -192,10 +192,6 @@ export function OrderDetailPage() {
                 </Link>
               </div>
             ) : null}
-
-            <button type="button" className={styles.chat} disabled title="거래 채팅 API 준비 중">
-              <Icon name="chat" size={16} /> 거래 채팅 (준비 중)
-            </button>
           </section>
 
           {hasDelivery ? <OrderDeliveryCard query={deliveryQuery} /> : null}

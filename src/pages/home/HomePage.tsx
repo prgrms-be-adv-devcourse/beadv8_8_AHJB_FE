@@ -11,6 +11,7 @@ import { useNow } from '@/lib/clock'
 import { formatCountdown } from '@/lib/format'
 import { CATEGORIES, CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from '@/lib/labels'
 import { FeaturedAuction } from './FeaturedAuction'
+import { HeroFallback } from './HeroFallback'
 import { CATEGORY_ART, TRADE_STEPS } from './homeContent'
 import styles from './HomePage.module.css'
 
@@ -63,10 +64,13 @@ export function HomePage() {
               </LinkButton>
             </div>
           </div>
-          {featured ? (
+          {hotQuery.isLoading ? (
+            <div className={styles.featuredSkeleton} />
+          ) : featured ? (
             <FeaturedAuction item={featured} now={now} />
           ) : (
-            <div className={styles.featuredSkeleton} />
+            // 진행 중 경매 0건이거나 목록 조회 실패
+            <HeroFallback />
           )}
         </div>
       </section>

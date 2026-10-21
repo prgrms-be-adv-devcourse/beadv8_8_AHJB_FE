@@ -119,28 +119,6 @@
 .ruleOk {
   color: #1f7a5a;
 }
-.demoList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-12) var(--space-14);
-  border-radius: var(--radius-md);
-  background: var(--lemon);
-  font-size: 12px;
-  line-height: 17px;
-}
-.demoTitle {
-  font-weight: 600;
-}
-.demoRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-}
-.demoRow span {
-  min-width: 0;
-}
 .legendRow {
   display: flex;
   align-items: baseline;
