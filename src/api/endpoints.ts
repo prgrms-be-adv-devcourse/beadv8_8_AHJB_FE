@@ -108,8 +108,8 @@ export const productApi = {
   /** 204 */
   remove: (productId: Id) => http.delete<null>('product.delete', `/api/v1/products/${productId}`),
   /**
-   * 곧 시작(경매 생성 전) 목록. 경매 행이 없어서 상품 도메인이 제공한다 (미구현, 경로는 제안).
-   * status 는 보내지 않는다. 카테고리·페이지만.
+   * 곧 시작(경매 생성 전) 목록. 경매 행이 없어서 상품 도메인이 제공한다. 비로그인 조회 가능.
+   * status 는 보내지 않는다. 카테고리·페이지만 (size 최대 50), 시작 임박순 고정.
    */
   upcoming: (params: Pick<AuctionListParams, 'category' | 'page' | 'size'>) =>
     http.get<AuctionListResponse>('product.upcoming', '/api/v1/products/upcoming', { ...params }),

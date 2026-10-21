@@ -5,3 +5,6 @@ dist
 .DS_Store
 .vercel
 node_modules/.tmp
+
+# 로컬 미리보기 실행 설정 (개인용)
+.claude/launch.json
