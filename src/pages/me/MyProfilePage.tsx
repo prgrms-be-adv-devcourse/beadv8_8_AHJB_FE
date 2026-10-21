@@ -94,7 +94,7 @@ export function MyProfilePage() {
           <strong>아직 판매자로 등록하지 않았어요.</strong>
           <span>판매자 등록을 하면 경매를 올리고 정산을 받을 수 있어요.</span>
           <div>
-            <LinkButton to="/seller/register?redirect=/me/profile" variant="solid" size="sm">
+            <LinkButton to="/seller/register" variant="solid" size="sm">
               판매자 등록
             </LinkButton>
           </div>
