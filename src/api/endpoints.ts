@@ -10,7 +10,7 @@ import type {
   SellerInfo,
 } from '@/types/member'
 import type {
-  MyProduct,
+  MyProductListResponse,
   ProductCreateRequest,
   ProductCreateResponse,
   ProductImageUploadResponse,
@@ -100,7 +100,7 @@ export const memberApi = {
 /** 상품 (원본 ws) */
 export const productApi = {
   detail: (productId: Id) => http.get<ProductDetail>('product.detail', `/api/v1/products/${productId}`),
-  mine: () => http.get<MyProduct[]>('product.mine', '/api/v1/products/me'),
+  mine: () => http.get<MyProductListResponse>('product.mine', '/api/v1/products/me'),
   create: (body: ProductCreateRequest) =>
     http.post<ProductCreateResponse>('product.create', '/api/v1/products', body),
   update: (productId: Id, body: ProductUpdateRequest) =>

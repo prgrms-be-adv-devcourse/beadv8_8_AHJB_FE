@@ -1,5 +1,5 @@
 import type { PageParams } from './common'
-import type { AuctionSummary, FailureReason } from './auction'
+import type { FailureReason } from './auction'
 
 export type Category = 'CONSOLE' | 'GAME_SOFTWARE' | 'ACCESSORY' | 'LIMITED_EDITION' | 'ETC'
 export type Manufacturer = 'NINTENDO' | 'SONY' | 'MICROSOFT' | 'SEGA' | 'ETC'
@@ -55,13 +55,35 @@ export interface ProductDetail {
   createdAt: string
 }
 
-/** GET /api/v1/products/me 의 항목 */
-export interface MyProduct extends AuctionSummary {
-  round: number
+/** 상품이 경매 이벤트로 복제해 둔 경매 상태. 결제완료·구매확정은 구분하지 않는다 (낙찰 후 거래가 깨지면 FAILED) */
+export type ProductAuctionStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'SOLD' | 'FAILED'
+
+/** GET /api/v1/products/me 의 항목. 상품 정보 + 경매 상태·종료 사유만 (현재가·입찰 수·낙찰가 없음) */
+export interface MyProduct {
+  productId: number
+  /** 경매 시작 전이면 null */
+  auctionId: number | null
+  productName: string
+  thumbnailUrl: string | null
+  category: Category
+  startPrice: number
+  instantWinPrice: number | null
+  status: ProductAuctionStatus
+  /** 경매 시작 예정 시각 */
   auctionScheduledAt: string
-  editable: boolean
+  /** 진행 중일 때 종료 예정 시각 (연장 미반영) */
+  auctionEndAt: string | null
+  /** FAILED 일 때만 값이 있음 */
   failureReason: FailureReason | null
-  orderId: number | null
+  /** 수정·삭제 가능 (시작 예정 시각 전) */
+  editable: boolean
+  createdAt: string
+}
+
+/** GET /api/v1/products/me 응답 */
+export interface MyProductListResponse {
+  content: MyProduct[]
+  serverTime: string
 }
 
 /** POST /api/v1/products */

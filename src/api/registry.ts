@@ -139,9 +139,10 @@ export const apiRegistry = {
   'product.mine': {
     method: 'GET',
     path: '/api/v1/products/me',
-    title: '내가 올린 상품',
+    title: '내 상품',
     owner: '송현수',
-    status: 'proposed',
+    status: 'done',
+    note: '상품 정보 + 경매 상태(SCHEDULED/IN_PROGRESS/SOLD/FAILED)·종료 사유. 현재가·입찰 수 없음',
   },
   'product.images': {
     method: 'POST',
