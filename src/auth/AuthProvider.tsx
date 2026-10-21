@@ -98,14 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authApi.login(body)
       tokenStore.set(result.accessToken, result.refreshToken)
       tokenStore.setProfile({ email: body.email })
+      let nickname = result.nickname
+      let suspended = result.suspended
       if (USE_TOKEN_PROFILE) {
+        // 실제 로그인 응답에는 닉네임·정지 여부가 없어서 요약에서 채운다
         const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
-        await queryClient.fetchQuery({ queryKey: summaryQueryKey(loggedInId), queryFn: memberApi.summary })
+        const summary = await queryClient.fetchQuery({ queryKey: summaryQueryKey(loggedInId), queryFn: memberApi.summary })
+        nickname = summary.nickname
+        suspended = summary.suspended
       } else {
         await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
       }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
-      return result
+      return { ...result, nickname, suspended }
     },
     [queryClient],
   )
