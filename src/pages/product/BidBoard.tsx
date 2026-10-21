@@ -94,7 +94,7 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
             <span>
               등록 후 1시간 동안만 수정·삭제할 수 있어요.{' '}
               <strong className="num">{untilStart > 0 ? formatCountdown(untilStart) : '0:00'}</strong> 뒤엔 경매가
-              자동으로 열리고 더는 고칠 수 없어요(PRODUCT008).
+              자동으로 열리고 더는 고칠 수 없어요.
             </span>
           </div>
           <div className={styles.ownerActions}>
@@ -240,7 +240,8 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
     },
   })
 
-  const increment = auction.bidIncrement
+  // 진행 중이 아니면 백엔드가 null 을 주므로 현재가 기준 단위로 대신 표시
+  const increment = auction.bidIncrement ?? bidIncrementOf(auction.currentPrice)
   const bidPrice = parseDigits(bidInput)
   // 원본은 4번째 인자로 bidCount 를 넘기지만 검사 함수가 쓰지 않음
   const validationError = touched ? validateBid(bidPrice, auction.currentPrice, minBidPrice ?? 0) : null
@@ -381,13 +382,13 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
         <div className={`${pageStyles.notice} ${pageStyles.noticeInfo}`}>
           <Icon name="info" size={16} />
           <span>
-            내 경매예요. 판매자는 자기 경매에 입찰할 수 없어요(AUCTION004). 질문이 오면 아래 Q&A에서 답글을 달아 주세요.
+            내 경매예요. 판매자는 자기 경매에 입찰할 수 없어요. 질문이 오면 아래 Q&A에서 답글을 달아 주세요.
           </span>
         </div>
       ) : me.isHighestBidder ? (
         <div className={`${pageStyles.notice} ${pageStyles.noticeGood}`}>
           <Icon name="check" size={16} />
-          <span>지금 최고 입찰자예요. 다른 회원이 더 높게 입찰하기 전에는 다시 입찰할 수 없어요(AUCTION005).</span>
+          <span>지금 최고 입찰자예요. 다른 회원이 더 높게 입찰하기 전에는 다시 입찰할 수 없어요.</span>
         </div>
       ) : hasMyBid ? (
         <div className={`${pageStyles.notice} ${pageStyles.noticeWarn}`}>
@@ -469,7 +470,11 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             variant="highlight"
             size="lg"
             fullWidth
-            disabled={isLive && (me.isHighestBidder || remaining <= 0)}
+            // 최소 입찰가 미만·단위 불일치도 비활성 (즉시낙찰가 이상이면 허용). 비로그인은 눌러서 로그인으로
+            disabled={
+              isLive &&
+              (me.isHighestBidder || remaining <= 0 || (isLoggedIn && !!validationError && !reachesInstantWin))
+            }
             loading={bidMutation.isPending}
           >
             {isLoggedIn

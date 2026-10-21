@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { auctionApi, cartApi, productApi } from '@/api/endpoints'
+import { auctionApi, cartApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
 import { DevApiNote } from '@/components/DevApiNote'
@@ -11,6 +11,7 @@ import { useNow } from '@/lib/clock'
 import { formatCountdown } from '@/lib/format'
 import { CATEGORIES, CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from '@/lib/labels'
 import { FeaturedAuction } from './FeaturedAuction'
+import { HeroFallback } from './HeroFallback'
 import { CATEGORY_ART, TRADE_STEPS } from './homeContent'
 import styles from './HomePage.module.css'
 
@@ -26,12 +27,13 @@ export function HomePage() {
   })
   const hotQuery = useQuery({
     queryKey: ['auctions', 'home', 'hot'],
-    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'BIDS', size: 10 }),
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'MOST_BIDS', size: 10 }),
     refetchInterval: 15_000,
   })
   const soonQuery = useQuery({
     queryKey: ['auctions', 'home', 'soon'],
-    queryFn: () => productApi.upcoming({ size: 5 }),
+    // 곧 시작은 경매 생성 전이라 상품 API (시작 임박순)
+    queryFn: () => auctionApi.listByTab({ status: 'SCHEDULED', size: 5 }),
   })
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, enabled: isLoggedIn })
 
@@ -62,10 +64,13 @@ export function HomePage() {
               </LinkButton>
             </div>
           </div>
-          {featured ? (
+          {hotQuery.isLoading ? (
+            <div className={styles.featuredSkeleton} />
+          ) : featured ? (
             <FeaturedAuction item={featured} now={now} />
           ) : (
-            <div className={styles.featuredSkeleton} />
+            // 진행 중 경매 0건이거나 목록 조회 실패
+            <HeroFallback />
           )}
         </div>
       </section>
@@ -94,7 +99,7 @@ export function HomePage() {
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>
-        <DevApiNote ids={['auction.list', 'product.upcoming']} className={styles.note} />
+        <DevApiNote ids={['auction.list']} className={styles.note} />
         <div className="grid-products">
           {endingQuery.isLoading
             ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
@@ -139,7 +144,7 @@ export function HomePage() {
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>입찰이 몰리는 경매</h2>
-          <Link to="/auctions?sort=BIDS" className={styles.more}>
+          <Link to="/auctions?sort=MOST_BIDS" className={styles.more}>
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>

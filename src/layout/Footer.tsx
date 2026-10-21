@@ -1,21 +1,9 @@
 import { Link } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { useToast } from '@/components/Toast'
 import { PHOTO_CREDITS } from '@/lib/photos'
 import styles from './Footer.module.css'
 
-/** 사이트 하단 (원본 Mx). 목업 데이터 초기화 버튼 포함 */
+/** 사이트 하단 (원본 Mx) */
 export function Footer() {
-  const queryClient = useQueryClient()
-  const toast = useToast()
-
-  const resetMockData = async () => {
-    const { resetDb } = await import('@/mock/db')
-    resetDb()
-    await queryClient.invalidateQueries()
-    toast('목업 데이터를 처음 상태로 되돌렸어요.', { tone: 'success' })
-  }
-
   return (
     <footer className={styles.footer}>
       <div className={`container ${styles.inner}`}>
@@ -38,16 +26,6 @@ export function Footer() {
             </span>
           ))}
         </p>
-        <div className={styles.mock}>
-          <span>
-            {
-              '목업 모드 · 백엔드 develop(2026-10-15) 기준 API를 브라우저 안에서 흉내 내요. 데이터는 이 브라우저에만 저장돼요.'
-            }
-          </span>
-          <button type="button" onClick={resetMockData} className={styles.reset}>
-            목업 데이터 초기화
-          </button>
-        </div>
       </div>
     </footer>
   )

@@ -5,7 +5,7 @@ import { authApi, memberApi } from '@/api/endpoints'
 import { tokenStore, type SessionProfile } from '@/api/tokenStore'
 import { decodeAccessToken } from '@/lib/jwt'
 import type { LoginRequest, LoginResponse } from '@/types/auth'
-import type { Me } from '@/types/member'
+import type { Me, MemberSummary } from '@/types/member'
 
 export interface AuthContextValue {
   /** 내 정보. 로그인 안 했거나 불러오는 중이면 null */
@@ -14,37 +14,44 @@ export interface AuthContextValue {
   isLoggedIn: boolean
   /** 토큰은 있는데 내 정보를 불러오는 중 */
   isLoading: boolean
-  login: (body: LoginRequest) => Promise<LoginResponse>
+  login: (body: LoginRequest) => Promise<LoginResult>
   logout: () => Promise<void>
 }
+
+/** 로그인 결과. 닉네임·정지 여부는 로그인 직후 불러온 내 정보 기준이다 */
+export type LoginResult = LoginResponse & { nickname: string }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
  * 내 정보를 어디서 가져올지.
- * - 로그인이 목업이거나 member.me 를 실제로 켰으면: GET /member/me (원본 방식)
- * - 로그인만 실제이고 member.me 는 꺼져 있으면: 로그인 응답 + 토큰으로 만든다.
- *   백엔드에 GET /member/me 가 없어서, 이 방식으로 로그인 상태·닉네임·판매자 여부를 판단한다.
+ * - 로그인이 목업이면: 목업 GET /member/me (원본 방식)
+ * - 로그인이 실제면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지) + 로그인 때 저장한 이메일로 만든다.
+ *   실제 GET /member/me 는 회원 정보 화면용 상세(MemberDetail)라 여기서는 쓰지 않는다.
  */
-const USE_TOKEN_PROFILE = isRealApi('auth.login') && !isRealApi('member.me')
+const USE_TOKEN_PROFILE = isRealApi('auth.login')
 
-/** 로그인 응답 + 토큰 → Me (partial) */
-function meFromToken(token: string, profile: SessionProfile | null): Me | null {
-  const claims = decodeAccessToken(token)
-  if (!claims || claims.memberId === null || !profile) return null
+/** 내 정보 요약 쿼리 키. 재발급으로 토큰이 바뀌어도 같은 회원이면 캐시를 그대로 쓰도록 회원 id 로 잡는다 */
+const summaryQueryKey = (memberId: number | null) => ['me', 'summary', memberId]
+
+/** 회원 id + 로그인 이메일 + 내 정보 요약 → Me (partial). 하나라도 없으면 null */
+function meFromSummary(
+  memberId: number | null,
+  profile: SessionProfile | null,
+  summary: MemberSummary | undefined,
+): Me | null {
+  if (memberId === null || !profile || !summary) return null
   return {
-    memberId: claims.memberId,
+    memberId,
     uuid: '',
     email: profile.email,
-    nickname: profile.nickname,
+    nickname: summary.nickname,
     username: '',
     phone: '',
     birthDate: null,
-    isSeller: claims.authorities.includes('ROLE_SELLER'),
-    accountStatus: profile.suspended ? 'SUSPENDED' : 'ACTIVE',
+    isSeller: summary.seller,
+    accountStatus: summary.suspended ? 'SUSPENDED' : 'ACTIVE',
     warningCount: 0,
-    address: null,
-    seller: null,
     createdAt: '',
     partial: true,
   }
@@ -73,22 +80,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false,
   })
 
-  const tokenMe = useMemo(
-    () => (USE_TOKEN_PROFILE && token ? meFromToken(token, profile) : null),
-    [token, profile],
+  const memberId = useMemo(() => decodeAccessToken(token)?.memberId ?? null, [token])
+
+  const summaryQuery = useQuery({
+    queryKey: summaryQueryKey(memberId),
+    queryFn: memberApi.summary,
+    enabled: USE_TOKEN_PROFILE && memberId !== null,
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
+  const summaryMe = useMemo(
+    () => (USE_TOKEN_PROFILE && token ? meFromSummary(memberId, profile, summaryQuery.data) : null),
+    [token, memberId, profile, summaryQuery.data],
   )
-  const me = USE_TOKEN_PROFILE ? tokenMe : token ? (meQuery.data ?? null) : null
+  const me = USE_TOKEN_PROFILE ? summaryMe : token ? (meQuery.data ?? null) : null
 
   const login = useCallback(
     async (body: LoginRequest) => {
       const result = await authApi.login(body)
       tokenStore.set(result.accessToken, result.refreshToken)
-      tokenStore.setProfile({ email: body.email, nickname: result.nickname, suspended: result.suspended })
-      if (!USE_TOKEN_PROFILE) {
-        await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+      tokenStore.setProfile({ email: body.email })
+      // 실제 로그인 응답에는 닉네임이 없어서 닉네임·정지 여부는 방금 불러온 내 정보에서 채운다
+      let nickname: string
+      let suspended: boolean
+      if (USE_TOKEN_PROFILE) {
+        const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
+        const summary = await queryClient.fetchQuery({
+          queryKey: summaryQueryKey(loggedInId),
+          queryFn: memberApi.summary,
+        })
+        nickname = summary.nickname
+        suspended = summary.suspended
+      } else {
+        const mockMe = await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
+        nickname = mockMe.nickname
+        suspended = mockMe.accountStatus === 'SUSPENDED'
       }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
-      return result
+      return { ...result, nickname, suspended }
     },
     [queryClient],
   )
@@ -113,11 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       me,
       isLoggedIn: !!token && !!me,
-      isLoading: !!token && !USE_TOKEN_PROFILE && meQuery.isLoading,
+      isLoading: !!token && (USE_TOKEN_PROFILE ? summaryQuery.isLoading : meQuery.isLoading),
       login,
       logout,
     }),
-    [token, me, meQuery.isLoading, login, logout],
+    [token, me, summaryQuery.isLoading, meQuery.isLoading, login, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

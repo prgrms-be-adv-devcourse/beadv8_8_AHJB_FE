@@ -32,11 +32,9 @@ function write(key: TokenKey, value: string | null) {
 
 const PROFILE_KEY = 'jjinmak.sessionProfile'
 
-/** 로그인할 때 받은 기본 정보. 백엔드에 GET /member/me 가 없어서 로그인 응답으로 대신한다 */
+/** 로그인 때 입력한 이메일. 백엔드에 이메일을 돌려주는 API 가 없어서 저장해 둔다 */
 export interface SessionProfile {
   email: string
-  nickname: string
-  suspended: boolean
 }
 
 let memoryProfile: SessionProfile | null = null
@@ -83,14 +81,12 @@ export const tokenStore = {
     writeProfile(null)
     if (hadToken) listeners.forEach((listener) => listener())
   },
-  /** 로그인·재발급 응답에서 받은 기본 정보 (member/me 없이 로그인 상태를 만들 때 사용) */
+  /** 로그인 때 저장한 정보 (member/me 없이 내 정보를 만들 때 사용) */
   getProfile(): SessionProfile | null {
     return readProfile()
   },
-  /** 기존 값과 합쳐서 저장한다 */
-  setProfile(profile: Partial<SessionProfile>) {
-    const merged = { email: '', nickname: '', suspended: false, ...readProfile(), ...profile }
-    writeProfile(merged)
+  setProfile(profile: SessionProfile) {
+    writeProfile(profile)
     listeners.forEach((listener) => listener())
   },
   subscribe(listener: () => void): () => void {

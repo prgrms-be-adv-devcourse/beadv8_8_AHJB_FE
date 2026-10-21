@@ -32,9 +32,9 @@ export const REAL_APIS: ReadonlySet<ApiKey> = parseRealApis(import.meta.env.VITE
 
 /**
  * 로그인을 실제로 켜면 같이 실제로 가야 하는 API.
- * 실제 토큰을 목업 재발급·로그아웃으로 보내면 안 되기 때문에 auth.login 을 따라간다.
+ * 실제 토큰을 목업 재발급·로그아웃·내 정보 요약으로 보내면 안 되기 때문에 auth.login 을 따라간다.
  */
-const FOLLOWS_LOGIN: ReadonlySet<ApiKey> = new Set<ApiKey>(['auth.reissue', 'auth.logout'])
+const FOLLOWS_LOGIN: ReadonlySet<ApiKey> = new Set<ApiKey>(['auth.reissue', 'auth.logout', 'member.summary'])
 
 /** 이 API 를 실제 서버로 보내는지 (false 면 브라우저 안 목업 서버) */
 export function isRealApi(key: ApiKey): boolean {

@@ -63,11 +63,11 @@
 
 | 전환 키         | API                                              | 화면                                           | 상태                                                                 |
 | --------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------- |
-| `cart.list`     | GET `/api/v1/cart` 낙찰 상품                     | `pages/cart/CartPage.tsx`, `layout/Header.tsx` | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ⚠️ 잔액 부족 시 `isPaid:false` 응답 → 프론트는 `WALLET201` 에러 기대 |
-| `order.winner`  | GET `/api/v1/order/winner` 구매 목록             | `pages/me/MyOrdersPage.tsx`                    | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `order.seller`  | GET `/api/v1/order/seller` 판매 목록             | `pages/me/MySalesPage.tsx`                     | ⚠️ `productName`, `thumbnailUrl` 필요                                |
-| `order.detail`  | GET `/api/v1/order/{orderId}` 주문 상세          | `pages/order/OrderDetailPage.tsx`              | ⚠️ `confirmExpiredAt` 필요. 판매자 화면은 `?as=seller`로 구분        |
+| `cart.list`     | GET `/api/v1/cart` 낙찰 상품                     | `pages/cart/CartPage.tsx`, `layout/Header.tsx` | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `cart.pay`      | POST `/api/v1/cart/payment` 예치금 결제          | `pages/cart/CartPage.tsx`                      | ✅ 잔액 부족이면 200 `isPaid:false` + `data`(결제창 파라미터) → 토스 결제창에서 부족분 카드 결제 → `payment.confirm` |
+| `order.winner`  | GET `/api/v1/order/winner` 구매 목록             | `pages/me/MyOrdersPage.tsx`                    | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `order.seller`  | GET `/api/v1/order/seller` 판매 목록             | `pages/me/MySalesPage.tsx`                     | ⚠️ `productName`, `thumbnailUrl` 없음 → 화면은 `상품 #id`로 표시     |
+| `order.detail`  | GET `/api/v1/order/{orderId}` 주문 상세          | `pages/order/OrderDetailPage.tsx`              | ⚠️ `productName`, `thumbnailUrl` 없음. `confirmExpiredAt`은 백엔드 #193부터. 판매자 화면은 `?as=seller`로 구분 |
 | `order.confirm` | POST `/api/v1/order/{orderId}/confirm-purchase`  | `components/order/useOrderActions.ts`          | ✅                                                                   |
 | `order.refund`  | POST `/api/v1/order/{orderId}/request-refund`    | `components/order/useOrderActions.ts`          | ✅                                                                   |
 | `order.send`    | POST `/api/v1/order/{orderId}/send-product` 발송 | `components/order/useOrderActions.ts`          | ✅                                                                   |
@@ -76,41 +76,49 @@
 
 | 전환 키           | API                                    | 화면                              | 상태                              |
 | ----------------- | -------------------------------------- | --------------------------------- | --------------------------------- |
-| `delivery.status` | GET `/api/v1/order/{orderId}/delivery` | `pages/order/OrderDetailPage.tsx` | ⚠️ 택배사·송장번호 필드 확인 필요 |
+| `delivery.status` | GET `/api/v1/order/{orderId}/delivery` | `pages/order/OrderDetailPage.tsx` | ✅ 주문 상세에 들어올 때 한 번 조회. `carrier`·`waybill`은 백엔드 #193부터 |
 
 ## payment (예치금·결제·충전)
 
-타입 `types/wallet.ts` (연동 시 백엔드 DTO 기준으로 수정 예정)
+타입 `types/wallet.ts` (백엔드 DTO 기준)
 
-전환 키는 백엔드 `WalletApiController`(`/api/v1/wallet`) · `PaymentApiController`(`/api/v1/payments`) 기준으로 등록했어요. 상태 ✅는 백엔드에 있다는 뜻이고, 프론트 연동은 아직 안 됐어요. 화면 열에 "(없음)"이면 새 화면이나 컴포넌트가 필요해요.
+전환 키는 백엔드 `WalletApiController`(`/api/v1/wallet`) · `PaymentApiController`(`/api/v1/payments`) 기준이에요. 상태 ✅는 백엔드에 있고 프론트가 그 응답 형태로 맞춰져 있다는 뜻, ⚠️는 백엔드엔 있지만 프론트 타입·흐름 수정이 남았다는 뜻이에요. 화면 열에 "(없음)"이면 새 화면이나 컴포넌트가 필요해요.
 
 ### 지갑 (`/api/v1/wallet`)
 
 | 전환 키              | API                                                      | 화면                                                                        | 상태                                                                                                    |
 | -------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `wallet.me`          | GET `/api/v1/wallet/me` 잔액                             | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ⚠️ 응답 `{ balance, settlementBalance }`. 프론트 `Wallet` 의 `walletId`·`heldAmount` 없음 → 타입 수정 |
-| `wallet.ledger`      | GET `/api/v1/wallet/me/ledger` 원장(입출금 내역)         | `pages/me/MyWalletPage.tsx`                                                 | ⚠️ 기존 `/wallet/me/transactions` 대체. `id`·`account` 등 필드명·enum 다름 → 경로·타입 수정            |
-| `wallet.holdings`    | GET `/api/v1/wallet/me/holdings` 홀딩(묶인 돈·정산 예정) | (없음) `MyWalletPage` "에스크로 보관 중" 카드가 `heldTotal` 사용 예정       | ✅ `role=BUYER\|SELLER`, `status` 필터                                                                   |
-| `wallet.withdraw`    | POST `/api/v1/wallet/me/withdrawals` 전액 출금(명목상)   | `pages/me/MyWalletPage.tsx` "출금 (준비 중)" 버튼                           | ✅ 실제 송금 없음. 잔액 0 이면 `WALLET601`                                                              |
-| `wallet.withdrawals` | GET `/api/v1/wallet/me/withdrawals` 출금 내역            | (없음)                                                                      | ✅                                                                                                      |
+| `wallet.me`          | GET `/api/v1/wallet/me` 잔액                             | `layout/Header.tsx`, `pages/me/MyWalletPage.tsx`, `pages/cart/CartPage.tsx` | ✅ `{ balance, settlementBalance }`. 정산금은 MyWalletPage 예치금 카드 아래에 표시(0이면 숨김)       |
+| `wallet.ledger`      | GET `/api/v1/wallet/me/ledger` 원장(입출금 내역)         | `pages/me/MyWalletPage.tsx` "예치금 내역" 탭                               | ✅ 유형별 한글 설명(`lib/labels.ts` `describeLedgerEntry`), 수수료·시스템 전용 유형은 숨김. 주문 참조는 주문 상세 링크 |
+| `wallet.holdings`    | GET `/api/v1/wallet/me/holdings` 홀딩(묶인 돈·정산 예정) | `pages/me/MyWalletPage.tsx` 판매자 "정산 예정 금액" 카드 (`role=SELLER`)   | ✅ 합계만 사용. 구매자 홀딩(에스크로) 카드는 제거, 홀딩 목록 화면 없음                                   |
+| `wallet.withdraw`    | POST `/api/v1/wallet/me/withdrawals` 전액 출금(명목상)   | `pages/me/MyWalletPage.tsx` "출금" 버튼 → 확인 모달                        | ✅ 실제 송금 없음, 잔액 → 0. 잔액 0 이면 버튼 비활성. 취소 가능한 충전이 있으면 모달에서 안내            |
+| `wallet.withdrawals` | GET `/api/v1/wallet/me/withdrawals` 출금 내역            | `pages/me/MyWalletPage.tsx` 출금 내역                                       | ✅ size 최대 50                                                                                         |
 
 ### 충전 · 결제 (`/api/v1/payments`)
 
 | 전환 키                 | API                                                       | 화면                                      | 상태                                                                                                           |
 | ----------------------- | --------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `payment.chargeRequest` | POST `/api/v1/payments/charges` 충전 요청                 | `components/ChargeDialog.tsx`             | ⚠️ 기존 `/wallet/me/charge` 한 번 호출을 대체. 응답 `pgOrderId`·`amount`·`orderName` 을 토스 SDK 에 넘김     |
-| `payment.chargeConfirm` | POST `/api/v1/payments/charges/confirm` 충전 승인         | (없음) 토스 successUrl 복귀 페이지 필요   | ⚠️ `{ pgOrderId, paymentKey, amount }`. 토스 SDK · 성공/실패 라우트 추가 필요                                 |
-| `payment.chargeCancel`  | POST `/api/v1/payments/charges/{chargeId}/cancel` 충전 취소 | (없음) 충전 내역 화면에서 호출 예정       | ✅ `cancelable: true` 인 건만. 잔액이 충전액보다 적으면 `CHARGE005`                                           |
-| `payment.charges`       | GET `/api/v1/payments/charges/me` 충전 내역               | (없음)                                    | ✅ size 최대 50                                                                                                |
-| `payment.chargeDetail`  | GET `/api/v1/payments/charges/{chargeId}` 충전 상세       | (없음)                                    | ✅ 상태 · 결제수단 · `receiptUrl` · 실패 사유                                                                  |
+| `payment.chargeRequest` | POST `/api/v1/payments/charges` 충전 요청                 | `components/ChargeDialog.tsx`             | ✅ 응답 `pgOrderId`·`amount`·`orderName` 을 토스 결제창(`lib/toss.ts`)에 넘김. 목업이면 결제창 없이 바로 승인까지 |
+| `payment.chargeConfirm` | POST `/api/v1/payments/charges/confirm` 충전 승인         | `pages/me/wallet/ChargeSuccessPage.tsx` (`/me/wallet/charge/success`) | ✅ 토스 successUrl 쿼리 `paymentKey`·`orderId`·`amount` 를 그대로 전달. 실패는 `/me/wallet/charge/fail`      |
+| `payment.chargeCancel`  | POST `/api/v1/payments/charges/{chargeId}/cancel` 충전 취소 | `pages/me/MyWalletPage.tsx` 충전 내역의 취소 버튼 | ✅ `cancelable` 이고 잔액 ≥ 충전액인 건에만 버튼 표시. 취소 후 카드 환불                                      |
+| `payment.charges`       | GET `/api/v1/payments/charges/me` 충전 내역               | `pages/me/MyWalletPage.tsx` 충전 내역     | ✅ 상태·결제수단·영수증·실패 사유 표시. size 최대 50                                                           |
+| `payment.chargeDetail`  | GET `/api/v1/payments/charges/{chargeId}` 충전 상세       | (없음) `paymentApi.chargeDetail` 만 있음  | ✅ 목록(`ChargeSummary`)과 같은 필드라 별도 화면 없음                                                          |
 | `payment.list`          | GET `/api/v1/payments/me` 결제 내역(주문 묶음 단위)       | (없음)                                    | ✅ `walletUsedAmount`(예치금) + `chargeAmount`(카드 부족분). size 최대 50                                      |
 | `payment.detail`        | GET `/api/v1/payments/me/{paymentId}` 결제 상세           | (없음)                                    | ✅ 주문별 금액 · 환불 여부 · 연결된 충전 건                                                                    |
-| `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | (없음) `pages/cart/CartPage.tsx` 흐름과 연결 | ⚠️ 부족분 토스 결제 후 승인 · 충전 · 홀딩 한 번에. 현재 프론트는 `cart.pay` 실패 → 충전 모달 흐름이라 주문 팀과 조율 필요 |
-| `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 부족 금액 표시  | ✅ `{ balance, walletUseAmount, shortage, needsCharge }`. 지금은 프론트가 직접 계산                           |
+| `payment.confirm`       | POST `/api/v1/payments/confirm` 주문 결제 승인            | `pages/cart/PaymentSuccessPage.tsx` (`/cart/payment/success`) | ✅ `cart.pay`의 `data.pgOrderId`·`chargeAmount`로 결제창 → successUrl 쿼리를 그대로 전달. 승인 · 충전 · 홀딩 한 번에. 실패는 `/cart/payment/fail` |
+| `payment.quote`         | GET `/api/v1/payments/quote?amount=` 결제 전 견적         | `pages/cart/CartPage.tsx` 결제 요약(예치금으로 / 카드로) | ✅ 선택 금액이 바뀔 때 조회. 응답 전엔 잔액으로 직접 계산한 값 표시                                           |
 
-### 제거 예정
+### 주문 결제(부족분 카드 결제) 흐름
 
-`wallet.transactions`, `wallet.charge` 는 백엔드에 없는 API 예요. `endpoints.ts`·`ChargeDialog`·`MyWalletPage` 가 아직 참조해서 `registry.ts` 에 `[제거 예정]` 으로 남겨 뒀고, 위 키로 옮기면서 삭제할 거예요.
+장바구니 결제하기 → `cart.pay` → 예치금이 충분하면 `isPaid:true` 로 끝. 부족하면 `isPaid:false` 와 `data { paymentId, totalPrice, chargeAmount, pgOrderId, orderName }` 가 와요. 프론트는 `data` 로 토스 결제창을 띄우고(금액은 총액이 아니라 **부족분 `chargeAmount`**), `/cart/payment/success` 에서 `payment.confirm` 을 호출하면 백엔드가 토스 승인 → 부족분 충전 → 주문 대금 홀딩까지 한 번에 끝내요. 주문 상태는 결제 완료 이벤트로 PAID 가 돼요. 결제창을 닫으면 주문은 결제 대기로 남고 다시 결제하기로 이어가요(백엔드 `cart.pay` 멱등 처리 · 1시간 뒤 주문 정리는 주문 팀 반영 예정). 승인 실패 코드 `CHARGE004`·`PG00x` 는 `retryable:true`(다시 결제하기), `PAYMENT005`(주문 만료) 는 `retryable:false`(카드 자동 취소 안내)예요.
+
+### 충전(토스 결제창) 로컬 확인
+
+`payment.chargeRequest`·`payment.chargeConfirm` 을 실제로 켜면 토스 결제창이 뜨기 때문에 클라이언트 키가 필요해요. `.env.development.local` 에 `VITE_TOSS_CLIENT_KEY=test_ck_...`(토스 개발자센터 테스트 키)를 넣고, 백엔드 `TOSS_PAYMENTS_SECRET_KEY` 에 같은 상점의 테스트 시크릿 키가 있어야 승인까지 돼요. 흐름은 `ChargeDialog` → 충전 요청 → 결제창 → `/me/wallet/charge/success` 에서 승인 → `/me/wallet` 복귀예요. 결제창을 닫으면 `/me/wallet/charge/fail` 로 오고, 백엔드에 남은 REQUESTED 충전 건은 스케줄러가 40분 뒤 정리하니 프론트가 할 일은 없어요.
+
+결제·지갑 API 의 실패 응답에는 공통 필드에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `api/client.ts` 의 `ApiError` 가 이 값을 같은 이름으로 담아 주니 결제 화면에서는 `error.retryable` 로 "다시 시도" 분기를 하면 돼요.
+
+목업(`src/mock/handlers/wallet.ts`, `payment.ts`)은 백엔드와 같은 경로·응답 형태로 맞춰 뒀어요. 다만 목업은 주머니가 하나라 `settlementBalance` 는 항상 0, 원장 `account` 는 항상 `DEPOSIT` 이고, 충전 건은 메모리에만 있어 새로고침하면 사라져요(승인된 금액은 잔액에 남아요). 백엔드에 없던 `wallet.transactions`·`wallet.charge` 키는 삭제했어요.
 
 에러 응답은 공통 `{ isSuccess, errorCode, message }` 에 `retryable`, `pgCode`, `pgMessage` 가 더 붙어요(`PaymentErrorResponse`). `retryable` 로 "다시 결제하기" 분기를 하려면 `api/client.ts` 의 `ApiError` 확장이 필요해요. 잔액 부족은 `WALLET201`.
 

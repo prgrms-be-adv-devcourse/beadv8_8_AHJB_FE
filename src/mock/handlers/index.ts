@@ -4,6 +4,7 @@ import { registerAuthRoutes } from './auth';
 import { registerCartRoutes } from './cart';
 import { registerMemberRoutes } from './member';
 import { registerOrderRoutes } from './order';
+import { registerPaymentRoutes } from './payment';
 import { registerProductRoutes } from './product';
 import { registerQnaRoutes } from './qna';
 import { registerRefundRoutes } from './refund';
@@ -26,6 +27,7 @@ export function registerAllRoutes(): void {
   registerCartRoutes();
   registerOrderRoutes();
   registerWalletRoutes();
+  registerPaymentRoutes();
   registerRefundRoutes();
   registerSettlementRoutes();
   registerReviewRoutes();

@@ -2,17 +2,35 @@ import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
 import type { LoginResponse } from '@/types/auth'
 import { API_BASE_URL, isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
+import { toUserMessage } from './errorMessages'
+
+/** 결제·지갑 API 가 실패 응답에 더해 주는 정보 (백엔드 PaymentErrorResponse). 다른 도메인 응답에는 없다 */
+export interface PaymentErrorInfo {
+  /** true 면 "다시 시도" 로 해결 가능, false 면 재시도해도 같은 결과 */
+  retryable?: boolean
+  pgCode?: string | null
+  pgMessage?: string | null
+}
 
 /** 백엔드 errorCode / 메시지 / HTTP 상태를 담는 에러 (원본 d0) */
 export class ApiError extends Error {
   code: string
   status: number
+  /** 결제·지갑 API 전용. 다른 API 에서는 항상 undefined */
+  retryable?: boolean
+  pgCode?: string | null
+  pgMessage?: string | null
 
-  constructor(code: string, message: string, status: number) {
+  constructor(code: string, message: string, status: number, payment?: PaymentErrorInfo) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.status = status
+    if (payment) {
+      this.retryable = payment.retryable
+      this.pgCode = payment.pgCode
+      this.pgMessage = payment.pgMessage
+    }
   }
 }
 
@@ -189,7 +207,6 @@ export function refreshSession(): Promise<boolean> {
       const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), { refreshToken }, null)
       const result = parseResponse<LoginResponse>(response)
       tokenStore.set(result.accessToken, result.refreshToken)
-      tokenStore.setProfile({ nickname: result.nickname, suspended: result.suspended })
       return true
     } catch {
       tokenStore.clear()
@@ -204,7 +221,12 @@ export function refreshSession(): Promise<boolean> {
 /** 실패 바디 → ApiError. 401 이면 토큰을 지운다 (원본과 같음) */
 function toApiError(body: ApiErrorBody, status: number): ApiError {
   if (status === 401) tokenStore.clear()
-  return new ApiError(body.errorCode ?? `HTTP${status}`, body.message ?? DEFAULT_ERROR_MESSAGE, status)
+  const payment: PaymentErrorInfo | undefined =
+    typeof body.retryable === 'boolean'
+      ? { retryable: body.retryable, pgCode: body.pgCode ?? null, pgMessage: body.pgMessage ?? null }
+      : undefined
+  const code = body.errorCode ?? `HTTP${status}`
+  return new ApiError(code, toUserMessage(code, status, body.message ?? DEFAULT_ERROR_MESSAGE), status, payment)
 }
 
 /** HTTP 메서드별 단축 함수 (원본 Te). 첫 인자는 registry 키 */

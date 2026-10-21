@@ -279,7 +279,7 @@ export function SellPage() {
         <div className={styles.lock} role="alert" style={{ marginBottom: 16 }}>
           <Icon name="alert" size={16} />
           <span>
-            경매 시작 예정 시각이 지나서 더는 수정할 수 없어요(PRODUCT008).{' '}
+            경매 시작 예정 시각이 지나서 더는 수정할 수 없어요.{' '}
             <Link to={`/products/${productId}`}>상품 보기</Link>
           </span>
         </div>

@@ -70,17 +70,33 @@ export const apiRegistry = {
   'member.me': {
     method: 'GET',
     path: '/api/v1/member/me',
-    title: '내 정보',
+    title: '내 정보 상세',
     owner: '차승환',
-    status: 'proposed',
-    note: '없어도 됨: 로그인 응답 + 토큰으로 대체. 생기면 내 정보 화면 상세(이름·휴대폰·배송지·계좌) 표시',
+    status: 'done',
+    note: '회원 정보 화면 기본 정보(이름·휴대폰·생년월일·배송지·가입일). 헤더용 내 정보는 토큰 + member.summary 로 만든다',
+  },
+  'member.seller': {
+    method: 'GET',
+    path: '/api/v1/member/me/seller',
+    title: '판매자 정보',
+    owner: '차승환',
+    status: 'done',
+    note: '정산 계좌(마스킹)·등록일. 판매자일 때만 부른다',
+  },
+  'member.summary': {
+    method: 'GET',
+    path: '/api/v1/member/me/summary',
+    title: '내 정보 요약',
+    owner: '차승환',
+    status: 'done',
+    note: '닉네임·판매자 여부·정지 여부. member.me 가 없을 때 이 값으로 내 정보를 만든다',
   },
   'member.warnings': {
     method: 'GET',
     path: '/api/v1/member/me/warnings',
-    title: '내 경고 이력',
+    title: '계정 상태 · 경고 이력',
     owner: '차승환',
-    status: 'proposed',
+    status: 'done',
   },
   'product.create': {
     method: 'POST',
@@ -117,7 +133,7 @@ export const apiRegistry = {
     path: '/api/v1/products/{productId}',
     title: '상품 상세',
     owner: '송현수',
-    status: 'proposed',
+    status: 'done',
     note: '상품명·사진·설명·배송·판매자·auctionId',
   },
   'product.mine': {
@@ -188,10 +204,10 @@ export const apiRegistry = {
   'auction.list': {
     method: 'GET',
     path: '/api/v1/auctions',
-    title: '경매 목록 · 검색',
+    title: '경매 목록 (진행 중 · 종료)',
     owner: '박신형',
-    status: 'proposed',
-    note: 'keyword, status, category, manufacturer, sort, page, size',
+    status: 'done',
+    note: 'status(IN_PROGRESS|ENDED), category, sort, page, size',
   },
   'auction.detail': {
     method: 'GET',
@@ -224,9 +240,10 @@ export const apiRegistry = {
   'auction.myBids': {
     method: 'GET',
     path: '/api/v1/auctions/me/bids',
-    title: '내 입찰 내역',
+    title: '입찰 중인 경매',
     owner: '박신형',
-    status: 'proposed',
+    status: 'done',
+    note: '진행 중만, 마감 임박순',
   },
   'auction.reopen': {
     method: 'POST',
@@ -318,7 +335,7 @@ export const apiRegistry = {
     title: '내 원장(입출금 내역)',
     owner: '김지유',
     status: 'done',
-    note: 'account(DEPOSIT|SETTLEMENT), type, page, size(최대 50). wallet.transactions 를 대체',
+    note: 'account(DEPOSIT|SETTLEMENT), type, page, size(최대 50)',
   },
   'wallet.holdings': {
     method: 'GET',
@@ -414,24 +431,6 @@ export const apiRegistry = {
     owner: '김지유',
     status: 'done',
     note: '?amount= → { balance, walletUseAmount, shortage, needsCharge }. 저장 안 함',
-  },
-  // 아래 두 키는 백엔드에 없음. endpoints.ts · ChargeDialog · MyWalletPage 가 아직 참조하므로
-  // 연동 작업에서 wallet.ledger / payment.chargeRequest+chargeConfirm 으로 바꾼 뒤 삭제한다.
-  'wallet.transactions': {
-    method: 'GET',
-    path: '/api/v1/wallet/me/transactions',
-    title: '[제거 예정] 예치금 내역',
-    owner: '김지유',
-    status: 'proposed',
-    note: '백엔드 없음 → wallet.ledger 로 대체',
-  },
-  'wallet.charge': {
-    method: 'POST',
-    path: '/api/v1/wallet/me/charge',
-    title: '[제거 예정] 예치금 충전',
-    owner: '김지유',
-    status: 'proposed',
-    note: '백엔드 없음 → payment.chargeRequest → 토스 결제창 → payment.chargeConfirm 으로 대체',
   },
   'refund.detail': {
     method: 'GET',

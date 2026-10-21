@@ -52,7 +52,7 @@ export function OrderDetailPage() {
     queryKey: ['delivery', orderId, order?.state],
     queryFn: () => orderApi.delivery(orderId),
     enabled: hasDelivery,
-    refetchInterval: order?.state === 'SHIPPING' ? 5000 : false,
+    retry: false,
   })
 
   const refundQuery = useQuery({
@@ -192,10 +192,6 @@ export function OrderDetailPage() {
                 </Link>
               </div>
             ) : null}
-
-            <button type="button" className={styles.chat} disabled title="거래 채팅 API 준비 중">
-              <Icon name="chat" size={16} /> 거래 채팅 (준비 중)
-            </button>
           </section>
 
           {hasDelivery ? <OrderDeliveryCard query={deliveryQuery} /> : null}

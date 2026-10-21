@@ -1,4 +1,4 @@
-import type { PageParams, PageResponse } from './common'
+import type { PageParams } from './common'
 import type { AuctionSummary, FailureReason } from './auction'
 
 export type Category = 'CONSOLE' | 'GAME_SOFTWARE' | 'ACCESSORY' | 'LIMITED_EDITION' | 'ETC'
@@ -53,16 +53,6 @@ export interface ProductDetail {
   wished: boolean
   isMine: boolean
   createdAt: string
-}
-
-export interface UpcomingListParams extends PageParams {
-  /** 비우면 전체 */
-  category?: Category | string
-}
-
-/** GET /api/v1/products/upcoming (곧 시작). 카드는 경매 목록과 같은 모양이고 status 는 항상 SCHEDULED */
-export interface UpcomingListResponse extends PageResponse<AuctionSummary> {
-  serverTime: string
 }
 
 /** GET /api/v1/products/me 의 항목 */

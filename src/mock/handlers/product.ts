@@ -13,8 +13,8 @@ import {
 import type { AuctionDuration, FeeType, ProductRecord } from '../types';
 import {
   POLICY_VERSION,
-  getPageParams,
   formatLocalDateTime as ldt,
+  getPageParams,
   now,
   paginate,
   parseTime,
@@ -181,6 +181,19 @@ export function registerProductRoutes(): void {
   });
 
   // /products/:id 보다 먼저 등록해야 한다
+  // 곧 시작(경매 생성 전) 목록. 시작 임박순
+  route('GET', '/api/v1/products/upcoming', ({ params }) => {
+    const category = params.get('category');
+    const { page, size } = getPageParams(params, 20);
+    let items = db.products
+      .filter((p) => !p.deleted)
+      .map(toAuctionSummary)
+      .filter((item) => item.status === 'SCHEDULED');
+    if (category) items = items.filter((item) => item.category === category);
+    items.sort((a, b) => parseTime(a.startAt) - parseTime(b.startAt));
+    return ok(paginate(items, page, size));
+  });
+
   route('GET', '/api/v1/products/me', (ctx) => {
     const me = requireMe(ctx);
     const items = db.products
@@ -200,18 +213,6 @@ export function registerProductRoutes(): void {
         };
       });
     return ok(items);
-  });
-
-  // 곧 시작: 경매 시작 전 상품을 시작 임박순으로 (/products/:id 보다 먼저 등록)
-  route('GET', '/api/v1/products/upcoming', ({ params }) => {
-    const category = params.get('category');
-    const { page, size } = getPageParams(params, 20);
-    const items = db.products
-      .filter((p) => !p.deleted)
-      .map(toAuctionSummary)
-      .filter((item) => item.status === 'SCHEDULED' && (!category || item.category === category))
-      .sort((a, b) => parseTime(a.startAt) - parseTime(b.startAt));
-    return ok({ ...paginate(items, page, Math.min(size, 50)), serverTime: ldt() });
   });
 
   route('GET', '/api/v1/products/:id', (ctx) => {

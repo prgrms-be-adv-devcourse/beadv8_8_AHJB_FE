@@ -232,8 +232,15 @@ export function shipOrder(order: OrderRecord, carrier: string, waybill: string, 
 /**
  * 장바구니 결제 (원본 QA).
  * forceTopUp=true 면 잔액 부족 시 부족분 대신 결제 총액만큼 잔액을 채워 결제한다(가상 회원 자동 결제용).
+ * orderGroupId 를 주면 그 id 로 주문 그룹을 만든다(부족분 카드 결제 흐름에서 결제 요청 때 발급한 id 재사용). 만든 주문 그룹 id 를 돌려준다.
  */
-export function payCartItems(memberId: number, productIds: number[], at: number, forceTopUp = false): void {
+export function payCartItems(
+  memberId: number,
+  productIds: number[],
+  at: number,
+  forceTopUp = false,
+  orderGroupId: number = nextId('orderGroups'),
+): number {
   const items = productIds.map((productId) => {
     const item = db.cartItems.find((c) => c.productId === productId);
     if (!item) fail('CART001');
@@ -247,7 +254,6 @@ export function payCartItems(memberId: number, productIds: number[], at: number,
     if (forceTopUp) walletOf(memberId).balance += total;
     else fail('WALLET201');
   }
-  const orderGroupId = nextId('orderGroups');
   const orders: OrderRecord[] = items.map((item) => ({
     id: nextId('orders'),
     orderGroupId,
@@ -288,6 +294,7 @@ export function payCartItems(memberId: number, productIds: number[], at: number,
     if (!isDemoMember(order.sellerId)) db.pending[`send:${order.id}`] = at + 15000;
   });
   db.cartItems = db.cartItems.filter((c) => !items.includes(c));
+  return orderGroupId;
 }
 
 // ---------- 환불 ----------

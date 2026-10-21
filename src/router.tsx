@@ -11,6 +11,8 @@ import { SignupPage } from '@/pages/auth/SignupPage'
 import { SellerRegisterPage } from '@/pages/auth/SellerRegisterPage'
 import { SellPage } from '@/pages/sell/SellPage'
 import { CartPage } from '@/pages/cart/CartPage'
+import { PaymentSuccessPage } from '@/pages/cart/PaymentSuccessPage'
+import { PaymentFailPage } from '@/pages/cart/PaymentFailPage'
 import { OrderDetailPage } from '@/pages/order/OrderDetailPage'
 import { MyPageLayout } from '@/pages/me/MyPageLayout'
 import { MyBidsPage } from '@/pages/me/MyBidsPage'
@@ -21,6 +23,8 @@ import { MyProductsPage } from '@/pages/me/MyProductsPage'
 import { MySalesPage } from '@/pages/me/MySalesPage'
 import { MySettlementsPage } from '@/pages/me/MySettlementsPage'
 import { MyWalletPage } from '@/pages/me/MyWalletPage'
+import { ChargeSuccessPage } from '@/pages/me/wallet/ChargeSuccessPage'
+import { ChargeFailPage } from '@/pages/me/wallet/ChargeFailPage'
 import { MyProfilePage } from '@/pages/me/MyProfilePage'
 import { DevApisPage } from '@/pages/dev/DevApisPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -56,6 +60,9 @@ export const routes: RouteObject[] = [
         ),
       },
       { path: '/cart', element: requireAuth(<CartPage />) },
+      // 장바구니 결제의 토스 결제창 successUrl / failUrl (lib/toss.ts 의 ORDER_PAYMENT_*_PATH 와 같아야 한다)
+      { path: '/cart/payment/success', element: requireAuth(<PaymentSuccessPage />) },
+      { path: '/cart/payment/fail', element: requireAuth(<PaymentFailPage />) },
       { path: '/orders/:orderId', element: requireAuth(<OrderDetailPage />) },
       {
         path: '/me',
@@ -70,6 +77,9 @@ export const routes: RouteObject[] = [
           { path: 'sales', element: <MySalesPage /> },
           { path: 'settlements', element: <MySettlementsPage /> },
           { path: 'wallet', element: <MyWalletPage /> },
+          // 토스 결제창 successUrl / failUrl (lib/toss.ts 의 CHARGE_SUCCESS_PATH / CHARGE_FAIL_PATH 와 같아야 한다)
+          { path: 'wallet/charge/success', element: <ChargeSuccessPage /> },
+          { path: 'wallet/charge/fail', element: <ChargeFailPage /> },
           { path: 'profile', element: <MyProfilePage /> },
         ],
       },
