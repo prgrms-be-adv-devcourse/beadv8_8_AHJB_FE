@@ -18,6 +18,12 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_DEV_PROXY_TARGET || 'http://localhost:8080',
           changeOrigin: true,
         },
+        // WebSocket(거래 채팅). Gateway /ws/chat 으로 전달
+        '/ws': {
+          target: env.VITE_DEV_PROXY_TARGET || 'http://localhost:8080',
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
   }

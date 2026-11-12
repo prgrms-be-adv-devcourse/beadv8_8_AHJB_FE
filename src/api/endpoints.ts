@@ -54,6 +54,7 @@ import type {
 } from '@/types/payment'
 import type { Refund, RefundProcessResult } from '@/types/refund'
 import type { SettlementDetail, SettlementListParams, SettlementSummary } from '@/types/settlement'
+import type { ChatListParams, ChatMessage, ChatRoomDetail, ChatRoomSummary } from '@/types/chat'
 import type {
   Review,
   ReviewCreateRequest,
@@ -239,6 +240,15 @@ export const settlementApi = {
     http.get<PageResponse<SettlementSummary>>('settlement.list', '/api/v1/settlements', params),
   detail: (settlementId: Id) =>
     http.get<SettlementDetail>('settlement.detail', `/api/v1/settlements/${settlementId}`),
+}
+
+/** 거래 채팅 (조회만. 전송·수신은 lib/chatSocket.ts 의 WebSocket) */
+export const chatApi = {
+  rooms: (params: ChatListParams = {}) =>
+    http.get<PageResponse<ChatRoomSummary>>('chat.rooms', '/api/v1/chat-rooms', params),
+  room: (roomId: Id) => http.get<ChatRoomDetail>('chat.room', `/api/v1/chat-rooms/${roomId}`),
+  messages: (roomId: Id, params: PageParams = {}) =>
+    http.get<PageResponse<ChatMessage>>('chat.messages', `/api/v1/chat-rooms/${roomId}/messages`, params),
 }
 
 /** 후기 (원본 Oi) */
