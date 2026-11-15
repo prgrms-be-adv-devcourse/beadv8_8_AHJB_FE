@@ -14,7 +14,7 @@ export interface ApiSpec {
 }
 
 /**
- * API 구현 현황표 (원본 eA).
+ * API 구현 현황표.
  * 키(`auction.detail` 등)는 VITE_REAL_APIS 전환 키로도 쓰인다 (api/config.ts).
  */
 export const apiRegistry = {
@@ -521,7 +521,7 @@ export const apiRegistry = {
 
 export type ApiKey = keyof typeof apiRegistry
 
-/** 현황 배지 문구 (원본 Co) */
+/** 현황 배지 문구 */
 export const API_STATUS_LABELS: Record<ApiImplStatus, string> = {
   done: '구현',
   partial: '필드 부족',

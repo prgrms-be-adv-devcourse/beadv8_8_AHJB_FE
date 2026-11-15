@@ -1,4 +1,4 @@
-// 목업 DB: localStorage 영속화 + id 발급 (원본 db 모듈)
+// 목업 DB: localStorage 영속화 + id 발급
 import { buildSeed } from './seed';
 import type { MockDb } from './types';
 

@@ -13,11 +13,11 @@ export interface StatusMeta {
   label: string
 }
 
-/** 마감 임박 기준: 1시간 (원본 Vx) */
+/** 마감 임박 기준: 1시간 */
 export const CLOSING_SOON_MS = 3600 * 1000
 
 /**
- * 경매 상태 배지 (원본 Hi).
+ * 경매 상태 배지.
  * 진행 중이면 남은 시간으로 '마감 처리 중'(0 이하) / '마감 임박'(1시간 미만) / '진행 중'.
  * FAILED 는 실패 사유 라벨(없으면 '종료').
  */
@@ -62,7 +62,7 @@ export interface OrderStateMeta extends StatusMeta {
   sellerHint: string
 }
 
-/** 주문 상태 라벨·색·안내 문구 (원본 fA) */
+/** 주문 상태 라벨·색·안내 문구 */
 export const ORDER_STATE_META: Record<OrderState, OrderStateMeta> = {
   WAITING: {
     label: '결제 대기',
@@ -120,7 +120,7 @@ export const ORDER_STATE_META: Record<OrderState, OrderStateMeta> = {
   },
 }
 
-/** 주문 진행 단계 (원본 hA). Stepper 에는 label 만 넘긴다 */
+/** 주문 진행 단계. Stepper 에는 label 만 넘긴다 */
 export const ORDER_STEPS: Array<{ state: OrderState; label: string }> = [
   { state: 'PAID', label: '결제' },
   { state: 'SHIPPING', label: '배송 중' },
@@ -129,7 +129,7 @@ export const ORDER_STEPS: Array<{ state: OrderState; label: string }> = [
 ]
 
 /**
- * 주문 상태 → 완료한 단계 수 0–4 (원본 mA). Stepper 의 current 로 쓴다.
+ * 주문 상태 → 완료한 단계 수 0–4. Stepper 의 current 로 쓴다.
  * WAITING·FAILED=0, PAID=1, SHIPPING·DELIVERY_ERROR=2, SHIPPED·REFUND_REQUESTED=3, CONFIRMED·REFUNDED=4
  */
 export function orderStepIndex(state: OrderState): number {
@@ -151,7 +151,7 @@ export function orderStepIndex(state: OrderState): number {
   }
 }
 
-/** 환불 상태 (원본 $m) */
+/** 환불 상태 */
 export const REFUND_STATUS_META: Record<RefundStatus, StatusMeta> = {
   REQUESTED: { label: '판매자 확인 중', tone: 'closing' },
   ACCEPTED: { label: '환불 처리 중', tone: 'live' },
@@ -159,7 +159,7 @@ export const REFUND_STATUS_META: Record<RefundStatus, StatusMeta> = {
   REJECTED: { label: '환불 거절', tone: 'neutral' },
 }
 
-/** 정산 상태 (원본 Ku) */
+/** 정산 상태 */
 export const SETTLEMENT_STATUS_META: Record<SettlementStatus, StatusMeta> = {
   PENDING: { label: '정산 예정', tone: 'scheduled' },
   COMPLETED: { label: '정산 완료', tone: 'ended' },

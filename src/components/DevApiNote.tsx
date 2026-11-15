@@ -9,7 +9,7 @@ interface DevApiNoteProps {
   className?: string
 }
 
-/** 개발 모드일 때만 화면 아래에 쓰는 API 칩을 보여 준다 (원본 ht) */
+/** 개발 모드일 때만 화면 아래에 쓰는 API 칩을 보여 준다 */
 export function DevApiNote({ ids, className }: DevApiNoteProps) {
   const devMode = useDevMode()
   if (!devMode) return null
@@ -34,7 +34,7 @@ export function DevApiNote({ ids, className }: DevApiNoteProps) {
   )
 }
 
-/** 화면 구석의 'API 표시' 토글 버튼 (원본 b0) */
+/** 화면 구석의 'API 표시' 토글 버튼 */
 export function DevModeToggle() {
   const devMode = useDevMode()
   return (

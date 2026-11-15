@@ -10,7 +10,7 @@ interface BadgeProps {
   children?: ReactNode
 }
 
-/** 상태 배지 (원본 gt) */
+/** 상태 배지 */
 export function Badge({ tone = 'neutral', variant = 'filled', size = 'md', children }: BadgeProps) {
   const className = [styles.badge, variant === 'outline' ? styles.outline : styles[tone], size === 'lg' && styles.lg]
     .filter(Boolean)

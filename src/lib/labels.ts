@@ -5,7 +5,7 @@ import type { LedgerEntry, TransactionType, WalletAccount, WithdrawalStatus } fr
 import type { ChargePurpose, ChargeStatus } from '@/types/payment'
 import type { AccountStatus, WarningReason } from '@/types/member'
 
-/** 카테고리 이름 (원본 $n) */
+/** 카테고리 이름 */
 export const CATEGORY_LABELS: Record<Category, string> = {
   CONSOLE: '게임기 본체',
   GAME_SOFTWARE: '게임 타이틀',
@@ -14,7 +14,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   ETC: '기타',
 }
 
-/** 카테고리 설명 (원본 Qx, 홈 카테고리 카드) */
+/** 카테고리 설명 */
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
   CONSOLE: '패미컴부터 스위치까지',
   GAME_SOFTWARE: '카트리지 · 디스크 · 게임카드',
@@ -23,10 +23,10 @@ export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
   ETC: '굿즈 · 그 밖의 것',
 }
 
-/** 카테고리 키 순서 (원본 _o) */
+/** 카테고리 키 순서 */
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[]
 
-/** 제조사 이름 (원본 Es) */
+/** 제조사 이름 */
 export const MANUFACTURER_LABELS: Record<Manufacturer, string> = {
   NINTENDO: '닌텐도',
   SONY: '소니',
@@ -35,10 +35,10 @@ export const MANUFACTURER_LABELS: Record<Manufacturer, string> = {
   ETC: '기타',
 }
 
-/** 제조사 키 순서 (원본 oA) */
+/** 제조사 키 순서 */
 export const MANUFACTURERS = Object.keys(MANUFACTURER_LABELS) as Manufacturer[]
 
-/** 배송비 유형 (원본 cA) */
+/** 배송비 유형 */
 export const SHIPPING_FEE_TYPE_LABELS: Record<ShippingFeeType, string> = {
   FREE: '무료배송',
   FIXED_3000: '3,000원',
@@ -46,7 +46,7 @@ export const SHIPPING_FEE_TYPE_LABELS: Record<ShippingFeeType, string> = {
   CUSTOM: '직접 입력',
 }
 
-/** 경매 기간 (원본 uA) */
+/** 경매 기간 */
 export const DURATION_LABELS: Record<AuctionDuration, string> = {
   DAYS_1: '1일',
   DAYS_3: '3일',
@@ -54,14 +54,14 @@ export const DURATION_LABELS: Record<AuctionDuration, string> = {
   CUSTOM: '종료 시각 지정',
 }
 
-/** 경매 실패 사유 (원본 dA) */
+/** 경매 실패 사유 */
 export const FAILURE_REASON_LABELS: Record<FailureReason, string> = {
   NO_BID: '유찰',
   UNPAID: '낙찰 무효',
   REFUNDED: '환불',
 }
 
-/** 택배사 (원본 kd) */
+/** 택배사 */
 export const CARRIER_LABELS: Record<Carrier, string> = {
   CJ: 'CJ대한통운',
   LOTTE: '롯데택배',
@@ -76,10 +76,10 @@ export const CARRIER_LABELS: Record<Carrier, string> = {
   GS_POSTBOX: 'GS Postbox',
 }
 
-/** 택배사 키 순서 (원본 Bx) */
+/** 택배사 키 순서 */
 export const CARRIERS = Object.keys(CARRIER_LABELS) as Carrier[]
 
-/** 배송 추적 코드 (원본 qx) */
+/** 배송 추적 코드 */
 export const DELIVERY_CODE_LABELS: Record<DeliveryCode, string> = {
   UNKNOWN: '상태를 알 수 없음',
   WAITING: '대기 중',
@@ -94,7 +94,7 @@ export const DELIVERY_CODE_LABELS: Record<DeliveryCode, string> = {
   WRONG: '미식별 코드',
 }
 
-/** 배송 진행 단계 순서 (원본 Zu) */
+/** 배송 진행 단계 순서 */
 export const DELIVERY_PROGRESS_CODES: DeliveryCode[] = [
   'INFORMATION_RECEIVED',
   'AT_PICKUP',
@@ -103,7 +103,7 @@ export const DELIVERY_PROGRESS_CODES: DeliveryCode[] = [
   'DELIVERED',
 ]
 
-/** 원장 거래 유형 (원본 Gx). 백엔드 WalletTransactionType 전체. 원장 화면은 없고 충전·결제 내역 연동 시 참고용 */
+/** 원장 거래 유형. 백엔드 WalletTransactionType 전체. 원장 화면은 없고 충전·결제 내역 연동 시 참고용 */
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   CHARGE: '충전',
   CHARGE_CANCEL: '충전 취소',
@@ -181,14 +181,14 @@ export const CHARGE_PURPOSE_LABELS: Record<ChargePurpose, string> = {
   FOR_PAYMENT: '주문 결제 부족분',
 }
 
-/** 경고 사유 (원본 Xx) */
+/** 경고 사유 */
 export const WARNING_REASON_LABELS: Record<WarningReason, string> = {
   PAYMENT_DEFAULT: '결제 미이행',
   REFUND_PENALTY: '환불 패널티',
   REPORT: '신고 누적',
 }
 
-/** 계정 상태 (원본 Yx) */
+/** 계정 상태 */
 export const ACCOUNT_STATUS_LABELS: Record<AccountStatus, string> = {
   ACTIVE: '정상',
   LOCKED: '로그인 잠김',
@@ -196,7 +196,7 @@ export const ACCOUNT_STATUS_LABELS: Record<AccountStatus, string> = {
   BANNED: '차단',
 }
 
-/** 정산 계좌 은행 목록 (원본 Wx) */
+/** 정산 계좌 은행 목록 */
 export const BANKS = [
   '국민은행',
   '신한은행',

@@ -17,7 +17,7 @@ interface ImagePickerProps {
   error: string | null
 }
 
-/** 판매 폼 1. 사진 섹션 (원본 mp 안). 첫 장이 대표 사진 */
+/** 판매 폼 1. 사진 섹션. 첫 장이 대표 사진 */
 export function ImagePicker({
   images,
   setImages,

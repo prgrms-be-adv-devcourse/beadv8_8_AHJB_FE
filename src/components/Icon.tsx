@@ -1,6 +1,6 @@
 import type { ReactNode, SVGProps } from 'react'
 
-/** 아이콘 모양 (원본 k0). 24×24 viewBox, 선 아이콘 */
+/** 아이콘 모양. 24×24 viewBox, 선 아이콘 */
 const ICON_PATHS = {
   search: (
     <>
@@ -166,7 +166,7 @@ export interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {
   filled?: boolean
 }
 
-/** SVG 아이콘 (원본 de). 나머지 props 는 svg 에 그대로 (strokeWidth 등으로 덮어쓰기 가능) */
+/** SVG 아이콘. 나머지 props 는 svg 에 그대로 (strokeWidth 등으로 덮어쓰기 가능) */
 export function Icon({ name, size = 16, filled = false, ...rest }: IconProps) {
   return (
     <svg

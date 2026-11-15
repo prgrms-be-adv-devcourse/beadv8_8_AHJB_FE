@@ -20,7 +20,7 @@ import { Dialog } from './Dialog'
 import { Chip, Field, Input } from './form/Field'
 import { useToast } from './Toast'
 
-/** 빠른 금액 추가 칩 (원본 $P) */
+/** 빠른 금액 추가 칩 */
 const QUICK_AMOUNTS = [10000, 50000, 100000, 300000]
 
 interface ChargeDialogProps {
@@ -34,7 +34,7 @@ interface ChargeDialogProps {
 }
 
 /**
- * 예치금 충전 모달 (원본 yA). 1,000원 이상·1,000원 단위·200만 원 이하.
+ * 예치금 충전 모달. 1,000원 이상·1,000원 단위·200만 원 이하.
  *
  * 실제: 충전 요청(POST /payments/charges) → 토스 결제창 → successUrl(/me/wallet/charge/success)에서 승인.
  *       결제창으로 페이지가 이동하므로 이 컴포넌트에서 끝나지 않는다.

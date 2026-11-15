@@ -110,7 +110,7 @@ export function registerReviewRoutes(): void {
   route('PATCH', '/api/v1/reviews/:id', (ctx) => {
     const review = findMyReview(ctx);
     const body = ctx.body as Partial<ReviewBody> | null | undefined;
-    // 원본 그대로: 평점을 먼저 반영한 뒤 내용 검증 (내용이 비면 평점만 메모리에 반영된 채 400)
+    // 평점을 먼저 반영한 뒤 내용 검증 (내용이 비면 평점만 메모리에 반영된 채 400)
     if (body?.rating !== undefined) {
       if (!isValidRating(body.rating)) fail('REVIEW005');
       review.rating = body.rating;

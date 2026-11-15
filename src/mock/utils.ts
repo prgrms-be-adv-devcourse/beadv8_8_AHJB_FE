@@ -8,28 +8,28 @@ export const DAY = 24 * HOUR;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
-/** 로컬 시각 'YYYY-MM-DDTHH:mm:ss' (원본 ldt) */
+/** 로컬 시각 'YYYY-MM-DDTHH:mm:ss' */
 export function formatLocalDateTime(time: number = Date.now()): string {
   const d = new Date(time);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
-/** 로컬 날짜 'YYYY-MM-DD' (원본 ld) */
+/** 로컬 날짜 'YYYY-MM-DD' */
 export function formatLocalDate(time: number): string {
   const d = new Date(time);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-/** 날짜 문자열 → ms (원본 ms) */
+/** 날짜 문자열 → ms */
 export const parseTime = (value: string): number => Date.parse(value);
 
-/** 구매확정 시각 기준 정산 지급일: 다음 달 15일 (원본 payoutDateOf) */
+/** 구매확정 시각 기준 정산 지급일: 다음 달 15일 */
 export function payoutDateOf(confirmedAt: string): string {
   const d = new Date(parseTime(confirmedAt));
   return formatLocalDate(new Date(d.getFullYear(), d.getMonth() + 1, 15).getTime());
 }
 
-/** 지급일 'YYYY-MM-DD' 의 03:00 (로컬) ms (원본 payoutTimeOf) */
+/** 지급일 'YYYY-MM-DD' 의 03:00 (로컬) ms */
 export function payoutTimeOf(payoutDate: string): number {
   const [year, month, day] = payoutDate.split('-').map(Number);
   return new Date(year, month - 1, day, 3, 0, 0).getTime();

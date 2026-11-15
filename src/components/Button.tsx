@@ -14,7 +14,7 @@ export interface ButtonStyleProps {
   className?: string
 }
 
-/** 버튼 className 조합 (원본 pA). md 는 별도 클래스 없음 */
+/** 버튼 className 조합. md 는 별도 클래스 없음 */
 export function buttonClassName({
   variant = 'solid',
   size = 'md',
@@ -32,7 +32,7 @@ export interface ButtonProps extends ButtonStyleProps, Omit<ButtonHTMLAttributes
   loading?: boolean
 }
 
-/** 버튼 (원본 et). type 기본값 'button' */
+/** 버튼. type 기본값 'button' */
 export function Button({
   variant,
   size,
@@ -63,7 +63,7 @@ export interface LinkButtonProps extends ButtonStyleProps, Omit<LinkProps, 'clas
   children?: ReactNode
 }
 
-/** 버튼 모양 링크 (원본 $t) */
+/** 버튼 모양 링크 */
 export function LinkButton({ variant, size, fullWidth, iconOnly, className, children, ...rest }: LinkButtonProps) {
   return (
     <Link className={buttonClassName({ variant, size, fullWidth, iconOnly, className })} {...rest}>

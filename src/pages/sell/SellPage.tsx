@@ -45,7 +45,7 @@ import { SellSidebar } from './SellSidebar'
 import { validateSellForm, type SellFieldKey } from './validateSellForm'
 import styles from './SellPage.module.css'
 
-/** 경매 올리기 /sell · 경매 수정 /sell/:productId/edit 공용 (원본 mp) */
+/** 경매 올리기 /sell · 경매 수정 /sell/:productId/edit 공용 */
 export function SellPage() {
   const productId = Number(useParams().productId) || null
   const isEdit = !!productId

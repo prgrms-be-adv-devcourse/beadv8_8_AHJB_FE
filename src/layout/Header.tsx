@@ -15,7 +15,7 @@ import styles from './Header.module.css'
 /** 결제 기한이 이만큼 안 남았으면 장바구니 숫자를 강조 (6시간) */
 const PAYMENT_DUE_HOT_MS = 6 * 3600 * 1000
 
-/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 (원본 tj) */
+/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 */
 export function Header() {
   const { me, isLoggedIn, logout } = useAuth()
   const navigate = useNavigate()

@@ -14,7 +14,7 @@ interface OrderRefundCardProps {
   role: OrderRole
 }
 
-/** 주문 상세의 환불 카드 (원본 SO 안) */
+/** 주문 상세의 환불 카드 */
 export function OrderRefundCard({ refund, order, role }: OrderRefundCardProps) {
   const meta = REFUND_STATUS_META[refund.status]
   return (

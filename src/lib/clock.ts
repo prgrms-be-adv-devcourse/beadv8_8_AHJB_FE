@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * 서버 시각 기준 "지금" (원본 Zo / Uo / Dn / Ux).
+ * 서버 시각 기준 "지금".
  * 구독자가 있는 동안만 1초마다 갱신된다.
  */
 let now = Date.now()
@@ -32,13 +32,13 @@ function subscribe(listener: () => void) {
   }
 }
 
-/** 서버가 알려준 시각(ISO 문자열)으로 시계를 맞춘다 (원본 Ux) */
+/** 서버가 알려준 시각(ISO 문자열)으로 시계를 맞춘다 */
 export function syncServerTime(serverTime: string) {
   offset = Date.parse(serverTime) - Date.now()
   now = Date.now() + offset
 }
 
-/** 1초마다 바뀌는 서버 기준 현재 시각(ms) (원본 Dn) */
+/** 1초마다 바뀌는 서버 기준 현재 시각(ms) */
 export function useNow(): number {
   return useSyncExternalStore(subscribe, () => now)
 }

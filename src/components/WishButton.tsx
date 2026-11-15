@@ -8,7 +8,7 @@ import { Icon } from './Icon'
 import { useToast } from './Toast'
 import styles from './WishButton.module.css'
 
-/** 내가 찜한 상품 id 집합 (최근 50개 기준) (원본 AA). queryKey ['wishes','ids'] */
+/** 내가 찜한 상품 id 집합 (최근 50개 기준). queryKey ['wishes','ids'] */
 export function useWishedProductIds(): Set<number> {
   const { isLoggedIn } = useAuth()
   const query = useQuery({
@@ -21,7 +21,7 @@ export function useWishedProductIds(): Set<number> {
 }
 
 /**
- * 찜 토글 mutation (원본 Aj). wished=true 면 해제, false 면 추가.
+ * 찜 토글 mutation. wished=true 면 해제, false 면 추가.
  * 성공하면 ['wishes'] 무효화 + ['product', productId] 캐시의 wished/wishCount 갱신.
  */
 export function useToggleWish() {
@@ -49,7 +49,7 @@ interface WishButtonProps {
   disabled?: boolean
 }
 
-/** 찜 버튼 (원본 Dd). 로그인 안 했으면 로그인 화면으로 */
+/** 찜 버튼. 로그인 안 했으면 로그인 화면으로 */
 export function WishButton({ productId, compact, count, wished, disabled }: WishButtonProps) {
   const { isLoggedIn } = useAuth()
   const navigate = useNavigate()

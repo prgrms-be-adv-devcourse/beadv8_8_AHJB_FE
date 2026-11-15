@@ -15,7 +15,7 @@ import { HeroFallback } from './HeroFallback'
 import { CATEGORY_ART, TRADE_STEPS } from './homeContent'
 import styles from './HomePage.module.css'
 
-/** 홈 / (원본 kS) */
+/** 홈 / */
 export function HomePage() {
   const now = useNow()
   const { isLoggedIn } = useAuth()

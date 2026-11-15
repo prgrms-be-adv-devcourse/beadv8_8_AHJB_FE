@@ -28,7 +28,7 @@ interface FieldProps {
   children: (id: string, describedBy: string | undefined) => ReactNode
 }
 
-/** 라벨 + 입력 + 안내 문구 (원본 At) */
+/** 라벨 + 입력 + 안내 문구 */
 export function Field({ label, hint, error, success, optional, children, className, id }: FieldProps) {
   const generatedId = useId()
   const fieldId = id ?? generatedId
@@ -66,7 +66,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   className?: string
 }
 
-/** 텍스트 입력 (원본 xt) */
+/** 텍스트 입력 */
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   { icon, suffix, invalid, inputSize = 'md', className, ...rest },
   ref,
@@ -97,7 +97,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   className?: string
 }
 
-/** 선택 상자 (원본 Xa) */
+/** 선택 상자 */
 export function Select({ className, invalid, children, ...rest }: SelectProps) {
   return (
     <div className={[styles.selectWrap, className].filter(Boolean).join(' ')}>
@@ -119,7 +119,7 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   invalid?: boolean
 }
 
-/** 여러 줄 입력 (원본 Qo) */
+/** 여러 줄 입력 */
 export function Textarea({ className, invalid, ...rest }: TextareaProps) {
   return (
     <textarea
@@ -135,7 +135,7 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
   description?: ReactNode
 }
 
-/** 체크박스 + 라벨 (원본 zr) */
+/** 체크박스 + 라벨 */
 export function Checkbox({ label, description, className, ...rest }: CheckboxProps) {
   return (
     <label className={[styles.check, className].filter(Boolean).join(' ')}>
@@ -157,7 +157,7 @@ interface ChipProps {
   children?: ReactNode
 }
 
-/** 토글 칩 버튼 (원본 zn) */
+/** 토글 칩 버튼 */
 export function Chip({ selected, onClick, children }: ChipProps) {
   return (
     <button
@@ -181,7 +181,7 @@ interface RadioCardProps<T extends string> {
   icon?: IconName
 }
 
-/** 카드 모양 라디오 (원본 Tw) */
+/** 카드 모양 라디오 */
 export function RadioCard<T extends string>({
   name,
   value,

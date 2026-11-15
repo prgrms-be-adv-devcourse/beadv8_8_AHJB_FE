@@ -12,7 +12,7 @@ import styles from './MyPage.module.css'
 
 type OrderFilter = (typeof ORDER_FILTERS)[number]
 
-/** 구매 주문 /me/orders (원본 KI) */
+/** 구매 주문 /me/orders */
 export function MyOrdersPage() {
   const [filterId, setFilterId] = useState<OrderFilterId>('all')
   const ordersQuery = useQuery({
