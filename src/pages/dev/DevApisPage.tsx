@@ -59,7 +59,7 @@ export function DevApisPage() {
         ))}
       </div>
 
-      {OWNERS.map((owner) => {
+      {[...OWNERS, ...new Set(entries.map(([, spec]) => spec.owner).filter((o) => !OWNERS.includes(o)))].map((owner) => {
         const rows = entries.filter(([, spec]) => spec.owner === owner && (filter === 'all' || spec.status === filter))
         if (!rows.length) return null
         return (

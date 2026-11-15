@@ -20,7 +20,6 @@ import type {
   QnaCreateRequest,
   QnaListParams,
   QnaListResponse,
-  ReopenResponse,
   WishListResponse,
   WishToggleResponse,
 } from '@/types/product'
@@ -119,9 +118,6 @@ export const productApi = {
     formData.append('file', file, fileName)
     return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
   },
-  /** 유찰·낙찰 무효 뒤 다음 회차 열기 */
-  reopen: (productId: Id) =>
-    http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),
 }
 
 /** 상품 Q&A */

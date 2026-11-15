@@ -320,7 +320,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             </span>
           </div>
         ) : me.isSeller ? (
-          <SellerEndedPanel data={data} product={product} />
+          <SellerEndedPanel data={data} />
         ) : (
           <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
             <Icon name="info" size={16} />
@@ -545,47 +545,22 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 판매자용 종료 패널: 유찰·낙찰 무효면 다음 회차 열기            */
+/* 판매자용 종료 패널                                                  */
 /* ------------------------------------------------------------------ */
 
-function SellerEndedPanel({ data, product }: { data: AuctionDetail; product: ProductDetail }) {
+function SellerEndedPanel({ data }: { data: AuctionDetail }) {
   const auction = data.auction
-  const toast = useToast()
-  const queryClient = useQueryClient()
-
-  const reopenMutation = useMutation({
-    mutationFn: () => productApi.reopen(product.productId),
-    onSuccess: (result) => {
-      toast(`${result.round}회차 경매를 열었어요.`, { tone: 'success' })
-      queryClient.invalidateQueries({ queryKey: ['product', product.productId] })
-      queryClient.invalidateQueries({ queryKey: ['auctions'] })
-    },
-    onError: (error) => toast(error.message, { tone: 'error' }),
-  })
 
   if (auction.status === 'FAILED' && auction.failureReason !== 'REFUNDED') {
     return (
-      <>
-        <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
-          <Icon name="info" size={16} />
-          <span>
-            {auction.failureReason === 'NO_BID'
-              ? '입찰 없이 끝났어요(유찰).'
-              : '낙찰자가 결제하지 않아 낙찰이 무효됐어요.'}{' '}
-            같은 조건으로 다음 회차를 열 수 있어요.
-          </span>
-        </div>
-        <Button
-          variant="highlight"
-          size="lg"
-          fullWidth
-          loading={reopenMutation.isPending}
-          onClick={() => reopenMutation.mutate()}
-        >
-          {product.round + 1}회차 경매 열기
-        </Button>
-        <DevApiNote ids={['auction.reopen']} />
-      </>
+      <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
+        <Icon name="info" size={16} />
+        <span>
+          {auction.failureReason === 'NO_BID'
+            ? '입찰 없이 끝났어요(유찰).'
+            : '낙찰자가 결제하지 않아 낙찰이 무효됐어요.'}
+        </span>
+      </div>
     )
   }
 

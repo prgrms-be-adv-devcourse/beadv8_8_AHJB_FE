@@ -7,7 +7,6 @@ import {
   memberById,
   requireMe,
   sellerRatingOf,
-  startAuction,
   wishCountOf,
 } from '../services';
 import type { AuctionDuration, FeeType, ProductRecord } from '../types';
@@ -257,18 +256,5 @@ export function registerProductRoutes(): void {
       isMine: me?.id === product.sellerId,
       createdAt: product.createdAt,
     });
-  });
-
-  /** 유찰된 상품 재경매 (바로 다음 회차 시작) */
-  route('POST', '/api/v1/products/:id/rounds', (ctx) => {
-    const me = requireMe(ctx);
-    const product = findProduct(Number(ctx.pathParams.id));
-    if (product.sellerId !== me.id) fail('PRODUCT007');
-    const latest = latestAuctionOf(product);
-    if (!latest || latest.status !== 'FAILED' || latest.failureReason === 'REFUNDED') fail('AUCTION010');
-    product.round += 1;
-    const auction = startAuction(product, now());
-    persist();
-    return ok({ auctionId: auction.id, round: product.round }, 201);
   });
 }
