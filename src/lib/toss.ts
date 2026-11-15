@@ -33,7 +33,7 @@ function loadSdk(): Promise<TossPaymentsSDK> {
   const clientKey = import.meta.env.VITE_TOSS_CLIENT_KEY
   if (!clientKey) {
     return Promise.reject(
-      new Error('토스 클라이언트 키(VITE_TOSS_CLIENT_KEY)가 없어요. .env.development.local 에 테스트 키를 넣고 npm run dev 를 다시 실행해 주세요.'),
+      new Error('토스 클라이언트 키(VITE_TOSS_CLIENT_KEY)가 없어요. .env.local 에 테스트 키를 넣고 npm run dev 를 다시 실행해 주세요.'),
     )
   }
   sdkPromise ??= loadTossPayments(clientKey)
