@@ -1,6 +1,6 @@
 import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
 import type { LoginResponse } from '@/types/auth'
-import { API_BASE_URL, isRealApi, type ApiKey } from './config'
+import { isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
 import { toUserMessage } from './errorMessages'
 
@@ -109,7 +109,9 @@ async function sendToServer(
   token: string | null,
 ): Promise<RawResponse> {
   const queryString = params.toString()
-  const url = `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ''}`
+  // 항상 같은 출처의 /api 로 보낸다. 로컬은 Vite proxy, 배포는 vercel.json rewrites 가 게이트웨이로 전달한다.
+  // API 도메인을 직접 호출하면 리프레시 쿠키(SameSite=Strict)가 붙지 않는다.
+  const url = `${path}${queryString ? `?${queryString}` : ''}`
   const isFormData = body instanceof FormData
   const headers: Record<string, string> = { Accept: 'application/json' }
   // FormData 는 브라우저가 boundary 를 포함한 multipart Content-Type 을 직접 붙인다.
