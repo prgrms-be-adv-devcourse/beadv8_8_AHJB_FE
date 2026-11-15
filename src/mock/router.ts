@@ -48,5 +48,5 @@ export const ok = (data: unknown, status = 200, message = '요청이 성공적�
 /** 바디 없는 응답 (201/204) */
 export const noContent = (status: number): MockResponse => ({ status, body: null });
 
-/** 요청 바디를 느슨한 객체로 본다 (원본은 검증 없이 필드에 접근) */
+/** 요청 바디를 느슨한 객체로 본다 (검증 없이 필드에 접근) */
 export const bodyOf = <T>(ctx: HandlerContext): Partial<T> => (ctx.body ?? {}) as Partial<T>;

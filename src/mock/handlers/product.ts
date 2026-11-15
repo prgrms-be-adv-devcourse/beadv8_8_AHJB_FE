@@ -105,7 +105,7 @@ export function registerProductRoutes(): void {
     if (!body.policyAgreed || body.policyVersion !== POLICY_VERSION) fail('PRODUCT004');
     if (!Array.isArray(body.imageIds) || body.imageIds.length < 1 || body.imageIds.length > 10) fail('COMMON001');
     validateProductInput(body, false);
-    // shipping / auctionTerms 가 없으면 원본처럼 TypeError → 500
+    // shipping / auctionTerms 가 없으면 TypeError → 500
     const shipping = body.shipping!;
     const terms = body.auctionTerms!;
     const t = now();

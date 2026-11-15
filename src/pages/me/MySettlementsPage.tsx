@@ -17,12 +17,12 @@ import { SETTLEMENT_STATUS_META } from '@/lib/status'
 import type { SettlementStatus } from '@/types/settlement'
 import styles from './MyPage.module.css'
 
-/** 정산 목록 한 페이지 크기 (원본 dp) */
+/** 정산 목록 한 페이지 크기 */
 const PAGE_SIZE = 10
 
 const STATUS_TABS: Array<SettlementStatus | undefined> = [undefined, 'PENDING', 'COMPLETED']
 
-/** /me/settlements 정산 (원본 nO) */
+/** /me/settlements 정산 */
 export function MySettlementsPage() {
   const now = useNow()
   const [status, setStatus] = useState<SettlementStatus | undefined>(undefined)

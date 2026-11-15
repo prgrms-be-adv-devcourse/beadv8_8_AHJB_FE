@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
   onClose: () => void
 }
 
-/** 확인/취소 모달 (<dialog>) (원본 Qr). 바깥(배경) 클릭·Esc 로 닫힌다 */
+/** 확인/취소 모달 (<dialog>). 바깥(배경) 클릭·Esc 로 닫힌다 */
 export function ConfirmDialog({
   open,
   title,

@@ -2,7 +2,7 @@ import { CATEGORIES } from '@/lib/labels'
 import type { AuctionListParams, AuctionListStatus, AuctionSort } from '@/types/auction'
 import type { Category } from '@/types/product'
 
-/** 목록 한 페이지 크기 (원본 gA) */
+/** 목록 한 페이지 크기 */
 export const AUCTION_PAGE_SIZE = 20
 
 /** 상단 탭 (헤더 내비와 같은 순서). 진행 중이 기본 */
@@ -38,7 +38,7 @@ const isStatus = (value: string | null): value is AuctionListStatus =>
 const isCategory = (value: string | null): value is Category =>
   !!value && (CATEGORIES as string[]).includes(value)
 
-/** URL 쿼리 → 경매 목록 요청 파라미터 (원본 xE). 모르는 값은 버린다 */
+/** URL 쿼리 → 경매 목록 요청 파라미터. 모르는 값은 버린다 */
 export function parseAuctionListParams(searchParams: URLSearchParams): AuctionListParams & {
   status: AuctionListStatus
 } {

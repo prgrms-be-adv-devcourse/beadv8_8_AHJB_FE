@@ -12,7 +12,7 @@ interface OrderAmountCardProps {
   now: number
 }
 
-/** 주문 상세 오른쪽 금액 카드 (원본 SO 안). 판매자는 수수료·정산 예정 금액도 본다 */
+/** 주문 상세 오른쪽 금액 카드. 판매자는 수수료·정산 예정 금액도 본다 */
 export function OrderAmountCard({ order, role, now }: OrderAmountCardProps) {
   const total = order.winningPrice + order.deliveryFee
   const fee = feeOf(order.winningPrice)

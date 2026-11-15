@@ -22,15 +22,6 @@
   word-break: keep-all;
   max-width: 80ch;
 }
-.sub code,
-.callouts code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  background: var(--white);
-  border: 1px solid var(--hairline);
-  border-radius: 3px;
-  padding: 0 4px;
-}
 .summary {
   display: grid;
   grid-template-columns: 1fr;
@@ -59,29 +50,6 @@
 .sumDesc {
   font-size: 12px;
   color: var(--text-muted);
-}
-.callouts {
-  padding: var(--space-20) var(--space-24);
-  border-radius: var(--radius-md);
-  background: var(--lemon);
-}
-.callouts ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-10);
-  margin-top: var(--space-12);
-  font-size: 13px;
-  line-height: 20px;
-  word-break: keep-all;
-}
-.callouts li {
-  padding-left: var(--space-14);
-  position: relative;
-}
-.callouts li:before {
-  content: "·";
-  position: absolute;
-  left: 2px;
 }
 .tabs {
   display: flex;

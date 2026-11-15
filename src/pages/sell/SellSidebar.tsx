@@ -28,7 +28,7 @@ interface SellSidebarProps {
   locked: boolean
 }
 
-/** 판매 폼 오른쪽: 목록 미리보기 · 정산 계산 · 일정 · 제출 버튼 (원본 mp 안) */
+/** 판매 폼 오른쪽: 목록 미리보기 · 정산 계산 · 일정 · 제출 버튼 */
 export function SellSidebar({
   isEdit,
   coverImage,

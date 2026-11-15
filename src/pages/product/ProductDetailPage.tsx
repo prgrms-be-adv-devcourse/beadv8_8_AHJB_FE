@@ -24,7 +24,7 @@ const COLUMN_STYLE = { display: 'flex', flexDirection: 'column', gap: 40, minWid
 const formatPeriodEdge = (value: string) =>
   new Date(value).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
 
-/** 상품(경매) 상세 /products/:productId (원본 EP) */
+/** 상품(경매) 상세 /products/:productId */
 export function ProductDetailPage() {
   const productId = Number(useParams().productId)
   const now = useNow()

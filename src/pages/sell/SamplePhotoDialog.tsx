@@ -13,7 +13,7 @@ interface SamplePhotoDialogProps {
   setImages: Dispatch<SetStateAction<string[]>>
 }
 
-/** 목업 번들 사진('photo:<이름>')을 골라 넣는 모달 (원본 mp 안). 다시 누르면 빠진다 */
+/** 목업 번들 사진('photo:<이름>')을 골라 넣는 모달. 다시 누르면 빠진다 */
 export function SamplePhotoDialog({ open, onClose, images, setImages }: SamplePhotoDialogProps) {
   return (
     <Dialog

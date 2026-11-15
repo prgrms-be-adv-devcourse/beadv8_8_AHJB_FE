@@ -29,10 +29,10 @@ import { MyProfilePage } from '@/pages/me/MyProfilePage'
 import { DevApisPage } from '@/pages/dev/DevApisPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
-/** 로그인 필요 화면으로 감싸기 (원본 wo) */
+/** 로그인 필요 화면으로 감싸기 */
 const requireAuth = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>
 
-/** 라우트 정의 (원본 bb). 원본은 HashRouter, 여기서는 BrowserRouter(의도된 변경 #1) */
+/** 라우트 정의 (BrowserRouter) */
 export const routes: RouteObject[] = [
   {
     element: <AppLayout />,

@@ -10,7 +10,7 @@ interface PaginationProps {
 
 const WINDOW = 5
 
-/** 페이지 번호 (원본 Rd). 최대 5개, 현재 페이지를 가운데 쪽에 둔다. 1페이지뿐이면 숨김 */
+/** 페이지 번호. 최대 5개, 현재 페이지를 가운데 쪽에 둔다. 1페이지뿐이면 숨김 */
 export function Pagination({ page, totalPages, onChange }: PaginationProps) {
   if (totalPages <= 1) return null
   const start = Math.max(0, Math.min(page - 2, totalPages - WINDOW))

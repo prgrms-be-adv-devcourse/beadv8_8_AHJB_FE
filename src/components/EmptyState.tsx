@@ -9,7 +9,7 @@ interface EmptyStateProps {
   action?: ReactNode
 }
 
-/** 빈 목록 안내 (원본 Qn) */
+/** 빈 목록 안내 */
 export function EmptyState({ icon = 'box', title, description, action }: EmptyStateProps) {
   return (
     <div className={styles.empty}>
@@ -28,7 +28,7 @@ interface ErrorStateProps {
   onRetry?: () => void
 }
 
-/** 불러오기 실패 안내 + 다시 시도 (원본 er) */
+/** 불러오기 실패 안내 + 다시 시도 */
 export function ErrorState({ message, onRetry }: ErrorStateProps) {
   return (
     <EmptyState

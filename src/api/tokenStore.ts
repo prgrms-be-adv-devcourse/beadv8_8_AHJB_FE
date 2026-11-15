@@ -59,7 +59,7 @@ function writeProfile(profile: SessionProfile | null) {
   }
 }
 
-/** 액세스·리프레시 토큰 저장소 (원본 vs) */
+/** 액세스·리프레시 토큰 저장소 */
 export const tokenStore = {
   get(): string | null {
     return read(ACCESS_TOKEN_KEY)

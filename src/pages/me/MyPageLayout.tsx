@@ -17,7 +17,7 @@ interface MenuItem {
   sellerOnly?: boolean
 }
 
-/** 마이페이지 왼쪽 메뉴 (원본 UI) */
+/** 마이페이지 왼쪽 메뉴 */
 const MENU_ITEMS: MenuItem[] = [
   { to: '/me/bids', label: '입찰 중인 경매', icon: 'gavel', group: '구매' },
   { to: '/me/orders', label: '구매 주문', icon: 'truck', group: '구매' },
@@ -37,7 +37,7 @@ interface StatItem {
   hot?: boolean
 }
 
-/** 마이페이지 레이아웃 /me (원본 zI). 왼쪽 메뉴 + 요약 수치 + 하위 페이지 Outlet */
+/** 마이페이지 레이아웃 /me. 왼쪽 메뉴 + 요약 수치 + 하위 페이지 Outlet */
 export function MyPageLayout() {
   const { me } = useAuth()
   const isSeller = !!me?.isSeller

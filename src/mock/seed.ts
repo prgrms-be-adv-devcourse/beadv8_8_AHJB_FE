@@ -1,4 +1,4 @@
-// 목업 DB 초기 데이터 생성기 (원본 SA)
+// 목업 DB 초기 데이터 생성기
 // 고정 시드 난수(mulberry32)를 쓰므로 호출 순서를 바꾸면 생성 결과가 달라진다. 순서를 유지할 것.
 import type {
   AuctionDuration,
@@ -810,7 +810,7 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
           type: 'REFUND_RECEIVE',
           amount: paidAmount,
           referenceType: 'REFUND',
-          // 원본 그대로: 환불 id 가 아닌 주문 id 를 참조
+          // 환불 id 가 아닌 주문 id 를 참조
           referenceId: order.id,
           description: `${product.name} 환불`,
         });

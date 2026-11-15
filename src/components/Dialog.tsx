@@ -13,7 +13,7 @@ interface DialogProps {
   width?: number
 }
 
-/** 일반 모달 (<dialog>) (원본 _a). 닫혀 있으면 내용을 그리지 않는다 */
+/** 일반 모달 (<dialog>). 닫혀 있으면 내용을 그리지 않는다 */
 export function Dialog({ open, title, description, children, footer, onClose, width = 440 }: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 

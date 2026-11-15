@@ -14,7 +14,7 @@ import { auctionStatusBadge } from '@/lib/status'
 import styles from './MyPage.module.css'
 
 /**
- * 입찰 중인 경매 /me/bids (원본 HI)
+ * 입찰 중인 경매 /me/bids
  * 내가 입찰한 '진행 중' 경매만, 마감 임박순 (백엔드가 정렬).
  * 이 화면의 질문은 하나: 지금 이기고 있나, 다시 입찰해야 하나.
  */

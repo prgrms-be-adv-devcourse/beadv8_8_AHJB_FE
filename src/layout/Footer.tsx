@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { PHOTO_CREDITS } from '@/lib/photos'
 import styles from './Footer.module.css'
 
-/** 사이트 하단 (원본 Mx) */
+/** 사이트 하단 */
 export function Footer() {
   return (
     <footer className={styles.footer}>

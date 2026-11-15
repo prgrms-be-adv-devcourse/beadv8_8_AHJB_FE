@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-/** 'API 표시' 개발 모드 (원본 tA / nA / g0 / rA) */
+/** 'API 표시' 개발 모드 */
 const STORAGE_KEY = 'jjinmak.devMode'
 const listeners = new Set<() => void>()
 
@@ -12,7 +12,7 @@ let devMode = (() => {
   }
 })()
 
-/** 개발 모드 켜기/끄기 (원본 g0) */
+/** 개발 모드 켜기/끄기 */
 export function setDevMode(on: boolean) {
   devMode = on
   try {
@@ -23,7 +23,7 @@ export function setDevMode(on: boolean) {
   listeners.forEach((listener) => listener())
 }
 
-/** 개발 모드 여부 구독 (원본 rA) */
+/** 개발 모드 여부 구독 */
 export function useDevMode(): boolean {
   return useSyncExternalStore(
     (listener) => {

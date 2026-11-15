@@ -8,7 +8,7 @@ interface SpinnerProps {
   label?: string
 }
 
-/** 로딩 스피너 (원본 en) */
+/** 로딩 스피너 */
 export function Spinner({ size = 20, block = false, label = '불러오는 중' }: SpinnerProps) {
   const spinner = (
     <span className={styles.spinner} style={{ width: size, height: size }} role="status" aria-label={label} />
@@ -22,7 +22,7 @@ interface SkeletonProps {
   radius?: number | string
 }
 
-/** 회색 자리표시 막대 (원본 Wu) */
+/** 회색 자리표시 막대 */
 export function Skeleton({ height = 16, width = '100%', radius = 4 }: SkeletonProps) {
   return <span className={styles.skeleton} style={{ height, width, borderRadius: radius }} aria-hidden="true" />
 }

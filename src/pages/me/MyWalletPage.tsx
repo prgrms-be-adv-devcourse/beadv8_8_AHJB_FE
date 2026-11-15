@@ -55,7 +55,7 @@ const CHARGE_TONES: Record<ChargeStatus, Tone> = {
   ABORTED: 'ended',
 }
 
-/** /me/wallet 예치금 (원본 sO) */
+/** /me/wallet 예치금 */
 export function MyWalletPage() {
   const toast = useToast()
   const queryClient = useQueryClient()

@@ -31,7 +31,7 @@ const NO_DELIVERY_STATES: OrderState[] = ['WAITING', 'PAID', 'FAILED']
 /** 환불 내역을 조회하는 주문 상태 */
 const REFUND_LOOKUP_STATES: OrderState[] = ['REFUND_REQUESTED', 'REFUNDED', 'CONFIRMED']
 
-/** 주문 상세 /orders/:orderId (원본 SO). 구매자·판매자 공용 */
+/** 주문 상세 /orders/:orderId. 구매자·판매자 공용 */
 export function OrderDetailPage() {
   const orderId = Number(useParams().orderId)
   const [searchParams] = useSearchParams()

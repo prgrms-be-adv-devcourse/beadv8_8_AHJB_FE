@@ -64,7 +64,7 @@ import type {
 
 type Id = number | string
 
-/** 인증 (원본 Qa) */
+/** 인증 */
 export const authApi = {
   /** 201, 바디 없음 */
   signup: (body: SignupRequest) => http.post<null>('auth.signup', '/api/v1/auth/signup', body),
@@ -83,7 +83,7 @@ export const authApi = {
     }),
 }
 
-/** 회원 (원본 Fo) */
+/** 회원 */
 export const memberApi = {
   /** 목업 전용: 로그인이 목업일 때 AuthProvider 가 내 정보(Me)를 만든다. 목업 /member/me 는 detail 필드도 같이 준다 */
   me: () => http.get<Me>('member.me', '/api/v1/member/me'),
@@ -97,7 +97,7 @@ export const memberApi = {
     http.post<null>('member.registerSeller', '/api/v1/member/me/seller', body),
 }
 
-/** 상품 (원본 ws) */
+/** 상품 */
 export const productApi = {
   detail: (productId: Id) => http.get<ProductDetail>('product.detail', `/api/v1/products/${productId}`),
   mine: () => http.get<MyProductListResponse>('product.mine', '/api/v1/products/me'),
@@ -124,7 +124,7 @@ export const productApi = {
     http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),
 }
 
-/** 상품 Q&A (원본 Xu) */
+/** 상품 Q&A */
 export const qnaApi = {
   list: (productId: Id, params: QnaListParams = {}) =>
     http.get<QnaListResponse>('qna.list', `/api/v1/products/${productId}/qnas`, params),
@@ -135,7 +135,7 @@ export const qnaApi = {
   remove: (qnaId: Id) => http.delete<null>('qna.delete', `/api/v1/qnas/${qnaId}`),
 }
 
-/** 찜 (원본 Ho) */
+/** 찜 */
 export const wishApi = {
   add: (productId: Id) => http.post<WishToggleResponse>('wish.add', `/api/v1/products/${productId}/wishes`),
   remove: (productId: Id) =>
@@ -143,7 +143,7 @@ export const wishApi = {
   list: (params: PageParams = {}) => http.get<WishListResponse>('wish.list', '/api/v1/wishes', params),
 }
 
-/** 경매 (원본 dr) */
+/** 경매 */
 export const auctionApi = {
   /** 진행 중·종료 목록. 곧 시작은 productApi.upcoming (listByTab 이 골라 준다) */
   list: (params: AuctionListParams) =>
@@ -163,14 +163,14 @@ export const auctionApi = {
   myBids: () => http.get<MyBid[]>('auction.myBids', '/api/v1/auctions/me/bids'),
 }
 
-/** 장바구니 (원본 Ga) */
+/** 장바구니 */
 export const cartApi = {
   list: () => http.get<CartItem[]>('cart.list', '/api/v1/cart'),
   pay: (productIds: number[]) =>
     http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds }),
 }
 
-/** 주문 (원본 js) */
+/** 주문 */
 export const orderApi = {
   winner: (params: PageParams = {}) => http.get<Order[]>('order.winner', '/api/v1/order/winner', params),
   seller: (params: PageParams = {}) => http.get<Order[]>('order.seller', '/api/v1/order/seller', params),
@@ -183,7 +183,7 @@ export const orderApi = {
   delivery: (orderId: Id) => http.get<DeliveryStatus>('delivery.status', `/api/v1/order/${orderId}/delivery`),
 }
 
-/** 지갑 (원본 Mi). 백엔드 WalletApiController */
+/** 지갑. 백엔드 WalletApiController */
 export const walletApi = {
   /** 잔액. balance = 예치금, settlementBalance = 정산금 */
   me: () => http.get<Wallet>('wallet.me', '/api/v1/wallet/me'),
@@ -223,7 +223,7 @@ export const paymentApi = {
   quote: (amount: number) => http.get<PaymentQuote>('payment.quote', '/api/v1/payments/quote', { amount }),
 }
 
-/** 환불 (원본 cd) */
+/** 환불 */
 export const refundApi = {
   detail: (refundId: Id) => http.get<Refund>('refund.detail', `/api/v1/refunds/${refundId}`),
   byOrder: (orderId: Id) => http.get<Refund>('refund.byOrder', '/api/v1/refunds', { orderId }),
@@ -233,7 +233,7 @@ export const refundApi = {
     http.patch<RefundProcessResult>('refund.reject', `/api/v1/refunds/${refundId}/reject`),
 }
 
-/** 정산 (원본 Yu) */
+/** 정산 */
 export const settlementApi = {
   list: (params: SettlementListParams = {}) =>
     http.get<PageResponse<SettlementSummary>>('settlement.list', '/api/v1/settlements', params),
@@ -241,7 +241,7 @@ export const settlementApi = {
     http.get<SettlementDetail>('settlement.detail', `/api/v1/settlements/${settlementId}`),
 }
 
-/** 후기 (원본 Oi) */
+/** 후기 */
 export const reviewApi = {
   reviewable: () => http.get<ReviewableOrder[]>('review.reviewable', '/api/v1/reviews/reviewable-orders'),
   create: (body: ReviewCreateRequest) => http.post<Review>('review.create', '/api/v1/reviews', body),

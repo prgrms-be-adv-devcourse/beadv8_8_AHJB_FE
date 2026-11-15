@@ -18,7 +18,7 @@ interface OrderCardProps {
   onSend?: (order: Order) => void
 }
 
-/** 마이페이지 주문 한 줄 (원본 wA). MyPage.module.css 의 row 계열 클래스를 쓴다 */
+/** 마이페이지 주문 한 줄. MyPage.module.css 의 row 계열 클래스를 쓴다 */
 export function OrderCard({ order, role, onSend }: OrderCardProps) {
   const now = useNow()
   const meta = ORDER_STATE_META[order.state]

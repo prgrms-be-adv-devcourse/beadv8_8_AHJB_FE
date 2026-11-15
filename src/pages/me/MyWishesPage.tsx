@@ -13,7 +13,7 @@ import { formatRelativeTime, formatWon } from '@/lib/format'
 import { CATEGORY_LABELS } from '@/lib/labels'
 import styles from './MyPage.module.css'
 
-/** /me/wishes 찜 (원본 iO). 카드는 ProductCard 스타일을 빌려 직접 그린다 */
+/** /me/wishes 찜. 카드는 ProductCard 스타일을 빌려 직접 그린다 */
 export function MyWishesPage() {
   const wishesQuery = useQuery({
     queryKey: ['wishes', 'page'],

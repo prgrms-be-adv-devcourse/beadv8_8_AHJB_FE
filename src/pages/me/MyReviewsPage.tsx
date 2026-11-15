@@ -22,7 +22,7 @@ type ReviewTab = 'reviewable' | 'written' | 'received'
 
 const STARS = [1, 2, 3, 4, 5]
 
-/** 읽기 전용 별점 (0.5 단위 부분 채움) (원본 cp) */
+/** 읽기 전용 별점 (0.5 단위 부분 채움) */
 function StarRating({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <span className={styles.stars} aria-label={`5점 만점에 ${value}점`}>
@@ -44,7 +44,7 @@ function StarRating({ value, size = 14 }: { value: number; size?: number }) {
   )
 }
 
-/** 별점 입력 (별 하나를 왼쪽/오른쪽 반으로 나눠 0.5 단위) (원본 _I) */
+/** 별점 입력 (별 하나를 왼쪽/오른쪽 반으로 나눠 0.5 단위) */
 function StarRatingInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [hover, setHover] = useState<number | null>(null)
   const shown = hover ?? value
@@ -94,7 +94,7 @@ interface ReviewDialogProps {
   onClose: () => void
 }
 
-/** 후기 쓰기/수정 모달 (원본 $I) */
+/** 후기 쓰기/수정 모달 */
 function ReviewDialog({ target, editing, onClose }: ReviewDialogProps) {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -176,7 +176,7 @@ const linkButtonStyle = {
   textDecoration: 'underline',
 } as const
 
-/** /me/reviews 후기 (작성 가능 · 쓴 후기 · 받은 후기) (원본 eO) */
+/** /me/reviews 후기 (작성 가능 · 쓴 후기 · 받은 후기) */
 export function MyReviewsPage() {
   const { me } = useAuth()
   const now = useNow()

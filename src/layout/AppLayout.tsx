@@ -4,7 +4,7 @@ import { ToastProvider } from '@/components/Toast'
 import { Footer } from './Footer'
 import { Header } from './Header'
 
-/** 공통 레이아웃 (원본 nj): 헤더 · 본문 · 푸터 · API 표시 토글 · 스크롤 복원 */
+/** 공통 레이아웃: 헤더 · 본문 · 푸터 · API 표시 토글 · 스크롤 복원 */
 export function AppLayout() {
   return (
     <ToastProvider>

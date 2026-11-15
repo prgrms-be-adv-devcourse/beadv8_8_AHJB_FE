@@ -15,7 +15,7 @@ interface SendProductDialogProps {
   onClose: () => void
 }
 
-/** 송장 등록 모달 (원본 jA). 운송장 번호는 숫자만 9–14자리 */
+/** 송장 등록 모달. 운송장 번호는 숫자만 9–14자리 */
 export function SendProductDialog({ order, onClose }: SendProductDialogProps) {
   const { send } = useOrderActions()
   const [carrier, setCarrier] = useState<Carrier>('CJ')
