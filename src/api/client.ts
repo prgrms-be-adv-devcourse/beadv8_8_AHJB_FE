@@ -165,7 +165,7 @@ export async function request<T>(
   let response = await send(method, path, params, options.body, tokenStore.get())
 
   // 액세스 토큰 만료(15분) → 재발급 후 한 번만 재시도. auth.* 요청은 재시도하지 않는다.
-  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.getRefresh()) {
+  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.get()) {
     const refreshed = await refreshSession()
     if (refreshed) response = await send(method, path, params, options.body, tokenStore.get())
   }
@@ -196,17 +196,20 @@ let refreshing: Promise<boolean> | null = null
 
 /**
  * 리프레시 토큰으로 새 토큰을 받는다 (POST /api/v1/auth/reissue).
+ * 실제 서버는 HttpOnly 쿠키의 리프레시 토큰을 읽으므로 바디 없이 보내고, 목업만 저장해 둔 토큰을 바디로 보낸다.
  * 여러 요청이 동시에 401 을 받아도 재발급은 한 번만 한다 (백엔드 리프레시 토큰은 1회용).
  * 판매자 등록처럼 권한이 바뀐 직후에도 호출해서 새 권한을 토큰에 반영한다.
  */
 export function refreshSession(): Promise<boolean> {
   if (refreshing) return refreshing
   refreshing = (async () => {
+    const real = isRealApi('auth.reissue')
     const refreshToken = tokenStore.getRefresh()
-    if (!refreshToken) return false
+    if (!real && !refreshToken) return false
     try {
-      const send = isRealApi('auth.reissue') ? sendToServer : sendToMock
-      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), { refreshToken }, null)
+      const send = real ? sendToServer : sendToMock
+      const body = real ? undefined : { refreshToken }
+      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), body, null)
       const result = parseResponse<LoginResponse>(response)
       tokenStore.set(result.accessToken, result.refreshToken)
       return true
