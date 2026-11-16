@@ -54,7 +54,7 @@ export function DropsPage() {
         </Chip>
       </div>
 
-      <DevApiNote ids={['auction.dutchList', 'product.detail']} />
+      <DevApiNote ids={['auction.dutchList', 'product.list']} />
 
       {listQuery.isError ? (
         <ErrorState message={listQuery.error.message} onRetry={() => listQuery.refetch()} />

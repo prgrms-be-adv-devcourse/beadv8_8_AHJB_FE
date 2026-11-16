@@ -11,7 +11,7 @@ export interface ProductSummary {
 
 /**
  * 상품 id 들의 이름·사진을 모아 온다 (경매·추천 목록 응답에는 상품명·사진이 없다).
- * 지금은 상품 상세를 id 마다 부른다. 상품 다건 조회 API 가 생기면 이 훅 안만 바꾼다.
+ * 지금은 상품 상세를 id 마다 부른다. 상품 목록 API(registry product.list, 미구현)가 생기면 이 훅 안만 바꾼다.
  * 상세 화면과 같은 queryKey 라 캐시를 같이 쓴다.
  */
 export function useProductSummaries(productIds: number[]): Map<number, ProductSummary> {

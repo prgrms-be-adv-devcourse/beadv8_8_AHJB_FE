@@ -46,7 +46,7 @@ export function RecommendSection({ title, description, items, loading, apiKey, l
         <h2 className={styles.title}>{title}</h2>
       </div>
       {description ? <p className={styles.desc}>{description}</p> : null}
-      <DevApiNote ids={[apiKey, 'product.detail']} />
+      <DevApiNote ids={[apiKey, 'product.list']} />
       <div className="grid-products">
         {loading
           ? Array.from({ length: limit }, (_, index) => <ProductCardSkeleton key={index} />)

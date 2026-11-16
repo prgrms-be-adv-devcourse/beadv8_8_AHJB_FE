@@ -44,7 +44,7 @@ export function MyBidsPage() {
           )}
         </p>
       ) : null}
-      <DevApiNote ids={['auction.myBids']} />
+      <DevApiNote ids={['auction.myBids', 'product.list']} />
       {bidsQuery.isLoading ? (
         <Spinner block />
       ) : bidsQuery.isError ? (

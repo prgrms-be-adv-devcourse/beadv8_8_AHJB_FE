@@ -1,6 +1,6 @@
 import type { HttpMethod } from '@/types/common'
 
-/** done = 백엔드 구현, partial = 필드 부족, proposed = 미구현(프론트 제안) */
+/** done = 백엔드 구현, partial = 필드 누락(화면에 쓰는 필드가 백엔드 응답에 없음), proposed = 미구현(프론트 제안) */
 export type ApiImplStatus = 'done' | 'partial' | 'proposed'
 
 export interface ApiSpec {
@@ -152,6 +152,14 @@ export const apiRegistry = {
     status: 'done',
     note: 'multipart file 1장 → { imageId, imageUrl }',
   },
+  'product.list': {
+    method: 'GET',
+    path: '(미정)',
+    title: '상품 목록 (여러 상품 조회)',
+    owner: '송현수',
+    status: 'proposed',
+    note: '썸네일·상품명이 없는 목록(경매·내 입찰·장바구니·주문·추천·하향식)이 조합에 사용',
+  },
   'qna.list': {
     method: 'GET',
     path: '/api/v1/products/{productId}/qnas',
@@ -199,16 +207,15 @@ export const apiRegistry = {
     path: '/api/v1/wishes',
     title: '찜 목록',
     owner: '송현수',
-    status: 'partial',
-    note: '카드 사진(thumbnailUrl) 필요',
+    status: 'done',
   },
   'auction.list': {
     method: 'GET',
     path: '/api/v1/auctions',
     title: '경매 목록 (진행 중 · 종료)',
     owner: '박신형',
-    status: 'done',
-    note: 'status(IN_PROGRESS|ENDED), category, sort, page, size',
+    status: 'partial',
+    note: '누락: failureReason. 썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'auction.detail': {
     method: 'GET',
@@ -244,7 +251,7 @@ export const apiRegistry = {
     title: '입찰 중인 경매',
     owner: '박신형',
     status: 'done',
-    note: '진행 중만, 마감 임박순',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'auction.dutchList': {
     method: 'GET',
@@ -266,8 +273,8 @@ export const apiRegistry = {
     path: '/api/v1/cart',
     title: '장바구니(낙찰 상품)',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'cart.pay': {
     method: 'POST',
@@ -281,24 +288,24 @@ export const apiRegistry = {
     path: '/api/v1/order/winner',
     title: '구매 주문 목록',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.seller': {
     method: 'GET',
     path: '/api/v1/order/seller',
     title: '판매 주문 목록',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.detail': {
     method: 'GET',
     path: '/api/v1/order/{orderId}',
     title: '주문 상세',
     owner: '신종혁',
-    status: 'partial',
-    note: 'confirmExpiredAt(자동 구매확정 시각) 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.confirm': {
     method: 'POST',
@@ -649,7 +656,7 @@ export type ApiKey = keyof typeof apiRegistry
 /** 현황 배지 문구 */
 export const API_STATUS_LABELS: Record<ApiImplStatus, string> = {
   done: '구현',
-  partial: '필드 부족',
+  partial: '필드 누락',
   proposed: '미구현',
 }
 

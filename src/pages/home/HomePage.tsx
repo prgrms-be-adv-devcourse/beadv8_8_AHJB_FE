@@ -113,7 +113,7 @@ export function HomePage() {
             </Link>
           </div>
           <p className={styles.sectionDesc}>기다릴수록 가격이 내려가요. 먼저 구매한 한 명만 가져가요.</p>
-          <DevApiNote ids={['auction.dutchList']} className={styles.note} />
+          <DevApiNote ids={['auction.dutchList', 'product.list']} className={styles.note} />
           <div className="grid-products">
             {drops.map((item) => (
               <DutchCard key={item.auctionId} item={item} product={dropProducts.get(item.productId)} />
@@ -144,7 +144,7 @@ export function HomePage() {
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>
-        <DevApiNote ids={['auction.list']} className={styles.note} />
+        <DevApiNote ids={['auction.list', 'product.list']} className={styles.note} />
         <div className="grid-products">
           {endingQuery.isLoading
             ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)

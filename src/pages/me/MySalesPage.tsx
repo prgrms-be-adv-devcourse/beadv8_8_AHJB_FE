@@ -45,7 +45,7 @@ export function MySalesPage() {
           정산 보기
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.seller', 'order.send', 'refund.byOrder']} />
+      <DevApiNote ids={['order.seller', 'product.list', 'order.send', 'refund.byOrder']} />
       <div className={styles.tabs}>
         {SALES_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>
