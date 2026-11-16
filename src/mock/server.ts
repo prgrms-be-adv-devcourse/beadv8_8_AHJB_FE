@@ -20,6 +20,10 @@ export interface MockRequest {
 /** 비로그인으로도 호출 가능한 GET 경로 (/api/v1/auth/* 는 메서드와 무관하게 공개) */
 const PUBLIC_GET_PATTERNS = [
   /^\/api\/v1\/auctions$/,
+  /^\/api\/v1\/auctions\/dutch$/,
+  /^\/api\/v1\/search$/,
+  /^\/api\/v1\/recommend\/popular$/,
+  /^\/api\/v1\/recommend\/auction\/\d+$/,
   /^\/api\/v1\/auctions\/\d+$/,
   /^\/api\/v1\/auctions\/\d+\/bids$/,
   /^\/api\/v1\/products\/upcoming$/,

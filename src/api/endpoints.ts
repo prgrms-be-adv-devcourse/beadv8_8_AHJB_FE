@@ -20,7 +20,6 @@ import type {
   QnaCreateRequest,
   QnaListParams,
   QnaListResponse,
-  ReopenResponse,
   WishListResponse,
   WishToggleResponse,
 } from '@/types/product'
@@ -30,10 +29,30 @@ import type {
   AuctionListResponse,
   Bid,
   BidResponse,
+  DutchAuctionDetail,
+  DutchAuctionListParams,
+  DutchAuctionListResponse,
+  DutchBuyResponse,
   InstantWinResponse,
   MyBid,
 } from '@/types/auction'
 import type { CartItem, CartPaymentResult } from '@/types/cart'
+import type {
+  ChatMessageListParams,
+  ChatMessageListResponse,
+  ChatRoomDetail,
+  ChatRoomListResponse,
+} from '@/types/chat'
+import type {
+  NotificationListParams,
+  NotificationListResponse,
+  NotificationSettingsResponse,
+  NotificationSettingsUpdateRequest,
+  ReadAllResponse,
+  UnreadCountResponse,
+} from '@/types/notification'
+import type { RecommendedAuction } from '@/types/recommend'
+import type { ProductSearchParams, ProductSearchResponse } from '@/types/search'
 import type { DeliveryStatus, Order, SendProductRequest } from '@/types/order'
 import type {
   HoldingPage,
@@ -73,8 +92,9 @@ export const authApi = {
   reissue: (refreshToken: string) =>
     http.post<LoginResponse>('auth.reissue', '/api/v1/auth/reissue', { refreshToken }),
   /** 204 */
-  logout: (refreshToken: string) =>
-    http.post<null>('auth.logout', '/api/v1/auth/logout', { refreshToken }),
+  /** 실제 서버는 리프레시 쿠키로 처리한다. refreshToken 은 목업용 */
+  logout: (refreshToken?: string) =>
+    http.post<null>('auth.logout', '/api/v1/auth/logout', refreshToken ? { refreshToken } : undefined),
   emailAvailable: (email: string) =>
     http.get<AvailabilityResponse>('auth.emailAvailable', '/api/v1/auth/email-availability', { email }),
   nicknameAvailable: (nickname: string) =>
@@ -119,9 +139,6 @@ export const productApi = {
     formData.append('file', file, fileName)
     return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
   },
-  /** 유찰·낙찰 무효 뒤 다음 회차 열기 */
-  reopen: (productId: Id) =>
-    http.post<ReopenResponse>('auction.reopen', `/api/v1/products/${productId}/rounds`),
 }
 
 /** 상품 Q&A */
@@ -130,7 +147,7 @@ export const qnaApi = {
     http.get<QnaListResponse>('qna.list', `/api/v1/products/${productId}/qnas`, params),
   create: (productId: Id, body: QnaCreateRequest) =>
     http.post<Qna>('qna.create', `/api/v1/products/${productId}/qnas`, body),
-  update: (qnaId: Id, content: string) => http.patch<Qna>('qna.update', `/api/v1/qnas/${qnaId}`, { content }),
+  update: (qnaId: Id, content: string) => http.patch<null>('qna.update', `/api/v1/qnas/${qnaId}`, { content }),
   /** 204 */
   remove: (qnaId: Id) => http.delete<null>('qna.delete', `/api/v1/qnas/${qnaId}`),
 }
@@ -161,6 +178,14 @@ export const auctionApi = {
   instantWin: (auctionId: Id) =>
     http.post<InstantWinResponse>('auction.instantWin', `/api/v1/auctions/${auctionId}/instant-win`),
   myBids: () => http.get<MyBid[]>('auction.myBids', '/api/v1/auctions/me/bids'),
+  /** 하향식 목록 (진행 중·종료). 곧 시작은 상품 API */
+  dutchList: (params: DutchAuctionListParams = {}) =>
+    http.get<DutchAuctionListResponse>('auction.dutchList', '/api/v1/auctions/dutch', { ...params }),
+  /** 상세 API 는 영국식과 같다. auction.auctionType 이 'DUTCH' 인 응답 */
+  dutchDetail: (auctionId: Id) => http.get<DutchAuctionDetail>('auction.detail', `/api/v1/auctions/${auctionId}`),
+  /** expectedPrice = 화면에 보이던 가격. 서버 현재가가 더 높으면 AUCTION013, 이미 팔렸으면 AUCTION014 */
+  dutchBuy: (auctionId: Id, expectedPrice: number) =>
+    http.post<DutchBuyResponse>('auction.dutchBuy', `/api/v1/auctions/${auctionId}/dutch-buy`, { expectedPrice }),
 }
 
 /** 장바구니 */
@@ -250,7 +275,49 @@ export const reviewApi = {
   written: (params: PageParams = {}) =>
     http.get<ReviewListResponse>('review.written', '/api/v1/reviews/written', params),
   update: (reviewId: Id, body: ReviewUpdateRequest) =>
-    http.patch<Review>('review.update', `/api/v1/reviews/${reviewId}`, body),
+    http.patch<null>('review.update', `/api/v1/reviews/${reviewId}`, body),
   /** 204 */
   remove: (reviewId: Id) => http.delete<null>('review.delete', `/api/v1/reviews/${reviewId}`),
+}
+
+/** 알림 */
+export const notificationApi = {
+  list: (params: NotificationListParams = {}) =>
+    http.get<NotificationListResponse>('notification.list', '/api/v1/notifications', { ...params }),
+  unreadCount: () => http.get<UnreadCountResponse>('notification.unreadCount', '/api/v1/notifications/unread-count'),
+  read: (notificationId: Id) =>
+    http.patch<null>('notification.read', `/api/v1/notifications/${notificationId}/read`),
+  readAll: () => http.patch<ReadAllResponse>('notification.readAll', '/api/v1/notifications/read-all'),
+  settings: () => http.get<NotificationSettingsResponse>('notification.settings', '/api/v1/notifications/settings'),
+  updateSettings: (body: NotificationSettingsUpdateRequest) =>
+    http.put<NotificationSettingsResponse>('notification.updateSettings', '/api/v1/notifications/settings', body),
+  /** 로그인 후 푸시 권한이 granted 이면 매번 */
+  registerDevice: (token: string) =>
+    http.post<null>('notification.registerDevice', '/api/v1/notifications/devices', { token }),
+  /** 로그아웃 직전 */
+  removeDevice: (token: string) =>
+    http.delete<null>('notification.removeDevice', `/api/v1/notifications/devices/${encodeURIComponent(token)}`),
+}
+
+/** 상품 검색 */
+export const searchApi = {
+  products: (params: ProductSearchParams = {}) =>
+    http.get<ProductSearchResponse>('search.products', '/api/v1/search', { ...params }),
+}
+
+/** 추천 */
+export const recommendApi = {
+  popular: () => http.get<RecommendedAuction[]>('recommend.popular', '/api/v1/recommend/popular'),
+  /** 로그인 필요 */
+  me: () => http.get<RecommendedAuction[]>('recommend.me', '/api/v1/recommend/me'),
+  byAuction: (auctionId: Id) =>
+    http.get<RecommendedAuction[]>('recommend.byAuction', `/api/v1/recommend/auction/${auctionId}`),
+}
+
+/** 채팅 (REST). 메시지 전송·수신은 STOMP */
+export const chatApi = {
+  rooms: (params: PageParams = {}) => http.get<ChatRoomListResponse>('chat.rooms', '/api/v1/chat-rooms', params),
+  room: (roomId: Id) => http.get<ChatRoomDetail>('chat.room', `/api/v1/chat-rooms/${roomId}`),
+  messages: (roomId: Id, params: ChatMessageListParams = {}) =>
+    http.get<ChatMessageListResponse>('chat.messages', `/api/v1/chat-rooms/${roomId}/messages`, params),
 }

@@ -13,7 +13,7 @@ const STATUSES: ApiImplStatus[] = ['done', 'partial', 'proposed']
 
 const STATUS_DESCRIPTIONS: Record<ApiImplStatus, string> = {
   done: '경로·필드 그대로 연결',
-  partial: '있지만 화면용 필드가 빠짐',
+  partial: '화면에 쓰는 필드가 백엔드 응답에 없음',
   proposed: '아직 없음 · 목업이 대신 응답',
 }
 
@@ -59,7 +59,7 @@ export function DevApisPage() {
         ))}
       </div>
 
-      {OWNERS.map((owner) => {
+      {[...OWNERS, ...new Set(entries.map(([, spec]) => spec.owner).filter((o) => !OWNERS.includes(o)))].map((owner) => {
         const rows = entries.filter(([, spec]) => spec.owner === owner && (filter === 'all' || spec.status === filter))
         if (!rows.length) return null
         return (

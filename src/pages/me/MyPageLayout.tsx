@@ -28,6 +28,7 @@ const MENU_ITEMS: MenuItem[] = [
   { to: '/me/settlements', label: '정산', icon: 'receipt', group: '판매', sellerOnly: true },
   { to: '/me/wallet', label: '예치금', icon: 'wallet', group: '지갑' },
   { to: '/me/profile', label: '회원 정보', icon: 'user', group: '계정' },
+  { to: '/me/notifications', label: '알림 설정', icon: 'bell', group: '계정' },
 ]
 
 interface StatItem {

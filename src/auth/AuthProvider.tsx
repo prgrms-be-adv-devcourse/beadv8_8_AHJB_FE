@@ -125,8 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      const refreshToken = tokenStore.getRefresh()
-      if (refreshToken) await authApi.logout(refreshToken)
+      if (tokenStore.get()) await authApi.logout(tokenStore.getRefresh() ?? undefined)
     } catch {
       /* 로그아웃 API 실패는 무시하고 토큰을 지운다 */
     } finally {

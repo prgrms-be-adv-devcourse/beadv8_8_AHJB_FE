@@ -159,7 +159,7 @@ export function CartPage() {
         <p className={styles.sub}>
           낙찰받은 상품이 담겨요. 낙찰 후 24시간 안에 결제하지 않으면 낙찰이 무효되고 경고(결제 미이행)를 받아요.
         </p>
-        <DevApiNote ids={['cart.list', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
+        <DevApiNote ids={['cart.list', 'product.list', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
       </div>
 
       {cartQuery.isLoading ? (

@@ -58,7 +58,10 @@ export interface AuctionListResponse {
   serverTime?: string
 }
 
+export type AuctionType = 'ENGLISH' | 'DUTCH'
+
 export interface AuctionInfo {
+  auctionType: AuctionType
   auctionId: number
   productId: number
   startPrice: number
@@ -126,4 +129,78 @@ export interface MyBid {
   /** false 면 '밀림' → 다시 입찰 버튼 */
   isHighestBidder: boolean
   endAt: string
+}
+
+/* ---------- 하향식 경매 (DUTCH) ---------- */
+
+/** GET /api/v1/auctions/dutch 쿼리. status 생략 = IN_PROGRESS */
+export interface DutchAuctionListParams extends PageParams {
+  status?: 'IN_PROGRESS' | 'ENDED'
+}
+
+/** 하향식 목록 카드 한 장. 상품명·사진은 없어서 상품 API 와 조합한다 */
+export interface DutchAuctionSummary {
+  auctionId: number
+  productId: number
+  status: AuctionStatus
+  startPrice: number
+  /** 진행 중: 지금 가격 / 판매됨: 낙찰가 / 유찰: null */
+  currentPrice: number | null
+  /** 한 번에 내려가는 금액 */
+  dropAmount: number
+  dropIntervalSec: number
+  /** 진행 중이 아니면 null */
+  nextDropAt: string | null
+  /** 마지막 가격 단계 */
+  isLastPrice: boolean
+  startAt: string
+  winningPrice: number | null
+  failureReason: FailureReason | null
+}
+
+/** GET /api/v1/auctions/dutch */
+export interface DutchAuctionListResponse {
+  content: DutchAuctionSummary[]
+  page: number
+  size: number
+  totalElements: number
+  hasNext: boolean
+  /** nextDropAt 카운트다운 보정용 */
+  serverTime: string
+}
+
+/** 하향식 상세의 공용 값. 최저가·종료 시각은 비공개라 없다 */
+export interface DutchAuctionInfo {
+  auctionType: 'DUTCH'
+  auctionId: number
+  productId: number
+  startPrice: number
+  startAt: string
+  status: AuctionStatus
+  /** 진행 중: 지금 가격 / 판매됨: 낙찰가 / 유찰: null */
+  currentPrice: number | null
+  /** 마지막 단계·종료 후 null */
+  nextPrice: number | null
+  /** 마지막 단계·종료 후 null */
+  nextDropAt: string | null
+  isLastPrice: boolean
+  dropAmount: number
+  dropIntervalSec: number
+  winningPrice: number | null
+  failureReason: FailureReason | null
+}
+
+/** GET /api/v1/auctions/{auctionId} (하향식) */
+export interface DutchAuctionDetail {
+  auction: DutchAuctionInfo
+  me: { isSeller: boolean }
+  serverTime: string
+}
+
+/** POST /api/v1/auctions/{auctionId}/dutch-buy */
+export interface DutchBuyResponse {
+  auctionId: number
+  winningPrice: number
+  winAt: string
+  status: AuctionStatus
 }

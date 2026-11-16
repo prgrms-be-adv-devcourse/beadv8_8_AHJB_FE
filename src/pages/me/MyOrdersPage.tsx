@@ -34,7 +34,7 @@ export function MyOrdersPage() {
           장바구니
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.winner']} />
+      <DevApiNote ids={['order.winner', 'product.list']} />
       <div className={styles.tabs}>
         {ORDER_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>

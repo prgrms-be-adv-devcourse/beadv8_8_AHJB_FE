@@ -146,7 +146,7 @@ export function OrderDetailPage() {
                   : ''}
               </span>
             </div>
-            <DevApiNote ids={['order.detail']} />
+            <DevApiNote ids={['order.detail', 'product.list']} />
 
             {role === 'buyer' && order.state === 'SHIPPED' ? (
               <div className={styles.actions}>
