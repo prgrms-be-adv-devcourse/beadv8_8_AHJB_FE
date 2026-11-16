@@ -252,7 +252,7 @@ export const apiRegistry = {
     title: '하향식 경매 목록',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
+    note: '상품명·사진 없음 → 상품 API 조합',
   },
   'auction.dutchBuy': {
     method: 'POST',
@@ -260,7 +260,6 @@ export const apiRegistry = {
     title: '하향식 구매',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'cart.list': {
     method: 'GET',
@@ -540,7 +539,6 @@ export const apiRegistry = {
     title: '알림함',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.unreadCount': {
     method: 'GET',
@@ -548,7 +546,6 @@ export const apiRegistry = {
     title: '안 읽은 알림 수',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.read': {
     method: 'PATCH',
@@ -556,7 +553,6 @@ export const apiRegistry = {
     title: '알림 읽음',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.readAll': {
     method: 'PATCH',
@@ -564,7 +560,6 @@ export const apiRegistry = {
     title: '알림 모두 읽음',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.settings': {
     method: 'GET',
@@ -572,7 +567,6 @@ export const apiRegistry = {
     title: '알림 수신 설정',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.updateSettings': {
     method: 'PUT',
@@ -580,7 +574,6 @@ export const apiRegistry = {
     title: '알림 수신 설정 변경',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.registerDevice': {
     method: 'POST',
@@ -588,7 +581,6 @@ export const apiRegistry = {
     title: '푸시 기기 등록',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   'notification.removeDevice': {
     method: 'DELETE',
@@ -596,7 +588,6 @@ export const apiRegistry = {
     title: '푸시 기기 해제',
     owner: '박신형',
     status: 'done',
-    note: '목업 없음',
   },
   // ===== search · recommend · chat =====
   'search.products': {
@@ -605,7 +596,6 @@ export const apiRegistry = {
     title: '상품 검색',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
   },
   'recommend.popular': {
     method: 'GET',
@@ -613,7 +603,7 @@ export const apiRegistry = {
     title: '인기 경매 추천',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
+    note: '상품명·사진 없음 → 상품 API 조합',
   },
   'recommend.me': {
     method: 'GET',
@@ -621,7 +611,6 @@ export const apiRegistry = {
     title: '개인 맞춤 추천',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
   },
   'recommend.byAuction': {
     method: 'GET',
@@ -629,7 +618,6 @@ export const apiRegistry = {
     title: '비슷한 경매 추천',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
   },
   'chat.rooms': {
     method: 'GET',
@@ -637,7 +625,7 @@ export const apiRegistry = {
     title: '채팅방 목록',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
+    note: '목업 roomId = 경매 id',
   },
   'chat.room': {
     method: 'GET',
@@ -645,7 +633,6 @@ export const apiRegistry = {
     title: '채팅방 상세',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
   },
   'chat.messages': {
     method: 'GET',
@@ -653,7 +640,7 @@ export const apiRegistry = {
     title: '채팅 메시지 목록',
     owner: '담당 확인',
     status: 'done',
-    note: '목업 없음',
+    note: '시스템 카드(type·systemType·payload)는 제안, 백엔드 미구현',
   },
 } as const satisfies Record<string, ApiSpec>
 

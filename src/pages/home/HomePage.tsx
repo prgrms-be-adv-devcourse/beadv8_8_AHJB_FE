@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { auctionApi, cartApi } from '@/api/endpoints'
+import { auctionApi, cartApi, recommendApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
 import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
+import { RecommendSection } from '@/components/RecommendSection'
+import { useProductSummaries } from '@/lib/productSummaries'
+import { DutchCard } from '@/pages/drops/DutchCard'
 import { useNow } from '@/lib/clock'
 import { formatCountdown } from '@/lib/format'
 import { CATEGORIES, CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from '@/lib/labels'
@@ -36,6 +39,15 @@ export function HomePage() {
     queryFn: () => auctionApi.listByTab({ status: 'SCHEDULED', size: 5 }),
   })
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, enabled: isLoggedIn })
+  const dropsQuery = useQuery({
+    queryKey: ['auctions', 'dutch', 'home'],
+    queryFn: () => auctionApi.dutchList({ status: 'IN_PROGRESS', size: 4 }),
+    refetchInterval: 10_000,
+  })
+  const drops = dropsQuery.data?.content ?? []
+  const dropProducts = useProductSummaries(drops.map((item) => item.productId))
+  const popularQuery = useQuery({ queryKey: ['recommend', 'popular'], queryFn: recommendApi.popular })
+  const forMeQuery = useQuery({ queryKey: ['recommend', 'me'], queryFn: recommendApi.me, enabled: isLoggedIn })
 
   // 입찰 1위는 히어로에, 2~6위는 '입찰이 몰리는 경매' 섹션에
   const featured = hotQuery.data?.content[0]
@@ -87,6 +99,39 @@ export function HomePage() {
             결제하기 <Icon name="chevronRight" size={14} />
           </span>
         </Link>
+      ) : null}
+
+      {drops.length ? (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>
+              <Icon name="bolt" size={18} />
+              드롭 타임
+            </h2>
+            <Link to="/drops" className={styles.more}>
+              전체 보기 <Icon name="chevronRight" size={14} />
+            </Link>
+          </div>
+          <p className={styles.sectionDesc}>기다릴수록 가격이 내려가요. 먼저 구매한 한 명만 가져가요.</p>
+          <DevApiNote ids={['auction.dutchList']} className={styles.note} />
+          <div className="grid-products">
+            {drops.map((item) => (
+              <DutchCard key={item.auctionId} item={item} product={dropProducts.get(item.productId)} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {isLoggedIn ? (
+        <div className={styles.section}>
+          <RecommendSection
+            title="회원님을 위한 경매"
+            description="찜하고 입찰한 상품과 비슷한 경매예요."
+            items={forMeQuery.data}
+            loading={forMeQuery.isLoading}
+            apiKey="recommend.me"
+          />
+        </div>
       ) : null}
 
       <section className={styles.section}>
@@ -154,6 +199,15 @@ export function HomePage() {
             : hotItems.map((item) => <ProductCard key={item.productId} item={item} />)}
         </div>
       </section>
+
+      <div className={styles.section}>
+        <RecommendSection
+          title="지금 인기 있는 경매"
+          items={popularQuery.data}
+          loading={popularQuery.isLoading}
+          apiKey="recommend.popular"
+        />
+      </div>
 
       <section className={styles.section}>
         <div className={styles.steps}>

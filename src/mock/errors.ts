@@ -36,6 +36,9 @@ export const ERROR_TABLE = {
   AUCTION009: [400, '즉시낙찰이 설정되지 않은 경매입니다.'],
   AUCTION010: [409, '현재 경매 상태에서는 처리할 수 없습니다.'],
   AUCTION011: [400, '가격이 올바르지 않습니다.'],
+  AUCTION012: [400, '이 경매 유형에서는 사용할 수 없는 기능입니다.'],
+  AUCTION013: [409, '가격이 바뀌었습니다. 현재 가격을 확인하고 다시 시도해 주세요.'],
+  AUCTION014: [409, '이미 판매된 경매입니다.'],
   CART001: [404, '존재하지 않는 상품입니다.'],
   CART002: [403, '상품에 접근할 수 없습니다.'],
   CART003: [403, '결제 기한이 만료된 상품입니다.'],
@@ -71,6 +74,12 @@ export const ERROR_TABLE = {
   REVIEW005: [400, '평점은 0.5점 단위로 0.5점부터 5.0점까지 입력할 수 있습니다.'],
   REVIEW006: [404, '존재하지 않는 후기입니다.'],
   REVIEW007: [403, '본인이 작성한 후기만 수정/삭제할 수 있습니다.'],
+  NOTIFICATION001: [404, '존재하지 않는 알림입니다.'],
+  NOTIFICATION002: [400, '푸시를 끌 수 없는 알림 묶음입니다.'],
+  CHAT001: [404, '존재하지 않는 채팅방'],
+  CHAT002: [403, '채팅방 참여자만 접근 가능'],
+  CHAT003: [409, '종료된 채팅방'],
+  CHAT005: [400, '메시지는 1~1000자'],
 } as const satisfies Record<string, readonly [number, string]>;
 
 export type ErrorCode = keyof typeof ERROR_TABLE;

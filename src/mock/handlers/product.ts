@@ -1,4 +1,5 @@
 import { db, nextId, persist } from '../db';
+import { dutchAuctionIdOfProduct } from './dutch';
 import { fail } from '../errors';
 import { bodyOf, noContent, ok, route, type HandlerContext } from '../router';
 import {
@@ -229,7 +230,7 @@ export function registerProductRoutes(): void {
     const me = ctx.me;
     return ok({
       productId: product.id,
-      auctionId: latest && latest.round === product.round ? latest.id : null,
+      auctionId: dutchAuctionIdOfProduct(product.id) ?? (latest && latest.round === product.round ? latest.id : null),
       round: product.round,
       name: product.name,
       category: product.category,

@@ -1,0 +1,44 @@
+.page {
+  padding-top: var(--space-24);
+}
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-24);
+  margin-bottom: var(--space-20);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--text);
+  color: var(--white);
+}
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+}
+.title {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+}
+.desc {
+  font-size: 14px;
+  opacity: 0.8;
+  word-break: keep-all;
+}
+.toolbar {
+  display: flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-16);
+}
+.livePrice {
+  color: var(--accent);
+}
+/* 하향식 상세 박스 */
+.dropRule {
+  font-size: 13px;
+  color: var(--text-muted);
+}

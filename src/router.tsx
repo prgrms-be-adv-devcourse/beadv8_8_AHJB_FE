@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, createBrowserRouter, type RouteObject } from 'react-router-dom'
+import { Navigate, createBrowserRouter, useParams, type RouteObject } from 'react-router-dom'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { RequireSeller } from '@/auth/RequireSeller'
 import { AppLayout } from '@/layout/AppLayout'
@@ -27,7 +27,20 @@ import { ChargeSuccessPage } from '@/pages/me/wallet/ChargeSuccessPage'
 import { ChargeFailPage } from '@/pages/me/wallet/ChargeFailPage'
 import { MyProfilePage } from '@/pages/me/MyProfilePage'
 import { DevApisPage } from '@/pages/dev/DevApisPage'
+import { AuctionRedirectPage } from '@/pages/auctions/AuctionRedirectPage'
+import { DropsPage } from '@/pages/drops/DropsPage'
+import { SearchPage } from '@/pages/search/SearchPage'
+import { NotificationsPage } from '@/pages/notifications/NotificationsPage'
+import { MyNotificationSettingsPage } from '@/pages/me/MyNotificationSettingsPage'
+import { ChatListPage } from '@/pages/chat/ChatListPage'
+import { ChatRoomPage } from '@/pages/chat/ChatRoomPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+
+/** /seller/orders/:orderId → /orders/:orderId */
+function SellerOrderRedirect() {
+  const { orderId } = useParams()
+  return <Navigate to={`/orders/${orderId}`} replace />
+}
 
 /** 로그인 필요 화면으로 감싸기 */
 const requireAuth = (element: ReactNode) => <RequireAuth>{element}</RequireAuth>
@@ -39,6 +52,16 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/', element: <HomePage /> },
       { path: '/auctions', element: <AuctionListPage /> },
+      { path: '/auctions/:auctionId', element: <AuctionRedirectPage /> },
+      { path: '/drops', element: <DropsPage /> },
+      { path: '/search', element: <SearchPage /> },
+      { path: '/notifications', element: requireAuth(<NotificationsPage />) },
+      { path: '/chats', element: requireAuth(<ChatListPage />) },
+      { path: '/chats/:roomId', element: requireAuth(<ChatRoomPage />) },
+      // 알림 서버의 임시 푸시 링크 경로 → 실제 화면 (PushLinkResolver 를 맞추면 지운다)
+      { path: '/mypage', element: <Navigate to="/me" replace /> },
+      { path: '/seller/settlements', element: <Navigate to="/me/settlements" replace /> },
+      { path: '/seller/orders/:orderId', element: <SellerOrderRedirect /> },
       { path: '/products/:productId', element: <ProductDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/signup', element: <SignupPage /> },
@@ -81,10 +104,10 @@ export const routes: RouteObject[] = [
           { path: 'wallet/charge/success', element: <ChargeSuccessPage /> },
           { path: 'wallet/charge/fail', element: <ChargeFailPage /> },
           { path: 'profile', element: <MyProfilePage /> },
+          { path: 'notifications', element: <MyNotificationSettingsPage /> },
         ],
       },
       { path: '/dev/apis', element: <DevApisPage /> },
-      { path: '/search', element: <Navigate to="/auctions" replace /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
