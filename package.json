@@ -13,6 +13,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.5.0",
     "@tanstack/react-query": "^5.104.4",
     "@tosspayments/tosspayments-sdk": "^2.9.0",
     "react": "^18.3.1",
