@@ -1,4 +1,4 @@
-// 브라우저 내 목업 서버 진입점 (원본 handleMockRequest)
+// 브라우저 내 목업 서버 진입점
 import { db } from './db';
 import { ERROR_TABLE, MockError } from './errors';
 import { registerAllRoutes } from './handlers';
@@ -20,6 +20,10 @@ export interface MockRequest {
 /** 비로그인으로도 호출 가능한 GET 경로 (/api/v1/auth/* 는 메서드와 무관하게 공개) */
 const PUBLIC_GET_PATTERNS = [
   /^\/api\/v1\/auctions$/,
+  /^\/api\/v1\/auctions\/dutch$/,
+  /^\/api\/v1\/search$/,
+  /^\/api\/v1\/recommend\/popular$/,
+  /^\/api\/v1\/recommend\/auction\/\d+$/,
   /^\/api\/v1\/auctions\/\d+$/,
   /^\/api\/v1\/auctions\/\d+\/bids$/,
   /^\/api\/v1\/products\/upcoming$/,
@@ -52,9 +56,8 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 
 /**
  * 토큰 → 목업 회원.
- * - `mock.<id>.<ts>` 토큰: 원본과 동일하게 id 로 회원을 찾는다 (없으면 null → 401).
- * - 그 외 토큰(실제 백엔드 로그인 JWT) [의도된 변경 #3]: 원본은 401 이었지만, 실제 인증 + 나머지 API 목업
- *   혼용을 위해 목업 회원으로 매핑한다. JWT payload 의 email/sub/nickname 이 시드 회원의 email·nickname 과
+ * - `mock.<id>.<ts>` 토큰: id 로 회원을 찾는다 (없으면 null → 401).
+ * - 그 외 토큰(실제 백엔드 로그인 JWT): 실제 인증 + 나머지 API 목업 혼용을 위해 목업 회원으로 매핑한다. JWT payload 의 email/sub/nickname 이 시드 회원의 email·nickname 과
  *   맞으면 그 회원, 아니면 기본 데모 회원(demo@jjinmak.kr).
  */
 function resolveMember(token: string | null): MemberRecord | null {

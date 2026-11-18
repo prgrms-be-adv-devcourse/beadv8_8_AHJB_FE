@@ -14,7 +14,7 @@ interface OrderActionDialogsProps {
   onClose: () => void
 }
 
-/** 주문 상세의 확인창 4종: 구매확정 · 환불 요청 · 환불 수락 · 환불 거절 (원본 WI) */
+/** 주문 상세의 확인창 4종: 구매확정 · 환불 요청 · 환불 수락 · 환불 거절 */
 export function OrderActionDialogs({ kind, order, refundId, onClose }: OrderActionDialogsProps) {
   const actions = useOrderActions()
   if (!order) return null

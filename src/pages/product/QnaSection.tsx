@@ -12,7 +12,7 @@ import type { QnaCreateRequest } from '@/types/product'
 import pageStyles from './ProductDetailPage.module.css'
 import styles from './QnaSection.module.css'
 
-/** 질문·답글 최대 글자 수 (원본 Ju) */
+/** 질문·답글 최대 글자 수 */
 const MAX_LENGTH = 1000
 
 interface QnaSectionProps {
@@ -21,7 +21,7 @@ interface QnaSectionProps {
   isMine: boolean
 }
 
-/** 실시간 Q&A (원본 jP). 5초마다 새로고침 */
+/** 실시간 Q&A. 5초마다 새로고침 */
 export function QnaSection({ productId, isMine }: QnaSectionProps) {
   const { me, isLoggedIn } = useAuth()
   const location = useLocation()

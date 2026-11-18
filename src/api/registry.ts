@@ -1,6 +1,6 @@
 import type { HttpMethod } from '@/types/common'
 
-/** done = 백엔드 구현, partial = 필드 부족, proposed = 미구현(프론트 제안) */
+/** done = 백엔드 구현, partial = 필드 누락(화면에 쓰는 필드가 백엔드 응답에 없음), proposed = 미구현(프론트 제안) */
 export type ApiImplStatus = 'done' | 'partial' | 'proposed'
 
 export interface ApiSpec {
@@ -14,7 +14,7 @@ export interface ApiSpec {
 }
 
 /**
- * API 구현 현황표 (원본 eA).
+ * API 구현 현황표.
  * 키(`auction.detail` 등)는 VITE_REAL_APIS 전환 키로도 쓰인다 (api/config.ts).
  */
 export const apiRegistry = {
@@ -152,6 +152,14 @@ export const apiRegistry = {
     status: 'done',
     note: 'multipart file 1장 → { imageId, imageUrl }',
   },
+  'product.list': {
+    method: 'GET',
+    path: '(미정)',
+    title: '상품 목록 (여러 상품 조회)',
+    owner: '송현수',
+    status: 'proposed',
+    note: '썸네일·상품명이 없는 목록(경매·내 입찰·장바구니·주문·추천·하향식)이 조합에 사용',
+  },
   'qna.list': {
     method: 'GET',
     path: '/api/v1/products/{productId}/qnas',
@@ -199,16 +207,15 @@ export const apiRegistry = {
     path: '/api/v1/wishes',
     title: '찜 목록',
     owner: '송현수',
-    status: 'partial',
-    note: '카드 사진(thumbnailUrl) 필요',
+    status: 'done',
   },
   'auction.list': {
     method: 'GET',
     path: '/api/v1/auctions',
     title: '경매 목록 (진행 중 · 종료)',
     owner: '박신형',
-    status: 'done',
-    note: 'status(IN_PROGRESS|ENDED), category, sort, page, size',
+    status: 'partial',
+    note: '누락: failureReason. 썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'auction.detail': {
     method: 'GET',
@@ -244,23 +251,30 @@ export const apiRegistry = {
     title: '입찰 중인 경매',
     owner: '박신형',
     status: 'done',
-    note: '진행 중만, 마감 임박순',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
-  'auction.reopen': {
-    method: 'POST',
-    path: '/api/v1/products/{productId}/rounds',
-    title: '다음 회차 열기',
+  'auction.dutchList': {
+    method: 'GET',
+    path: '/api/v1/auctions/dutch',
+    title: '하향식 경매 목록',
     owner: '박신형',
-    status: 'proposed',
-    note: '유찰·낙찰 무효 뒤 판매자가 다시 경매를 열어요',
+    status: 'done',
+    note: '상품명·사진 없음 → 상품 API 조합',
+  },
+  'auction.dutchBuy': {
+    method: 'POST',
+    path: '/api/v1/auctions/{auctionId}/dutch-buy',
+    title: '하향식 구매',
+    owner: '박신형',
+    status: 'done',
   },
   'cart.list': {
     method: 'GET',
     path: '/api/v1/cart',
     title: '장바구니(낙찰 상품)',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'cart.pay': {
     method: 'POST',
@@ -274,24 +288,24 @@ export const apiRegistry = {
     path: '/api/v1/order/winner',
     title: '구매 주문 목록',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.seller': {
     method: 'GET',
     path: '/api/v1/order/seller',
     title: '판매 주문 목록',
     owner: '신종혁',
-    status: 'partial',
-    note: 'productName, thumbnailUrl 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.detail': {
     method: 'GET',
     path: '/api/v1/order/{orderId}',
     title: '주문 상세',
     owner: '신종혁',
-    status: 'partial',
-    note: 'confirmExpiredAt(자동 구매확정 시각) 필요',
+    status: 'done',
+    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
   },
   'order.confirm': {
     method: 'POST',
@@ -313,6 +327,14 @@ export const apiRegistry = {
     title: '발송(송장 등록)',
     owner: '신종혁',
     status: 'done',
+  },
+  'delivery.update': {
+    method: 'PUT',
+    path: '/api/v1/order/{orderId}/delivery',
+    title: '배송 정보 수정',
+    owner: '신종혁',
+    status: 'done',
+    note: '목업 없음 · 프론트에서 쓰는 API인지 확인 필요',
   },
   'delivery.status': {
     method: 'GET',
@@ -540,14 +562,124 @@ export const apiRegistry = {
     owner: '송현수',
     status: 'done',
   },
+  // ===== notification =====
+  'notification.list': {
+    method: 'GET',
+    path: '/api/v1/notifications',
+    title: '알림함',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.unreadCount': {
+    method: 'GET',
+    path: '/api/v1/notifications/unread-count',
+    title: '안 읽은 알림 수',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.read': {
+    method: 'PATCH',
+    path: '/api/v1/notifications/{notificationId}/read',
+    title: '알림 읽음',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.readAll': {
+    method: 'PATCH',
+    path: '/api/v1/notifications/read-all',
+    title: '알림 모두 읽음',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.settings': {
+    method: 'GET',
+    path: '/api/v1/notifications/settings',
+    title: '알림 수신 설정',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.updateSettings': {
+    method: 'PUT',
+    path: '/api/v1/notifications/settings',
+    title: '알림 수신 설정 변경',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.registerDevice': {
+    method: 'POST',
+    path: '/api/v1/notifications/devices',
+    title: '푸시 기기 등록',
+    owner: '박신형',
+    status: 'done',
+  },
+  'notification.removeDevice': {
+    method: 'DELETE',
+    path: '/api/v1/notifications/devices/{token}',
+    title: '푸시 기기 해제',
+    owner: '박신형',
+    status: 'done',
+  },
+  // ===== search · recommend · chat =====
+  'search.products': {
+    method: 'GET',
+    path: '/api/v1/search',
+    title: '상품 검색',
+    owner: '담당 확인',
+    status: 'done',
+  },
+  'recommend.popular': {
+    method: 'GET',
+    path: '/api/v1/recommend/popular',
+    title: '인기 경매 추천',
+    owner: '담당 확인',
+    status: 'done',
+    note: '상품명·사진 없음 → 상품 API 조합',
+  },
+  'recommend.me': {
+    method: 'GET',
+    path: '/api/v1/recommend/me',
+    title: '개인 맞춤 추천',
+    owner: '담당 확인',
+    status: 'done',
+  },
+  'recommend.byAuction': {
+    method: 'GET',
+    path: '/api/v1/recommend/auction/{auctionId}',
+    title: '비슷한 경매 추천',
+    owner: '담당 확인',
+    status: 'done',
+  },
+  'chat.rooms': {
+    method: 'GET',
+    path: '/api/v1/chat-rooms',
+    title: '채팅방 목록',
+    owner: '담당 확인',
+    status: 'done',
+    note: '목업 roomId = 경매 id',
+  },
+  'chat.room': {
+    method: 'GET',
+    path: '/api/v1/chat-rooms/{roomId}',
+    title: '채팅방 상세',
+    owner: '담당 확인',
+    status: 'done',
+  },
+  'chat.messages': {
+    method: 'GET',
+    path: '/api/v1/chat-rooms/{roomId}/messages',
+    title: '채팅 메시지 목록',
+    owner: '담당 확인',
+    status: 'done',
+    note: '시스템 카드(type·systemType·payload)는 제안, 백엔드 미구현',
+  },
 } as const satisfies Record<string, ApiSpec>
 
 export type ApiKey = keyof typeof apiRegistry
 
-/** 현황 배지 문구 (원본 Co) */
+/** 현황 배지 문구 */
 export const API_STATUS_LABELS: Record<ApiImplStatus, string> = {
   done: '구현',
-  partial: '필드 부족',
+  partial: '필드 누락',
   proposed: '미구현',
 }
 

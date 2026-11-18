@@ -18,16 +18,16 @@ import type { ProductDetail } from '@/types/product'
 import pageStyles from './ProductDetailPage.module.css'
 import styles from './BidBoard.module.css'
 
-/** 마감 5분 전 연장 구간 (원본 HN) */
+/** 마감 5분 전 연장 구간 */
 const EXTENSION_WINDOW_MS = 300 * 1000
 
-/** 입력칸에 넣을 최소 입찰가 문자열. 종료된 경매는 minBidPrice 가 null 일 수 있음 (의도된 변경 #4) */
+/** 입력칸에 넣을 최소 입찰가 문자열. 종료된 경매는 minBidPrice 가 null 일 수 있음 */
 function minBidText(minBidPrice: number | null): string {
   return minBidPrice?.toLocaleString('ko-KR') ?? ''
 }
 
 /* ------------------------------------------------------------------ */
-/* 경매 시작 전 보드 (원본 UN)                                          */
+/* 경매 시작 전 보드                                          */
 /* ------------------------------------------------------------------ */
 
 export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
@@ -101,7 +101,7 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
             <Button variant="outline" size="lg" onClick={() => setConfirmOpen(true)} disabled={untilStart <= 0}>
               <Icon name="trash" size={16} /> 삭제
             </Button>
-            {/* 원본도 aria-disabled 만 주고 링크 이동은 막지 않음 */}
+            {/* aria-disabled 만 주고 링크 이동은 막지 않음 */}
             <LinkButton
               to={`/sell/${product.productId}/edit`}
               variant="solid"
@@ -136,7 +136,7 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 진행 중 / 종료된 경매 입찰 박스 (원본 zN)                              */
+/* 진행 중 / 종료된 경매 입찰 박스                              */
 /* ------------------------------------------------------------------ */
 
 interface AuctionBidBoxProps {
@@ -243,7 +243,6 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
   // 진행 중이 아니면 백엔드가 null 을 주므로 현재가 기준 단위로 대신 표시
   const increment = auction.bidIncrement ?? bidIncrementOf(auction.currentPrice)
   const bidPrice = parseDigits(bidInput)
-  // 원본은 4번째 인자로 bidCount 를 넘기지만 검사 함수가 쓰지 않음
   const validationError = touched ? validateBid(bidPrice, auction.currentPrice, minBidPrice ?? 0) : null
   const bidError = serverError ?? validationError
   const reachesInstantWin = !!auction.instantWinPrice && bidPrice >= auction.instantWinPrice
@@ -321,7 +320,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             </span>
           </div>
         ) : me.isSeller ? (
-          <SellerEndedPanel data={data} product={product} />
+          <SellerEndedPanel data={data} />
         ) : (
           <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
             <Icon name="info" size={16} />
@@ -546,47 +545,22 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 판매자용 종료 패널: 유찰·낙찰 무효면 다음 회차 열기 (원본 QN)            */
+/* 판매자용 종료 패널                                                  */
 /* ------------------------------------------------------------------ */
 
-function SellerEndedPanel({ data, product }: { data: AuctionDetail; product: ProductDetail }) {
+function SellerEndedPanel({ data }: { data: AuctionDetail }) {
   const auction = data.auction
-  const toast = useToast()
-  const queryClient = useQueryClient()
-
-  const reopenMutation = useMutation({
-    mutationFn: () => productApi.reopen(product.productId),
-    onSuccess: (result) => {
-      toast(`${result.round}회차 경매를 열었어요.`, { tone: 'success' })
-      queryClient.invalidateQueries({ queryKey: ['product', product.productId] })
-      queryClient.invalidateQueries({ queryKey: ['auctions'] })
-    },
-    onError: (error) => toast(error.message, { tone: 'error' }),
-  })
 
   if (auction.status === 'FAILED' && auction.failureReason !== 'REFUNDED') {
     return (
-      <>
-        <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
-          <Icon name="info" size={16} />
-          <span>
-            {auction.failureReason === 'NO_BID'
-              ? '입찰 없이 끝났어요(유찰).'
-              : '낙찰자가 결제하지 않아 낙찰이 무효됐어요.'}{' '}
-            같은 조건으로 다음 회차를 열 수 있어요.
-          </span>
-        </div>
-        <Button
-          variant="highlight"
-          size="lg"
-          fullWidth
-          loading={reopenMutation.isPending}
-          onClick={() => reopenMutation.mutate()}
-        >
-          {product.round + 1}회차 경매 열기
-        </Button>
-        <DevApiNote ids={['auction.reopen']} />
-      </>
+      <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
+        <Icon name="info" size={16} />
+        <span>
+          {auction.failureReason === 'NO_BID'
+            ? '입찰 없이 끝났어요(유찰).'
+            : '낙찰자가 결제하지 않아 낙찰이 무효됐어요.'}
+        </span>
+      </div>
     )
   }
 

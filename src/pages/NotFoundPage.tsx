@@ -1,7 +1,7 @@
 import { LinkButton } from '@/components/Button'
 import { EmptyState } from '@/components/EmptyState'
 
-/** 없는 경로 (원본 aO) */
+/** 없는 경로 */
 export function NotFoundPage() {
   return (
     <div className="container">

@@ -3,7 +3,7 @@ import type { ProductSeller } from '@/types/product'
 import { formatRating } from '@/lib/format'
 import styles from './SellerCard.module.css'
 
-/** 아바타 배경색 (원본 tp). id % 6 으로 고른다 */
+/** 아바타 배경색. id % 6 으로 고른다 */
 export const AVATAR_COLORS = [
   'var(--mint)',
   'var(--lemon)',
@@ -20,7 +20,7 @@ interface AvatarProps {
   size?: number
 }
 
-/** 닉네임 첫 글자 아바타 (원본 vA) */
+/** 닉네임 첫 글자 아바타 */
 export function Avatar({ nickname, id, size = 40 }: AvatarProps) {
   return (
     <span
@@ -43,7 +43,7 @@ interface SellerCardProps {
   note?: ReactNode
 }
 
-/** 판매자 카드: 아바타, 닉네임, 평점·후기 수 (원본 HE) */
+/** 판매자 카드: 아바타, 닉네임, 평점·후기 수 */
 export function SellerCard({ seller, note }: SellerCardProps) {
   return (
     <div className={styles.card}>

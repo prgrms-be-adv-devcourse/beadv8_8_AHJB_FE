@@ -13,7 +13,7 @@ export interface SendProductVariables {
 }
 
 /**
- * 주문 처리 mutation 모음 (원본 xA): 구매확정 · 환불 요청 · 송장 등록 · 환불 수락 · 환불 거절.
+ * 주문 처리 mutation 모음: 구매확정 · 환불 요청 · 송장 등록 · 환불 수락 · 환불 거절.
  * 성공하면 관련 쿼리를 무효화하고 토스트를 띄운다. 실패하면 에러 메시지 토스트.
  */
 export function useOrderActions() {

@@ -1,6 +1,6 @@
 import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
 import type { LoginResponse } from '@/types/auth'
-import { API_BASE_URL, isRealApi, type ApiKey } from './config'
+import { isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
 import { toUserMessage } from './errorMessages'
 
@@ -12,7 +12,7 @@ export interface PaymentErrorInfo {
   pgMessage?: string | null
 }
 
-/** 백엔드 errorCode / 메시지 / HTTP 상태를 담는 에러 (원본 d0) */
+/** 백엔드 errorCode / 메시지 / HTTP 상태를 담는 에러 */
 export class ApiError extends Error {
   code: string
   status: number
@@ -38,7 +38,7 @@ export class ApiError extends Error {
 export type QueryValue = string | number | boolean | null | undefined | ReadonlyArray<string | number>
 
 /**
- * 쿼리 객체 → URLSearchParams (원본 f0).
+ * 쿼리 객체 → URLSearchParams.
  * null·undefined·''·false 는 빼고, 배열은 쉼표로 이어 붙인다(빈 배열은 뺀다).
  */
 export function buildQuery(query?: object): URLSearchParams {
@@ -68,7 +68,7 @@ interface RawResponse {
 
 const DEFAULT_ERROR_MESSAGE = '요청을 처리하지 못했어요.'
 
-/** 목업 서버로 보낸다 (원본과 같은 방식: 동적 import) */
+/** 목업 서버로 보낸다 (동적 import) */
 async function sendToMock(
   method: HttpMethod,
   path: string,
@@ -100,7 +100,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-/** 실제 서버로 보낸다 (의도된 변경 #2) */
+/** 실제 서버로 보낸다 */
 async function sendToServer(
   method: HttpMethod,
   path: string,
@@ -109,7 +109,9 @@ async function sendToServer(
   token: string | null,
 ): Promise<RawResponse> {
   const queryString = params.toString()
-  const url = `${API_BASE_URL}${path}${queryString ? `?${queryString}` : ''}`
+  // 항상 같은 출처의 /api 로 보낸다. 로컬은 Vite proxy, 배포는 vercel.json rewrites 가 게이트웨이로 전달한다.
+  // API 도메인을 직접 호출하면 리프레시 쿠키(SameSite=Strict)가 붙지 않는다.
+  const url = `${path}${queryString ? `?${queryString}` : ''}`
   const isFormData = body instanceof FormData
   const headers: Record<string, string> = { Accept: 'application/json' }
   // FormData 는 브라우저가 boundary 를 포함한 multipart Content-Type 을 직접 붙인다.
@@ -146,7 +148,7 @@ function isEnvelope(body: object): body is ApiBody {
 }
 
 /**
- * 공통 요청 함수 (원본 La).
+ * 공통 요청 함수.
  * `apiKey` 가 VITE_REAL_APIS 에 있으면 실제 서버, 아니면 목업 서버로 보낸다.
  * 성공하면 `data` 를, 바디 없는 성공 응답이면 null 을 돌려준다.
  * 실제 서버가 401 을 주면 토큰을 한 번 재발급하고 같은 요청을 다시 보낸다.
@@ -163,7 +165,7 @@ export async function request<T>(
   let response = await send(method, path, params, options.body, tokenStore.get())
 
   // 액세스 토큰 만료(15분) → 재발급 후 한 번만 재시도. auth.* 요청은 재시도하지 않는다.
-  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.getRefresh()) {
+  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.get()) {
     const refreshed = await refreshSession()
     if (refreshed) response = await send(method, path, params, options.body, tokenStore.get())
   }
@@ -194,17 +196,20 @@ let refreshing: Promise<boolean> | null = null
 
 /**
  * 리프레시 토큰으로 새 토큰을 받는다 (POST /api/v1/auth/reissue).
+ * 실제 서버는 HttpOnly 쿠키의 리프레시 토큰을 읽으므로 바디 없이 보내고, 목업만 저장해 둔 토큰을 바디로 보낸다.
  * 여러 요청이 동시에 401 을 받아도 재발급은 한 번만 한다 (백엔드 리프레시 토큰은 1회용).
  * 판매자 등록처럼 권한이 바뀐 직후에도 호출해서 새 권한을 토큰에 반영한다.
  */
 export function refreshSession(): Promise<boolean> {
   if (refreshing) return refreshing
   refreshing = (async () => {
+    const real = isRealApi('auth.reissue')
     const refreshToken = tokenStore.getRefresh()
-    if (!refreshToken) return false
+    if (!real && !refreshToken) return false
     try {
-      const send = isRealApi('auth.reissue') ? sendToServer : sendToMock
-      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), { refreshToken }, null)
+      const send = real ? sendToServer : sendToMock
+      const body = real ? undefined : { refreshToken }
+      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), body, null)
       const result = parseResponse<LoginResponse>(response)
       tokenStore.set(result.accessToken, result.refreshToken)
       return true
@@ -218,7 +223,7 @@ export function refreshSession(): Promise<boolean> {
   return refreshing
 }
 
-/** 실패 바디 → ApiError. 401 이면 토큰을 지운다 (원본과 같음) */
+/** 실패 바디 → ApiError. 401 이면 토큰을 지운다 */
 function toApiError(body: ApiErrorBody, status: number): ApiError {
   if (status === 401) tokenStore.clear()
   const payment: PaymentErrorInfo | undefined =
@@ -229,7 +234,7 @@ function toApiError(body: ApiErrorBody, status: number): ApiError {
   return new ApiError(code, toUserMessage(code, status, body.message ?? DEFAULT_ERROR_MESSAGE), status, payment)
 }
 
-/** HTTP 메서드별 단축 함수 (원본 Te). 첫 인자는 registry 키 */
+/** HTTP 메서드별 단축 함수. 첫 인자는 registry 키 */
 export const http = {
   get: <T>(apiKey: ApiKey, path: string, query?: object) => request<T>(apiKey, 'GET', path, { query }),
   post: <T>(apiKey: ApiKey, path: string, body?: unknown) => request<T>(apiKey, 'POST', path, { body }),

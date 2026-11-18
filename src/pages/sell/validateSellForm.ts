@@ -42,7 +42,7 @@ export interface SellFormValues {
   agreed: boolean
 }
 
-/** 판매 폼 검사 (원본 mp 의 useMemo). 항목별 오류 문구, 문제없으면 null */
+/** 판매 폼 검사. 항목별 오류 문구, 문제없으면 null */
 export function validateSellForm(v: SellFormValues): SellErrors {
   return {
     images: v.images.length < 1 ? '사진을 1장 이상 올려 주세요.' : null,

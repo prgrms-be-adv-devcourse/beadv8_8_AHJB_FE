@@ -8,7 +8,7 @@ interface StepperProps {
   tone?: 'teal' | 'coral' | 'muted'
 }
 
-/** 진행 단계 막대 (원본 Vo) */
+/** 진행 단계 막대 */
 export function Stepper({ steps, current, tone = 'teal' }: StepperProps) {
   return (
     <ol className={`${styles.stepper} ${styles[tone]}`} aria-label="진행 단계">
@@ -16,10 +16,9 @@ export function Stepper({ steps, current, tone = 'teal' }: StepperProps) {
         const done = index < current
         const isNow = index === current - 1
         return (
-          // 원본도 CSS 에 없는 styles.todo 를 참조한다 (undefined → 'undefined' 문자열)
           <li
             key={step}
-            className={`${done ? styles.done : styles.todo} ${isNow ? styles.now : ''}`}
+            className={`${done ? styles.done : ''} ${isNow ? styles.now : ''}`}
             aria-current={isNow ? 'step' : undefined}
           >
             <span className={styles.bar} />

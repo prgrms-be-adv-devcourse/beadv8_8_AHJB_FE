@@ -13,7 +13,7 @@ import { useToast } from '@/components/Toast'
 import { BANKS } from '@/lib/labels'
 import styles from './Auth.module.css'
 
-/** 판매자 등록 (/seller/register, 원본 BP) */
+/** 판매자 등록 (/seller/register) */
 export function SellerRegisterPage() {
   const { me } = useAuth()
   const navigate = useNavigate()

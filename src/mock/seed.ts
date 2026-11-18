@@ -1,4 +1,4 @@
-// 목업 DB 초기 데이터 생성기 (원본 SA)
+// 목업 DB 초기 데이터 생성기
 // 고정 시드 난수(mulberry32)를 쓰므로 호출 순서를 바꾸면 생성 결과가 달라진다. 순서를 유지할 것.
 import type {
   AuctionDuration,
@@ -101,7 +101,7 @@ interface WalletEvent {
 export function buildSeed(version: number): MockDb {
   const nowMs = Date.now();
   const random = createRandom(RANDOM_SEED);
-  const pick = <T,>(items: T[]): T => items[Math.floor(random() * items.length)];
+  const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)];
   const db: MockDb = {
     version,
     savedAt: nowMs,
@@ -134,54 +134,59 @@ export function buildSeed(version: number): MockDb {
     ['demo@jjinmak.kr', '찐막러', '김찐막', true, [0, 0]],
     ['buyer@jjinmak.kr', '첫구매', '이구매', false, [0, 0]],
     ['retro@jjinmak.kr', '레트로창고', '박창고', true, [110.4, 23]],
-    ['famitsu@jjinmak.kr', '패미통신', '최통신', true, [57.5, 12]],
-    ['n64@jjinmak.kr', '육사마니아', '정육사', true, [43.5, 9]],
-    ['sega@jjinmak.kr', '세가세대', '한세가', true, [36, 8]],
+    ['famitsu@jjinmak.kr', '통신', '최통신', true, [57.5, 12]],
+    ['n64@jjinmak.kr', '마니아', '정육사', true, [43.5, 9]],
+    ['sega@jjinmak.kr', '세대', '한세가', true, [36, 8]],
     ['ps@jjinmak.kr', '플스장인', '오장인', true, [76.5, 16]],
     ['cart@jjinmak.kr', '카트리지수집', '윤수집', true, [27, 6]],
     ['pocket@jjinmak.kr', '초록버전', '서초록', true, [62, 13]],
     ['limited@jjinmak.kr', '한정판헌터', '강헌터', true, [94, 20]],
   ];
-  memberRows.forEach(([email, nickname, username, isSeller, [ratingSum, ratingCount]], index) => {
-    const id = index + 1;
-    db.members.push({
-      id,
-      uuid: seedUuid(id),
-      email,
-      password: SEED_PASSWORD,
-      nickname,
-      username,
-      phone: `0101234${String(5670 + id).padStart(4, '0')}`,
-      birthDate: id === 1 ? '1999-03-14' : null,
-      address:
-        id <= 2
+  memberRows.forEach(
+    (
+      [email, nickname, username, isSeller, [ratingSum, ratingCount]],
+      index,
+    ) => {
+      const id = index + 1;
+      db.members.push({
+        id,
+        uuid: seedUuid(id),
+        email,
+        password: SEED_PASSWORD,
+        nickname,
+        username,
+        phone: `0101234${String(5670 + id).padStart(4, '0')}`,
+        birthDate: id === 1 ? '1999-03-14' : null,
+        address:
+          id <= 2
+            ? {
+                alias: '집',
+                recipient: username,
+                recipientPhone: `0101234${String(5670 + id).padStart(4, '0')}`,
+                zipcode: '06236',
+                address: '서울특별시 강남구 테헤란로 123',
+                addressDetail: id === 1 ? '101동 1001호' : '3층',
+              }
+            : null,
+        seller: isSeller
           ? {
-              alias: '집',
-              recipient: username,
-              recipientPhone: `0101234${String(5670 + id).padStart(4, '0')}`,
-              zipcode: '06236',
-              address: '서울특별시 강남구 테헤란로 123',
-              addressDetail: id === 1 ? '101동 1001호' : '3층',
+              bank: pick(['국민은행', '신한은행', '카카오뱅크', '토스뱅크']),
+              accountNumber: `3333${String(1e7 + id * 1371).slice(0, 8)}`,
+              accountHolder: username,
             }
           : null,
-      seller: isSeller
-        ? {
-            bank: pick(['국민은행', '신한은행', '카카오뱅크', '토스뱅크']),
-            accountNumber: `3333${String(1e7 + id * 1371).slice(0, 8)}`,
-            accountHolder: username,
-          }
-        : null,
-      accountStatus: 'ACTIVE',
-      failedLogins: 0,
-      lockedUntil: null,
-      baseRating: { sum: ratingSum, count: ratingCount },
-      createdAt: ldt(nowMs - (200 - id * 9) * DAY),
-    });
-    db.wallets.push({
-      memberId: id,
-      balance: id <= 2 ? 0 : Math.round((200 + random() * 800) * 1000),
-    });
-  });
+        accountStatus: 'ACTIVE',
+        failedLogins: 0,
+        lockedUntil: null,
+        baseRating: { sum: ratingSum, count: ratingCount },
+        createdAt: ldt(nowMs - (200 - id * 9) * DAY),
+      });
+      db.wallets.push({
+        memberId: id,
+        balance: id <= 2 ? 0 : Math.round((200 + random() * 800) * 1000),
+      });
+    },
+  );
   db.seq.members = 10;
 
   /** 데모 회원(1, 2)과 exclude 를 제외한 회원 id */
@@ -219,7 +224,11 @@ export function buildSeed(version: number): MockDb {
     return product;
   }
 
-  function addAuction(product: ProductRecord, startAt: number, endAt: number): AuctionRecord {
+  function addAuction(
+    product: ProductRecord,
+    startAt: number,
+    endAt: number,
+  ): AuctionRecord {
     const auction: AuctionRecord = {
       id: seq('auctions', 500),
       productId: product.id,
@@ -244,7 +253,11 @@ export function buildSeed(version: number): MockDb {
   }
 
   /** 진행중 경매에 입찰 count 건을 채운다 */
-  function addBids(auction: AuctionRecord, count: number, options: BidOptions = {}) {
+  function addBids(
+    auction: AuctionRecord,
+    count: number,
+    options: BidOptions = {},
+  ) {
     if (count === 0) return;
     let prices: number[] = [];
     // 즉시낙찰가를 넘지 않을 때까지 상승 폭을 줄여 가며 재시도
@@ -252,18 +265,28 @@ export function buildSeed(version: number): MockDb {
       prices = [];
       let price = auction.startPrice;
       for (let n = 0; n < count; n++) {
-        if (n > 0) price += bidUnitOf(price) * (1 + Math.floor(random() * step));
+        if (n > 0)
+          price += bidUnitOf(price) * (1 + Math.floor(random() * step));
         prices.push(price);
       }
-      if (!auction.instantWinPrice || prices[prices.length - 1] < auction.instantWinPrice) break;
+      if (
+        !auction.instantWinPrice ||
+        prices[prices.length - 1] < auction.instantWinPrice
+      )
+        break;
     }
     if (auction.instantWinPrice) {
       const instantWinPrice = auction.instantWinPrice;
       prices = prices.filter((price) => price < instantWinPrice);
     }
     const startAt = Date.parse(auction.startAt);
-    const lastAt = Math.min(options.until ?? nowMs - 2 * MINUTE, Date.parse(auction.endAt));
-    const bidderPool = otherMemberIds([auction.sellerId]).concat(auction.sellerId === 2 ? [] : [2]);
+    const lastAt = Math.min(
+      options.until ?? nowMs - 2 * MINUTE,
+      Date.parse(auction.endAt),
+    );
+    const bidderPool = otherMemberIds([auction.sellerId]).concat(
+      auction.sellerId === 2 ? [] : [2],
+    );
     let previousBidder = -1;
     prices.forEach((price, index) => {
       let bidderId = options.fixed?.[index];
@@ -272,7 +295,10 @@ export function buildSeed(version: number): MockDb {
         do bidderId = pick(bidderPool);
         while (bidderId === previousBidder || bidderId === nextFixed);
       }
-      const bidAt = startAt + ((lastAt - startAt) * (index + 1)) / prices.length - random() * MINUTE;
+      const bidAt =
+        startAt +
+        ((lastAt - startAt) * (index + 1)) / prices.length -
+        random() * MINUTE;
       db.bids.push({
         id: seq('bids', 7000),
         auctionId: auction.id,
@@ -295,9 +321,17 @@ export function buildSeed(version: number): MockDb {
   };
 
   /** 진행중 경매 상품: endsIn 후 종료, 입찰 bidCount 건 */
-  function addLiveAuction(spec: ProductSpec, endsIn: number, bidCount: number, options: BidOptions = {}) {
+  function addLiveAuction(
+    spec: ProductSpec,
+    endsIn: number,
+    bidCount: number,
+    options: BidOptions = {},
+  ) {
     const endAt = nowMs + endsIn;
-    const startAt = Math.min(endAt - DURATION_MS[spec.duration], nowMs - 30 * MINUTE);
+    const startAt = Math.min(
+      endAt - DURATION_MS[spec.duration],
+      nowMs - 30 * MINUTE,
+    );
     const product = addProduct(spec, startAt - HOUR);
     const auction = addAuction(product, startAt, endAt);
     addBids(auction, bidCount, options);
@@ -665,7 +699,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
         feeType: 'FIXED_3000',
         startingPrice: 25000,
         duration: 'DAYS_3',
-        description: '순정 진동팩 2개입니다. 둘 다 진동 정상, 배터리 커버 있음.',
+        description:
+          '순정 진동팩 2개입니다. 둘 다 진동 정상, 배터리 커버 있음.',
       },
       nowMs - 6 * DAY,
     );
@@ -703,7 +738,9 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
         auctionId: auction.id,
         bidderId,
         bidPrice,
-        bidAt: ldt(startAt + ((endAt - startAt) * (index + 1)) / (prices.length + 0.5)),
+        bidAt: ldt(
+          startAt + ((endAt - startAt) * (index + 1)) / (prices.length + 0.5),
+        ),
       });
       previousBidder = bidderId;
     });
@@ -743,9 +780,14 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
       winningPrice: spec.winningPrice,
       deliveryFee,
       state: spec.state,
-      shippedAt: spec.deliveredAgo !== undefined ? ldt(nowMs - spec.deliveredAgo) : null,
-      confirmExpiredAt: spec.deliveredAgo !== undefined ? ldt(nowMs - spec.deliveredAgo + 7 * DAY) : null,
-      confirmedAt: spec.confirmedAt !== undefined ? ldt(spec.confirmedAt) : null,
+      shippedAt:
+        spec.deliveredAgo !== undefined ? ldt(nowMs - spec.deliveredAgo) : null,
+      confirmExpiredAt:
+        spec.deliveredAgo !== undefined
+          ? ldt(nowMs - spec.deliveredAgo + 7 * DAY)
+          : null,
+      confirmedAt:
+        spec.confirmedAt !== undefined ? ldt(spec.confirmedAt) : null,
       createdAt: ldt(paidAt - 2000),
       updatedAt: ldt(
         nowMs -
@@ -756,7 +798,9 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
               spec.deliveredAgo,
               spec.refundRequestedAgo,
               spec.refundProcessedAgo,
-              spec.confirmedAt !== undefined ? nowMs - spec.confirmedAt : undefined,
+              spec.confirmedAt !== undefined
+                ? nowMs - spec.confirmedAt
+                : undefined,
             ].filter((ago): ago is number => ago !== undefined),
           ),
       ),
@@ -795,10 +839,12 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
         winnerId: spec.winnerId,
         sellerId: product.sellerId,
         productId: product.id,
-          amount: spec.winningPrice + order.deliveryFee,
+        amount: spec.winningPrice + order.deliveryFee,
         status: refunded ? 'COMPLETED' : 'REQUESTED',
         requestedAt: ldt(nowMs - spec.refundRequestedAgo),
-        processedAt: refunded ? ldt(nowMs - (spec.refundProcessedAgo ?? 0)) : null,
+        processedAt: refunded
+          ? ldt(nowMs - (spec.refundProcessedAgo ?? 0))
+          : null,
       });
       if (refunded) {
         holdingStatus = 'REFUNDED';
@@ -810,7 +856,7 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
           type: 'REFUND_RECEIVE',
           amount: paidAmount,
           referenceType: 'REFUND',
-          // 원본 그대로: 환불 id 가 아닌 주문 id 를 참조
+          // 환불 id 가 아닌 주문 id 를 참조
           referenceId: order.id,
           description: `${product.name} 환불`,
         });
@@ -871,7 +917,13 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
   /** 이번 달 기준 monthOffset 개월 뒤 day 일 hour:20 */
   const monthDay = (monthOffset: number, day: number, hour = 14) => {
     const base = new Date(nowMs);
-    return new Date(base.getFullYear(), base.getMonth() + monthOffset, day, hour, 20).getTime();
+    return new Date(
+      base.getFullYear(),
+      base.getMonth() + monthOffset,
+      day,
+      hour,
+      20,
+    ).getTime();
   };
 
   addClosedAuction({
@@ -884,7 +936,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     feeType: 'FIXED_3000',
     startingPrice: 30000,
     duration: 'DAYS_3',
-    description: '게임보이 포켓 실버입니다. 화면 깨끗하고 AAA 배터리로 동작해요.',
+    description:
+      '게임보이 포켓 실버입니다. 화면 깨끗하고 AAA 배터리로 동작해요.',
     winnerId: 1,
     winningPrice: 42000,
     wonAgo: 3 * HOUR,
@@ -953,7 +1006,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     feeType: 'FIXED_4000',
     startingPrice: 90000,
     duration: 'DAYS_7',
-    description: '게임큐브 바이올렛 본체와 순정 패드, 메모리카드 59블록 포함입니다.',
+    description:
+      '게임큐브 바이올렛 본체와 순정 패드, 메모리카드 59블록 포함입니다.',
     winnerId: 1,
     winningPrice: 138000,
     wonAgo: 6 * DAY + 3 * HOUR,
@@ -997,7 +1051,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     feeType: 'FIXED_3000',
     startingPrice: 10000,
     duration: 'DAYS_3',
-    description: 'N64 카트리지입니다. 쉘을 열어 기판 상태를 확인했어요(사진 참고). 접점 세척 완료.',
+    description:
+      'N64 카트리지입니다. 쉘을 열어 기판 상태를 확인했어요(사진 참고). 접점 세척 완료.',
     winnerId: 1,
     winningPrice: 18500,
     wonAgo: 10 * DAY,
@@ -1061,7 +1116,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     feeType: 'FIXED_3000',
     startingPrice: 40000,
     duration: 'DAYS_3',
-    description: '게임기어 블랙입니다. 화면·사운드 콘덴서 전부 교체해서 선명해요.',
+    description:
+      '게임기어 블랙입니다. 화면·사운드 콘덴서 전부 교체해서 선명해요.',
     winnerId: 5,
     winningPrice: 58000,
     wonAgo: 7 * HOUR,
@@ -1139,7 +1195,8 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     feeType: 'FIXED_3000',
     startingPrice: 30000,
     duration: 'DAYS_3',
-    description: '포켓카메라 레드 라벨입니다. 촬영·저장 정상, 세이브 배터리 교체.',
+    description:
+      '포켓카메라 레드 라벨입니다. 촬영·저장 정상, 세이브 배터리 교체.',
     winnerId: 9,
     winningPrice: 52000,
     wonAgo: 8 * DAY,
@@ -1225,7 +1282,14 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     '포장 꼼꼼했어요. 라벨 상태도 사진이랑 똑같습니다. 배송이 하루 늦은 것만 빼면 만족!',
     nowMs - DAY,
   );
-  addReview('S6', 10, 1, 5, '거의 새것 같은 프로콘 잘 받았습니다. 응답도 빠르셨어요.', monthDay(-2, 21));
+  addReview(
+    'S6',
+    10,
+    1,
+    5,
+    '거의 새것 같은 프로콘 잘 받았습니다. 응답도 빠르셨어요.',
+    monthDay(-2, 21),
+  );
   addReview(
     'S7',
     4,
@@ -1234,7 +1298,14 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     '희귀한 물건인데 상태 좋네요. 센서 바까지 챙겨 주셔서 감사합니다.',
     monthDay(-3, 10),
   );
-  addReview('O6', 1, 7, 5, '카드 인식 바로 됐어요. 무료배송 감사합니다.', nowMs - 11 * DAY);
+  addReview(
+    'O6',
+    1,
+    7,
+    5,
+    '카드 인식 바로 됐어요. 무료배송 감사합니다.',
+    nowMs - 11 * DAY,
+  );
 
   // ---------- Q&A ----------
   const addQna = (
@@ -1258,7 +1329,12 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     });
     return id;
   };
-  let questionId = addQna('P1', 5, '박스 모서리 눌림이나 찢어짐 있나요? 사진으로는 잘 안 보여서요.', nowMs - 3 * DAY);
+  let questionId = addQna(
+    'P1',
+    5,
+    '박스 모서리 눌림이나 찢어짐 있나요? 사진으로는 잘 안 보여서요.',
+    nowMs - 3 * DAY,
+  );
   addQna(
     'P1',
     3,
@@ -1266,7 +1342,12 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     nowMs - 3 * DAY + HOUR,
     questionId,
   );
-  questionId = addQna('P1', 2, 'AV 케이블이랑 전원 어댑터도 포함인가요?', nowMs - DAY);
+  questionId = addQna(
+    'P1',
+    2,
+    'AV 케이블이랑 전원 어댑터도 포함인가요?',
+    nowMs - DAY,
+  );
   addQna(
     'P1',
     3,
@@ -1275,7 +1356,12 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     questionId,
   );
   addQna('P1', 8, '다른 상품이랑 묶음배송 되나요?', nowMs - 2 * HOUR);
-  questionId = addQna('P2', 1, '디스크 드라이브 벨트 교체는 언제 하셨나요?', nowMs - DAY);
+  questionId = addQna(
+    'P2',
+    1,
+    '디스크 드라이브 벨트 교체는 언제 하셨나요?',
+    nowMs - DAY,
+  );
   addQna(
     'P2',
     4,
@@ -1284,10 +1370,26 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     questionId,
   );
   addQna('P5', 6, '연락처 남겨요 010-****', nowMs - 9 * HOUR, null, true);
-  addQna('P5', 7, '게임보이 플레이어 부트 디스크도 들어 있나요?', nowMs - 5 * HOUR);
+  addQna(
+    'P5',
+    7,
+    '게임보이 플레이어 부트 디스크도 들어 있나요?',
+    nowMs - 5 * HOUR,
+  );
   questionId = addQna('P9', 6, '화면 세로줄 나감 있나요?', nowMs - 20 * HOUR);
-  addQna('P9', 9, '줄 나감 없습니다. 원하시면 동작 영상 보내드려요.', nowMs - 19 * HOUR, questionId);
-  addQna('P4', 2, 'VMU 배터리 상태 괜찮나요? 삐 소리 나는지 궁금해요.', nowMs - 4 * HOUR);
+  addQna(
+    'P9',
+    9,
+    '줄 나감 없습니다. 원하시면 동작 영상 보내드려요.',
+    nowMs - 19 * HOUR,
+    questionId,
+  );
+  addQna(
+    'P4',
+    2,
+    'VMU 배터리 상태 괜찮나요? 삐 소리 나는지 궁금해요.',
+    nowMs - 4 * HOUR,
+  );
 
   // ---------- 찜 ----------
   ['P1', 'P2', 'P5', 'P8', 'P11', 'P13'].forEach((key, index) =>
@@ -1301,11 +1403,16 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     const wishCount =
       product.sellerId === 1 && product.id === productsByKey.P6?.id
         ? 4
-        : Math.floor(random() * 26) + (product.category === 'LIMITED_EDITION' ? 12 : 2);
+        : Math.floor(random() * 26) +
+          (product.category === 'LIMITED_EDITION' ? 12 : 2);
     const candidates = otherMemberIds([product.sellerId]).concat([2]);
     for (let n = 0; n < Math.min(wishCount, candidates.length); n++) {
       const memberId = candidates[(n + product.id) % candidates.length];
-      if (!db.wishes.some((w) => w.memberId === memberId && w.productId === product.id))
+      if (
+        !db.wishes.some(
+          (w) => w.memberId === memberId && w.productId === product.id,
+        )
+      )
         db.wishes.push({
           memberId,
           productId: product.id,
@@ -1324,7 +1431,9 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     2: [[100000, 0]],
   };
   for (const memberId of [1, 2]) {
-    const events = walletEvents.filter((e) => e.memberId === memberId).sort((a, b) => a.at - b.at);
+    const events = walletEvents
+      .filter((e) => e.memberId === memberId)
+      .sort((a, b) => a.at - b.at);
     const firstAt = events[0]?.at ?? nowMs - 10 * DAY;
     charges[memberId].forEach(([amount, at]) =>
       events.push({

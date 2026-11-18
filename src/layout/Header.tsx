@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { cartApi, walletApi } from '@/api/endpoints'
+import { cartApi, notificationApi, walletApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
 import { Input } from '@/components/form/Field'
@@ -15,7 +15,7 @@ import styles from './Header.module.css'
 /** 결제 기한이 이만큼 안 남았으면 장바구니 숫자를 강조 (6시간) */
 const PAYMENT_DUE_HOT_MS = 6 * 3600 * 1000
 
-/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 (원본 tj) */
+/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 */
 export function Header() {
   const { me, isLoggedIn, logout } = useAuth()
   const navigate = useNavigate()
@@ -23,7 +23,12 @@ export function Header() {
   const [searchParams] = useSearchParams()
   const toast = useToast()
   const now = useNow()
-  const [keyword, setKeyword] = useState('')
+  const [keyword, setKeyword] = useState(location.pathname === '/search' ? (searchParams.get('keyword') ?? '') : '')
+
+  // 검색 결과 화면에서는 주소의 검색어를 입력칸에 맞춘다
+  useEffect(() => {
+    if (location.pathname === '/search') setKeyword(searchParams.get('keyword') ?? '')
+  }, [location.pathname, searchParams])
 
   const cartQuery = useQuery({
     queryKey: ['cart'],
@@ -32,16 +37,24 @@ export function Header() {
     refetchInterval: 20000,
   })
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me, enabled: isLoggedIn })
+  // 폴링하지 않는다: 화면 진입·탭 재활성화·알림 읽음 처리 때 다시 받는다 (푸시 수신 시 갱신은 웹 푸시 PR 에서)
+  const unreadQuery = useQuery({
+    queryKey: ['notifications', 'unread'],
+    queryFn: notificationApi.unreadCount,
+    enabled: isLoggedIn,
+    refetchOnWindowFocus: true,
+  })
+  const unreadCount = unreadQuery.data?.count ?? 0
 
   const cartCount = cartQuery.data?.length ?? 0
   const paymentDueSoon = (cartQuery.data ?? []).some(
     (item) => Date.parse(item.paymentDueAt) - now < PAYMENT_DUE_HOT_MS,
   )
 
-  // 검색 API 는 아직 없다 (경매 목록 keyword 는 이후 확장). 그때까지 안내만 한다
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (keyword.trim()) toast('검색은 준비 중이에요. 상단 탭과 카테고리로 둘러보세요.')
+    const value = keyword.trim()
+    navigate(value ? `/search?keyword=${encodeURIComponent(value)}` : '/search')
   }
 
   // 경매 목록에서 현재 탭 (status 가 없으면 진행 중)
@@ -96,6 +109,25 @@ export function Header() {
                 </span>
               </NavLink>
               <NavLink
+                to="/chats"
+                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
+                aria-label="채팅"
+              >
+                <Icon name="chat" size={18} />
+              </NavLink>
+              <NavLink
+                to="/notifications"
+                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
+                aria-label={`알림 ${unreadCount}개 안 읽음`}
+              >
+                <span className={styles.iconWrap}>
+                  <Icon name="bell" size={18} />
+                  {unreadCount ? (
+                    <span className={`${styles.count} ${styles.countHot} num`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  ) : null}
+                </span>
+              </NavLink>
+              <NavLink
                 to="/me"
                 className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
               >
@@ -143,6 +175,11 @@ export function Header() {
               {tab.label}
             </Link>
           ))}
+          <span className={styles.catSep} aria-hidden="true" />
+          <NavLink to="/drops" className={({ isActive: active }) => `${styles.cat} ${active ? styles.catOn : ''}`}>
+            <Icon name="bolt" size={12} />
+            드롭 타임
+          </NavLink>
         </div>
       </nav>
     </header>

@@ -20,7 +20,7 @@ import {
 import styles from './AuctionListPage.module.css'
 
 /**
- * 경매 목록 /auctions (원본 wE)
+ * 경매 목록 /auctions
  * - 상태: 헤더의 상단 탭 (?status=IN_PROGRESS|SCHEDULED|ENDED, 기본 진행 중)
  * - 카테고리: 이 페이지의 칩 한 줄
  * - 정렬: 탭별 선택지 (곧 시작은 시작 임박순 고정)
@@ -56,7 +56,8 @@ export function AuctionListPage() {
 
   const totalCount = listQuery.data?.totalElements ?? 0
   const totalPages = Math.ceil(totalCount / AUCTION_PAGE_SIZE)
-  const apiIds: ApiKey[] = params.status === 'SCHEDULED' ? ['product.upcoming'] : ['auction.list']
+  // 경매 목록에는 썸네일·상품명이 없어서 상품 목록 API(미구현)로 조합한다
+  const apiIds: ApiKey[] = params.status === 'SCHEDULED' ? ['product.upcoming'] : ['auction.list', 'product.list']
 
   return (
     <div className={`container ${styles.page}`}>

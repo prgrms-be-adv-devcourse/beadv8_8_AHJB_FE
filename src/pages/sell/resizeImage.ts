@@ -1,5 +1,5 @@
 /**
- * 고른 사진 파일을 긴 변 maxSize px 이하로 줄여 JPEG data URL 로 만든다 (원본 IO).
+ * 고른 사진 파일을 긴 변 maxSize px 이하로 줄여 JPEG data URL 로 만든다.
  * 작은 사진은 키우지 않는다. canvas 2d 컨텍스트가 없으면 원본 data URL 을 그대로 돌려준다.
  */
 export function resizeImage(file: File, maxSize = 900, quality = 0.82): Promise<string> {

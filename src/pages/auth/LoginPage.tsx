@@ -9,7 +9,7 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import styles from './Auth.module.css'
 
-/** 로그인 (/login, 원본 VP) */
+/** 로그인 (/login) */
 export function LoginPage() {
   const { login, isLoggedIn } = useAuth()
   const navigate = useNavigate()

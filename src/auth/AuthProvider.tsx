@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 /**
  * 내 정보를 어디서 가져올지.
- * - 로그인이 목업이면: 목업 GET /member/me (원본 방식)
+ * - 로그인이 목업이면: 목업 GET /member/me
  * - 로그인이 실제면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지) + 로그인 때 저장한 이메일로 만든다.
  *   실제 GET /member/me 는 회원 정보 화면용 상세(MemberDetail)라 여기서는 쓰지 않는다.
  */
@@ -57,7 +57,7 @@ function meFromSummary(
   }
 }
 
-/** 로그인 상태 제공 (원본 h0). QueryClientProvider 안에 둔다 */
+/** 로그인 상태 제공. QueryClientProvider 안에 둔다 */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [token, setToken] = useState(() => tokenStore.get())
@@ -125,8 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      const refreshToken = tokenStore.getRefresh()
-      if (refreshToken) await authApi.logout(refreshToken)
+      if (tokenStore.get()) await authApi.logout(tokenStore.getRefresh() ?? undefined)
     } catch {
       /* 로그아웃 API 실패는 무시하고 토큰을 지운다 */
     } finally {
@@ -153,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-/** 로그인 상태 읽기 (원본 yn) */
+/** 로그인 상태 읽기 */
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
   if (!context) throw new Error('AuthProvider 안에서만 쓸 수 있어요.')

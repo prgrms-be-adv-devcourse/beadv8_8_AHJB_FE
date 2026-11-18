@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { Spinner } from '@/components/Spinner'
 import { useAuth } from './AuthProvider'
 
-/** 로그인해야 볼 수 있는 화면. 아니면 /login?redirect=현재경로 (원본 $p) */
+/** 로그인해야 볼 수 있는 화면. 아니면 /login?redirect=현재경로 */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { isLoggedIn, isLoading } = useAuth()
   const location = useLocation()

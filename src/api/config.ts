@@ -5,9 +5,6 @@ export type { ApiKey } from './registry'
 /** 전환 가능한 모든 API 키 (registry.ts 의 키와 같다) */
 export const API_KEYS = Object.keys(apiRegistry) as ApiKey[]
 
-/** 실제 서버 주소. 비어 있으면 같은 출처의 /api 로 보낸다 (Vite proxy / vercel rewrites). */
-export const API_BASE_URL: string = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
-
 function isApiKey(value: string): value is ApiKey {
   return Object.prototype.hasOwnProperty.call(apiRegistry, value)
 }

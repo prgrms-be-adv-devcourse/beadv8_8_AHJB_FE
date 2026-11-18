@@ -11,7 +11,7 @@ interface ImgProps {
   fit?: 'contain' | 'cover'
 }
 
-/** 상품 사진 프레임. 사진이 없거나 못 불러오면 빈 아이콘 (원본 In) */
+/** 상품 사진 프레임. 사진이 없거나 못 불러오면 빈 아이콘 */
 export function Img({ src, alt, className, fit = 'contain' }: ImgProps) {
   const [failed, setFailed] = useState(false)
   const url = resolvePhotoUrl(src)

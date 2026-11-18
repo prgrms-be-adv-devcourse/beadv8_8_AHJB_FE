@@ -10,17 +10,19 @@ import { Img } from './Img'
 import { WishButton } from './WishButton'
 import styles from './ProductCard.module.css'
 
-/** 상품 상세 경로 (원본 On) */
+/** 상품 상세 경로 */
 export const productPath = (productId: number | string) => `/products/${productId}`
 
 interface ProductCardProps {
   item: AuctionSummary
   /** 오른쪽 위 찜 버튼 (기본 true) */
   showWish?: boolean
+  /** 가격 이름을 직접 정할 때 (입찰 수를 모르는 추천·검색 카드) */
+  priceLabel?: string
 }
 
-/** 경매 상품 카드 (원본 bo) */
-export function ProductCard({ item, showWish = true }: ProductCardProps) {
+/** 경매 상품 카드 */
+export function ProductCard({ item, showWish = true, priceLabel }: ProductCardProps) {
   const now = useNow()
   // 무산 사유가 없으면 입찰 0건 = 유찰로 본다 (목록 API 에 failureReason 추가 전까지)
   const failureReason = item.failureReason ?? (item.status === 'FAILED' && item.bidCount === 0 ? 'NO_BID' : null)
@@ -71,7 +73,9 @@ export function ProductCard({ item, showWish = true }: ProductCardProps) {
               .join(' · ')}
           </p>
           <div className={styles.priceRow}>
-            <span className={styles.priceLabel}>{noBidFailed ? '시작가' : ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가'}</span>
+            <span className={styles.priceLabel}>
+              {priceLabel ?? (noBidFailed ? '시작가' : ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가')}
+            </span>
             <span className={`${styles.price} num`}>{formatWon(item.currentPrice)}</span>
             <span className={`${styles.bids} num`}>
               {item.bidCount ? `입찰 ${item.bidCount}` : ''}
@@ -90,7 +94,7 @@ export function ProductCard({ item, showWish = true }: ProductCardProps) {
   )
 }
 
-/** 카드 자리표시 (원본 fd) */
+/** 카드 자리표시 */
 export function ProductCardSkeleton() {
   return (
     <div className={styles.card} aria-hidden="true">

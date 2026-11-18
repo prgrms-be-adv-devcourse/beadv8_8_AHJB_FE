@@ -1,4 +1,5 @@
 import { db, persist } from '../db';
+import { dutchDetailOf, isDutchAuctionId } from './dutch';
 import { fail } from '../errors';
 import { ok, route } from '../router';
 import {
@@ -88,11 +89,14 @@ export function registerAuctionRoutes(): void {
   });
 
   route('GET', '/api/v1/auctions/:id', (ctx) => {
-    const auction = findAuction(Number(ctx.pathParams.id));
+    const id = Number(ctx.pathParams.id);
+    if (isDutchAuctionId(id)) return ok(dutchDetailOf(id, ctx.me));
+    const auction = findAuction(id);
     const me = ctx.me;
     return ok(
       {
         auction: {
+          auctionType: 'ENGLISH',
           auctionId: auction.id,
           productId: auction.productId,
           startPrice: auction.startPrice,

@@ -12,7 +12,7 @@ interface FeaturedAuctionProps {
   now: number
 }
 
-/** 히어로 오른쪽 '입찰 경쟁 1위' 카드 (원본 kS 내부) */
+/** 히어로 오른쪽 '입찰 경쟁 1위' 카드 */
 export function FeaturedAuction({ item, now }: FeaturedAuctionProps) {
   const badge = auctionStatusBadge(item.status, item.endAt, now)
 

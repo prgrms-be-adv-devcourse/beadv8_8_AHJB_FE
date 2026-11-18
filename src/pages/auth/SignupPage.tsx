@@ -11,11 +11,11 @@ import { useToast } from '@/components/Toast'
 import { formatPhone } from '@/lib/format'
 import styles from './Auth.module.css'
 
-/** 이메일 형식 (원본 sp) */
+/** 이메일 형식 */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-/** 휴대폰 번호 (숫자만, 원본 ip) */
+/** 휴대폰 번호 (숫자만) */
 const PHONE_PATTERN = /^01[0-9]{8,9}$/
-/** 숫자만 남긴다 (원본 xo) */
+/** 숫자만 남긴다 */
 const digitsOnly = (value: string) => value.replace(/\D/g, '')
 
 interface SignupForm {
@@ -56,7 +56,7 @@ type ErrorKey =
   | 'addressDetail'
   | 'terms'
 
-/** 회원가입 (/signup, 원본 qP) */
+/** 회원가입 (/signup) */
 export function SignupPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()

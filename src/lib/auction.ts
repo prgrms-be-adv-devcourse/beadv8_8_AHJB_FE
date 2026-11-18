@@ -1,4 +1,4 @@
-/** 현재가 기준 입찰 단위(원) (원본 Td) */
+/** 현재가 기준 입찰 단위(원) */
 export function bidIncrementOf(price: number): number {
   if (price >= 5_000_000) return 100_000
   if (price >= 1_000_000) return 50_000
@@ -8,7 +8,7 @@ export function bidIncrementOf(price: number): number {
   return 500
 }
 
-/** 입찰 단위 표 (원본 yo) */
+/** 입찰 단위 표 */
 export const BID_INCREMENT_TIERS: Array<{ from: number; unit: number }> = [
   { from: 0, unit: 500 },
   { from: 10_000, unit: 1_000 },
@@ -19,11 +19,11 @@ export const BID_INCREMENT_TIERS: Array<{ from: number; unit: number }> = [
 ]
 
 /**
- * 입찰가 검사 (원본 np). 문제가 없으면 null, 있으면 안내 문구.
+ * 입찰가 검사. 문제가 없으면 null, 있으면 안내 문구.
  * @param bidPrice 입력한 입찰가 (0 이면 미입력)
  * @param currentPrice 현재가 (단위 계산 기준)
  * @param minBidPrice 최소 입찰가
- * @param _instantWinPrice 원본도 받기만 하고 쓰지 않는 4번째 인자
+ * @param _instantWinPrice 쓰지 않는 인자
  */
 export function validateBid(
   bidPrice: number,

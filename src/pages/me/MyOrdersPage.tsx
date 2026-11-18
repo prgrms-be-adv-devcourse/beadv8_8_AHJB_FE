@@ -12,7 +12,7 @@ import styles from './MyPage.module.css'
 
 type OrderFilter = (typeof ORDER_FILTERS)[number]
 
-/** 구매 주문 /me/orders (원본 KI) */
+/** 구매 주문 /me/orders */
 export function MyOrdersPage() {
   const [filterId, setFilterId] = useState<OrderFilterId>('all')
   const ordersQuery = useQuery({
@@ -34,7 +34,7 @@ export function MyOrdersPage() {
           장바구니
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.winner']} />
+      <DevApiNote ids={['order.winner', 'product.list']} />
       <div className={styles.tabs}>
         {ORDER_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>

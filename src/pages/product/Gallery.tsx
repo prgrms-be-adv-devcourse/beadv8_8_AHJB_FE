@@ -7,7 +7,7 @@ interface GalleryProps {
   title: string
 }
 
-/** 상품 사진 갤러리: 큰 사진 + 썸네일 탭 (원본 bE) */
+/** 상품 사진 갤러리: 큰 사진 + 썸네일 탭 */
 export function Gallery({ images, title }: GalleryProps) {
   const [index, setIndex] = useState(0)
   // 사진이 없으면 빈 칸 하나(Img 가 자리표시를 그림)

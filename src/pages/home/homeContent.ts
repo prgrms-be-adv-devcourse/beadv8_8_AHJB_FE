@@ -1,7 +1,7 @@
 import type { IconName } from '@/components/Icon'
 import type { Category } from '@/types/product'
 
-/** 홈 카테고리 카드 이미지 (원본 OS) */
+/** 홈 카테고리 카드 이미지 */
 export const CATEGORY_ART: Record<Category, string> = {
   CONSOLE: 'photo:sfc-console',
   GAME_SOFTWARE: 'photo:sfc-cartridges',
@@ -10,7 +10,7 @@ export const CATEGORY_ART: Record<Category, string> = {
   ETC: 'photo:power-glove',
 }
 
-/** '거래는 이렇게 흘러가요' 단계 (원본 bS) */
+/** '거래는 이렇게 흘러가요' 단계 */
 export const TRADE_STEPS: Array<{ icon: IconName; title: string; desc: string }> = [
   {
     icon: 'gavel',

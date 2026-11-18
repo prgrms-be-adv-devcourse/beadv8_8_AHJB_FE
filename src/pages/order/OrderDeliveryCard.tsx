@@ -10,7 +10,7 @@ interface OrderDeliveryCardProps {
   query: UseQueryResult<DeliveryStatus>
 }
 
-/** 주문 상세의 배송 카드 (원본 SO 안). 진행 단계 5개 중 현재 위치를 표시 */
+/** 주문 상세의 배송 카드. 진행 단계 5개 중 현재 위치를 표시 */
 export function OrderDeliveryCard({ query }: OrderDeliveryCardProps) {
   const delivery = query.data
   // DELIVERED 면 전부 완료, 진행 단계에 없는 코드(예외 등)면 -1

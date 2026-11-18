@@ -16,7 +16,7 @@ function warningReasonLabel(reason: string): string {
   return WARNING_REASON_LABELS[reason as WarningReason] ?? reason
 }
 
-/** 회원 정보 /me/profile (원본 JI). 블럭마다 API 를 따로 부른다 */
+/** 회원 정보 /me/profile. 블럭마다 API 를 따로 부른다 */
 export function MyProfilePage() {
   const { me, logout } = useAuth()
   const navigate = useNavigate()

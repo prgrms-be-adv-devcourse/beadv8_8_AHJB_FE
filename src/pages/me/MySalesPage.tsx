@@ -13,7 +13,7 @@ import styles from './MyPage.module.css'
 
 type SalesFilterId = 'all' | 'send' | 'shipping' | 'refund' | 'done'
 
-/** 판매 주문 탭 (원본 up). states 가 없으면 전체 */
+/** 판매 주문 탭. states 가 없으면 전체 */
 const SALES_FILTERS: Array<{ id: SalesFilterId; label: string; states?: OrderState[] }> = [
   { id: 'all', label: '전체' },
   { id: 'send', label: '발송 대기', states: ['PAID'] },
@@ -22,7 +22,7 @@ const SALES_FILTERS: Array<{ id: SalesFilterId; label: string; states?: OrderSta
   { id: 'done', label: '구매확정 · 환불', states: ['CONFIRMED', 'REFUNDED'] },
 ]
 
-/** /me/sales 판매 주문 (원본 tO) */
+/** /me/sales 판매 주문 */
 export function MySalesPage() {
   const [filterId, setFilterId] = useState<SalesFilterId>('all')
   const [sendTarget, setSendTarget] = useState<Order | null>(null)
@@ -45,7 +45,7 @@ export function MySalesPage() {
           정산 보기
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.seller', 'order.send', 'refund.byOrder']} />
+      <DevApiNote ids={['order.seller', 'product.list', 'order.send', 'refund.byOrder']} />
       <div className={styles.tabs}>
         {SALES_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>

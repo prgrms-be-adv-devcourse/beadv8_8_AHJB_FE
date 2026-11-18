@@ -1,20 +1,24 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { auctionApi, productApi } from '@/api/endpoints'
+import { auctionApi, productApi, recommendApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
 import { DevApiNote } from '@/components/DevApiNote'
 import { ErrorState } from '@/components/EmptyState'
 import { Icon } from '@/components/Icon'
 import { SellerCard } from '@/components/SellerCard'
 import { Spinner } from '@/components/Spinner'
+import { RecommendSection } from '@/components/RecommendSection'
 import { WishButton } from '@/components/WishButton'
+import type { AuctionDetail, DutchAuctionDetail } from '@/types/auction'
+import { dutchStatusBadge, formatInterval } from '@/pages/drops/dutch'
 import { syncServerTime, useNow } from '@/lib/clock'
 import { formatRelativeTime, formatWon } from '@/lib/format'
 import { CATEGORY_LABELS, MANUFACTURER_LABELS, SHIPPING_FEE_TYPE_LABELS } from '@/lib/labels'
 import { auctionStatusBadge } from '@/lib/status'
 import { AuctionBidBox, ScheduledAuctionBoard } from './BidBoard'
 import { BidHistory } from './BidHistory'
+import { DutchBoard } from './DutchBoard'
 import { Gallery } from './Gallery'
 import { QnaSection } from './QnaSection'
 import styles from './ProductDetailPage.module.css'
@@ -24,7 +28,7 @@ const COLUMN_STYLE = { display: 'flex', flexDirection: 'column', gap: 40, minWid
 const formatPeriodEdge = (value: string) =>
   new Date(value).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
 
-/** 상품(경매) 상세 /products/:productId (원본 EP) */
+/** 상품(경매) 상세 /products/:productId */
 export function ProductDetailPage() {
   const productId = Number(useParams().productId)
   const now = useNow()
@@ -37,18 +41,28 @@ export function ProductDetailPage() {
   const product = productQuery.data
   const auctionId = product?.auctionId ?? null
 
-  const auctionQuery = useQuery({
+  // 상세 API 하나가 영국식·하향식을 같이 준다 (auction.auctionType 으로 구분)
+  const auctionQuery = useQuery<AuctionDetail | DutchAuctionDetail>({
     queryKey: ['auction', auctionId],
     queryFn: () => auctionApi.detail(auctionId!),
     enabled: !!auctionId,
     refetchInterval: (query) => (query.state.data?.auction.status === 'IN_PROGRESS' ? 3000 : false),
   })
 
-  // 내가 입찰한 적 있는지 확인용 (입찰 수가 바뀔 때마다 다시 받음)
+  const detail = auctionQuery.data
+  const dutchDetail = detail?.auction.auctionType === 'DUTCH' ? (detail as DutchAuctionDetail) : null
+  const englishDetail = detail && !dutchDetail ? (detail as AuctionDetail) : null
+
+  // 내가 입찰한 적 있는지 확인용 (입찰 수가 바뀔 때마다 다시 받음). 하향식은 입찰이 없다
   const myBidCheckQuery = useQuery({
-    queryKey: ['auction', auctionId, 'bids', 'mine-check', auctionQuery.data?.auction.bidCount],
+    queryKey: ['auction', auctionId, 'bids', 'mine-check', englishDetail?.auction.bidCount],
     queryFn: () => auctionApi.bids(auctionId!, { size: 50 }),
-    enabled: !!auctionId && !!auctionQuery.data,
+    enabled: !!auctionId && !!englishDetail,
+  })
+  const similarQuery = useQuery({
+    queryKey: ['recommend', 'auction', auctionId],
+    queryFn: () => recommendApi.byAuction(auctionId!),
+    enabled: !!auctionId && !!englishDetail,
   })
 
   useEffect(() => {
@@ -71,9 +85,11 @@ export function ProductDetailPage() {
     )
   }
 
-  const auction = auctionQuery.data?.auction
+  const auction = englishDetail?.auction
   const status = auction ? auction.status : 'SCHEDULED'
-  const badge = auctionStatusBadge(status, auction?.endAt ?? null, now, auction?.failureReason)
+  const badge = dutchDetail
+    ? dutchStatusBadge(dutchDetail.auction)
+    : auctionStatusBadge(status, auction?.endAt ?? null, now, auction?.failureReason)
   const hasMyBid = !!myBidCheckQuery.data?.content.some((bid) => bid.isMine)
 
   return (
@@ -108,6 +124,11 @@ export function ProductDetailPage() {
                 한정판
               </Badge>
             ) : null}
+            {dutchDetail ? (
+              <Badge variant="outline" size="lg">
+                드롭 타임
+              </Badge>
+            ) : null}
             {auction?.instantWinPrice ? (
               <Badge variant="outline" size="lg">
                 즉시낙찰 {formatWon(auction.instantWinPrice)}
@@ -123,12 +144,12 @@ export function ProductDetailPage() {
             </p>
           </div>
           <DevApiNote ids={['product.detail', 'auction.detail']} />
-          {auction ? (
-            auctionQuery.data ? (
-              <AuctionBidBox data={auctionQuery.data} product={product} hasMyBid={hasMyBid} />
-            ) : (
-              <Spinner block />
-            )
+          {dutchDetail ? (
+            <DutchBoard data={dutchDetail} product={product} />
+          ) : englishDetail ? (
+            <AuctionBidBox data={englishDetail} product={product} hasMyBid={hasMyBid} />
+          ) : auctionId ? (
+            <Spinner block />
           ) : (
             <ScheduledAuctionBoard product={product} />
           )}
@@ -178,9 +199,11 @@ export function ProductDetailPage() {
                 </dd>
                 <dt>경매 기간</dt>
                 <dd className="num">
-                  {auction
-                    ? `${formatPeriodEdge(auction.startAt)} ~ ${formatPeriodEdge(auction.endAt)}`
-                    : '등록 1시간 뒤 시작'}
+                  {dutchDetail
+                    ? `${formatPeriodEdge(dutchDetail.auction.startAt)} 시작 · ${formatInterval(dutchDetail.auction.dropIntervalSec)}마다 가격 하락`
+                    : auction
+                      ? `${formatPeriodEdge(auction.startAt)} ~ ${formatPeriodEdge(auction.endAt)}`
+                      : '등록 1시간 뒤 시작'}
                 </dd>
               </dl>
             </div>
@@ -190,7 +213,14 @@ export function ProductDetailPage() {
             <h2 className={styles.sectionTitle}>거래 안내</h2>
             <div className={styles.card}>
               <ul className={styles.policy}>
-                <li>마감 5분 전에 입찰이 들어오면 종료 시각이 입찰 시점부터 5분 뒤로 늘어나요.</li>
+                {dutchDetail ? (
+                  <li>
+                    드롭 타임은 시작가에서 정해진 시간마다 가격이 내려가요. 가장 먼저 구매한 한 명이 그 가격에 가져가고,
+                    최저가까지 아무도 사지 않으면 유찰돼요.
+                  </li>
+                ) : (
+                  <li>마감 5분 전에 입찰이 들어오면 종료 시각이 입찰 시점부터 5분 뒤로 늘어나요.</li>
+                )}
                 <li>
                   낙찰 상품은 장바구니에 담기고, 24시간 안에 예치금으로 결제하지 않으면 낙찰이 무효되고 경고가 쌓여요.
                 </li>
@@ -221,6 +251,17 @@ export function ProductDetailPage() {
           <QnaSection productId={product.productId} isMine={product.isMine} />
         </div>
       </div>
+
+      {englishDetail ? (
+        <div className={styles.similar}>
+          <RecommendSection
+            title="비슷한 경매"
+            items={similarQuery.data?.filter((item) => item.productId !== product.productId)}
+            loading={similarQuery.isLoading}
+            apiKey="recommend.byAuction"
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

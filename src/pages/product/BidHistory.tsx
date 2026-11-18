@@ -8,7 +8,7 @@ import type { Bid } from '@/types/auction'
 import pageStyles from './ProductDetailPage.module.css'
 import styles from './BidHistory.module.css'
 
-/** 한 번에 불러오는 입찰 기록 수 (원본 rp) */
+/** 한 번에 불러오는 입찰 기록 수 */
 const PAGE_SIZE = 10
 
 interface BidHistoryProps {
@@ -21,8 +21,7 @@ interface BidHistoryProps {
 }
 
 /**
- * 입찰 기록 표 (원본 eP).
- * 의도된 변경 #5: 원본은 '더 보기'마다 size 를 10 → 20 → … 로 키워 page 0 을 다시 받았다.
+ * 입찰 기록 표.
  * 백엔드 size 최대 50 제한 때문에 page 0, 1, 2 … 를 size 10 으로 받아 이어 붙인다.
  * 진행 중 5초 폴링·입찰 수 변화 시 새로고침은 불러온 페이지 전체를 다시 받는다.
  */
@@ -35,8 +34,7 @@ export function BidHistory({ auctionId, bidCount, live, won }: BidHistoryProps) 
     refetchInterval: live ? 5000 : false,
   })
 
-  // 원본은 queryKey 에 bidCount 를 넣어 입찰 수가 바뀌면 다시 받았다.
-  // 키에 넣으면 불러온 페이지가 초기화되므로, 대신 바뀔 때 refetch 한다.
+  // bidCount 를 queryKey 에 넣으면 불러온 페이지가 초기화되므로, 바뀔 때 refetch 한다.
   const lastBidCount = useRef(bidCount)
   useEffect(() => {
     if (lastBidCount.current === bidCount) return

@@ -22,7 +22,7 @@ interface ToastItem {
 
 const ToastContext = createContext<ShowToast>(() => {})
 
-/** 토스트 알림 영역 (원본 U0). 최대 3개, 4.2초 뒤 자동으로 사라진다 */
+/** 토스트 알림 영역. 최대 3개, 4.2초 뒤 자동으로 사라진다 */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(0)
@@ -70,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** 토스트 띄우기 함수 (원본 tn). `toast('저장했어요.', { tone: 'success' })` */
+/** 토스트 띄우기 함수. `toast('저장했어요.', { tone: 'success' })` */
 export function useToast(): ShowToast {
   return useContext(ToastContext)
 }

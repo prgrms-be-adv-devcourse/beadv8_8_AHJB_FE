@@ -116,12 +116,6 @@ export interface ProductImageUploadResponse {
 /** PATCH /api/v1/products/{productId}. imageIds 를 보내면 이미지 목록 전체를 교체한다 */
 export type ProductUpdateRequest = Partial<Omit<ProductCreateRequest, 'policyAgreed' | 'policyVersion'>>
 
-/** POST /api/v1/products/{productId}/rounds */
-export interface ReopenResponse {
-  auctionId: number
-  round: number
-}
-
 /* ---------- Q&A ---------- */
 
 export interface Qna {

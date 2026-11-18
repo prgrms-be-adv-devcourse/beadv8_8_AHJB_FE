@@ -1,33 +1,33 @@
 import type { AuctionDuration, ShippingFeeType } from '@/types/product'
 
-/** 사진 최대 장수 (원본 Ua) */
+/** 사진 최대 장수 */
 export const MAX_IMAGES = 10
 
-/** 판매 정책 버전 (원본 hp) */
+/** 판매 정책 버전 */
 export const POLICY_VERSION = 'v1'
 
-/** 배송비 선택지 순서 (원본 Cb) */
+/** 배송비 선택지 순서 */
 export const SHIPPING_FEE_TYPES: ShippingFeeType[] = ['FREE', 'FIXED_3000', 'FIXED_4000', 'CUSTOM']
 
-/** 진행 기간 선택지 순서 (원본 Sb) */
+/** 진행 기간 선택지 순서 */
 export const DURATIONS: AuctionDuration[] = ['DAYS_1', 'DAYS_3', 'DAYS_7', 'CUSTOM']
 
 const DAY_MS = 86_400_000
 
-/** 진행 기간별 길이(ms). CUSTOM 은 종료 시각을 직접 받는다 (원본 Ib) */
+/** 진행 기간별 길이(ms). CUSTOM 은 종료 시각을 직접 받는다 */
 export const DURATION_MS: Record<Exclude<AuctionDuration, 'CUSTOM'>, number> = {
   DAYS_1: DAY_MS,
   DAYS_3: 3 * DAY_MS,
   DAYS_7: 7 * DAY_MS,
 }
 
-/** 등록 후 경매 자동 시작까지 = 수정 가능 시간 1시간 (원본 Ob) */
+/** 등록 후 경매 자동 시작까지 = 수정 가능 시간 1시간 */
 export const EDIT_WINDOW_MS = 3600 * 1000
 
 /** 새 상품의 '종료 시각 지정' 기본값: 지금부터 3일 뒤 */
 export const DEFAULT_CUSTOM_END_OFFSET_MS = 3 * DAY_MS
 
-/** 업로드 사진 축소 기준 (원본 IO(file, 800, 0.8) 호출값) */
+/** 업로드 사진 축소 기준 */
 export const UPLOAD_MAX_SIZE = 800
 export const UPLOAD_QUALITY = 0.8
 
