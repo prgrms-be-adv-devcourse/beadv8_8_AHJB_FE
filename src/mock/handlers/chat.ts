@@ -2,7 +2,7 @@
 // 시스템 카드(type·systemType·payload)는 백엔드에 아직 없는 제안 모양이다
 import { db } from '../db';
 import { fail } from '../errors';
-import { ok, route } from '../router';
+import { bodyOf, ok, route } from '../router';
 import { memberById, requireMe } from '../services';
 import type { AuctionRecord, MemberRecord, OrderState } from '../types';
 import { formatLocalDateTime as ldt, getPageParams, MINUTE, paginate, parseTime } from '../utils';
@@ -24,6 +24,16 @@ interface MessageRecord {
 const WON_STATUSES = ['WON', 'PAID', 'COMPLETED'];
 const messagesByRoom = new Map<number, MessageRecord[]>();
 let lastMessageId = 0;
+/** 읽은 위치: `${roomId}:${memberId}` → 마지막 읽은 messageId */
+const lastReadByRoomMember = new Map<string, number>();
+
+const readKey = (roomId: number, memberId: number) => `${roomId}:${memberId}`;
+
+/** 내가 안 읽은 메시지 수 (내가 보낸 것 제외, 시스템 메시지 포함) */
+function unreadCountOf(auction: AuctionRecord, me: MemberRecord): number {
+  const lastRead = lastReadByRoomMember.get(readKey(auction.id, me.id)) ?? 0;
+  return messagesOf(auction).filter((m) => m.messageId > lastRead && m.senderId !== me.id).length;
+}
 
 const roomAuctions = () =>
   db.auctions.filter((a) => WON_STATUSES.includes(a.status) && a.winnerId !== null);
@@ -102,7 +112,9 @@ function roomView(auction: AuctionRecord, role: Role) {
     counterpartNickname: memberById(counterpartId)?.nickname ?? '알 수 없음',
     myRole: role,
     status: statusOf(auction),
+    lastMessageContent: messages[messages.length - 1]?.content ?? null,
     lastMessageAt: messages[messages.length - 1]?.createdAt ?? null,
+    counterpartLastReadId: lastReadByRoomMember.get(readKey(auction.id, counterpartId)) ?? null,
     createdAt: auction.winAt ?? auction.endAt,
   };
 }
@@ -118,16 +130,38 @@ export function registerChatRoutes(): void {
         return role ? [roomView(auction, role)] : [];
       })
       .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? ''))
-      .map(({ roomId, productName, productThumbnailUrl, counterpartNickname, myRole, status, lastMessageAt }) => ({
+      .map(({ roomId, productName, productThumbnailUrl, counterpartNickname, myRole, status, lastMessageContent, lastMessageAt }) => ({
         roomId,
         productName,
         productThumbnailUrl,
         counterpartNickname,
         myRole,
         status,
+        lastMessageContent,
         lastMessageAt,
+        unreadCount: unreadCountOf(roomAuctions().find((a) => a.id === roomId) as AuctionRecord, me),
       }));
     return ok(paginate(rooms, page, size));
+  });
+
+  /** 안 읽은 메시지가 있는 방 수 (헤더 배지). /:roomId 보다 먼저 등록해야 'unread-count' 가 roomId 로 안 잡힌다 */
+  route('GET', '/api/v1/chat-rooms/unread-count', (ctx) => {
+    const me = requireMe(ctx);
+    const count = roomAuctions().filter((auction) => roleOf(auction, me) && unreadCountOf(auction, me) > 0).length;
+    return ok({ count });
+  });
+
+  /** 읽은 위치 기록. 앞으로만 움직인다 (같은 요청 반복·옛 요청은 무시) */
+  route('PATCH', '/api/v1/chat-rooms/:roomId/read', (ctx) => {
+    const me = requireMe(ctx);
+    const roomId = Number(ctx.pathParams.roomId);
+    const { auction } = participantRoom(roomId, me);
+    const { lastReadMessageId } = bodyOf<{ lastReadMessageId: number }>(ctx);
+    if (!lastReadMessageId || !messagesOf(auction).some((m) => m.messageId === lastReadMessageId)) fail('CHAT006');
+    const key = readKey(roomId, me.id);
+    const current = lastReadByRoomMember.get(key) ?? 0;
+    if (lastReadMessageId > current) lastReadByRoomMember.set(key, lastReadMessageId);
+    return ok({ roomId, lastReadMessageId: lastReadByRoomMember.get(key) });
   });
 
   route('GET', '/api/v1/chat-rooms/:roomId', (ctx) => {

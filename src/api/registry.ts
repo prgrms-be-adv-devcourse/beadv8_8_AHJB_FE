@@ -520,6 +520,22 @@ export const apiRegistry = {
     status: 'done',
     note: '전송은 WebSocket /ws/chat (STOMP, lib/chatSocket.ts)',
   },
+  'chat.read': {
+    method: 'PATCH',
+    path: '/api/v1/chat-rooms/{roomId}/read',
+    title: '채팅 읽음 처리',
+    owner: '조민형',
+    status: 'done',
+    note: '읽은 위치가 바뀌면 /topic/chat-rooms/{roomId} 로 READ push',
+  },
+  'chat.unreadCount': {
+    method: 'GET',
+    path: '/api/v1/chat-rooms/unread-count',
+    title: '안 읽은 채팅방 수',
+    owner: '조민형',
+    status: 'done',
+    note: '헤더 말풍선 배지. 안 읽은 메시지가 있는 방의 수',
+  },
   'review.reviewable': {
     method: 'GET',
     path: '/api/v1/reviews/reviewable-orders',

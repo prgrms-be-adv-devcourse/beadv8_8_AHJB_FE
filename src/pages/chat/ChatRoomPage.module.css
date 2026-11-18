@@ -94,11 +94,40 @@
   border-color: var(--primary);
   color: var(--on-primary);
 }
+.meta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.metaMine {
+  align-items: flex-end;
+}
 .time {
   flex: none;
   font-size: 11px;
   line-height: 14px;
   color: var(--text-muted);
+}
+.readLabel {
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.systemMessage {
+  align-self: center;
+  max-width: 80%;
+  margin: var(--space-4) 0;
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-full);
+  background: var(--white);
+  border: 1px solid var(--hairline);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-muted);
+  text-align: center;
 }
 .empty {
   margin: auto;
