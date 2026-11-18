@@ -4,10 +4,17 @@ import { tokenStore } from '@/api/tokenStore'
 import type { ChatMessagePush } from '@/types/chat'
 import type { ApiErrorBody } from '@/types/common'
 
-/** 개발: 같은 출처(Vite proxy /ws → Gateway). 배포: VITE_WS_BASE_URL (wss://api.jjinmak.kro.kr) */
+/** 배포 기본값. Vercel rewrites 는 WebSocket 을 넘기지 못해 API 서버로 직접 붙는다 */
+const PROD_WS_BASE_URL = 'wss://api.jjinmak.kro.kr'
+
+/**
+ * 개발: 같은 출처(Vite proxy /ws → Gateway).
+ * 배포: VITE_WS_BASE_URL 이 있으면 그 값, 없으면 PROD_WS_BASE_URL.
+ */
 function wsBaseUrl(): string {
   const configured = (import.meta.env.VITE_WS_BASE_URL ?? '').replace(/\/+$/, '')
   if (configured) return configured
+  if (import.meta.env.PROD) return PROD_WS_BASE_URL
   return window.location.origin.replace(/^http/, 'ws')
 }
 

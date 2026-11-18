@@ -503,7 +503,7 @@ export const apiRegistry = {
     title: '거래 채팅방 목록',
     owner: '조민형',
     status: 'done',
-    note: '목업 없음. 로그인 후 실제 서버(Gateway)로만 동작',
+    note: '목업 roomId = 경매 id. 실제는 로그인 후 Gateway 경유',
   },
   'chat.room': {
     method: 'GET',
@@ -648,29 +648,6 @@ export const apiRegistry = {
     title: '비슷한 경매 추천',
     owner: '담당 확인',
     status: 'done',
-  },
-  'chat.rooms': {
-    method: 'GET',
-    path: '/api/v1/chat-rooms',
-    title: '채팅방 목록',
-    owner: '담당 확인',
-    status: 'done',
-    note: '목업 roomId = 경매 id',
-  },
-  'chat.room': {
-    method: 'GET',
-    path: '/api/v1/chat-rooms/{roomId}',
-    title: '채팅방 상세',
-    owner: '담당 확인',
-    status: 'done',
-  },
-  'chat.messages': {
-    method: 'GET',
-    path: '/api/v1/chat-rooms/{roomId}/messages',
-    title: '채팅 메시지 목록',
-    owner: '담당 확인',
-    status: 'done',
-    note: '시스템 카드(type·systemType·payload)는 제안, 백엔드 미구현',
   },
 } as const satisfies Record<string, ApiSpec>
 

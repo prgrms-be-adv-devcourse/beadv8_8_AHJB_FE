@@ -22,7 +22,6 @@ import { MyWishesPage } from '@/pages/me/MyWishesPage'
 import { MyProductsPage } from '@/pages/me/MyProductsPage'
 import { MySalesPage } from '@/pages/me/MySalesPage'
 import { MySettlementsPage } from '@/pages/me/MySettlementsPage'
-import { MyChatRoomsPage } from '@/pages/me/MyChatRoomsPage'
 import { ChatRoomPage } from '@/pages/chat/ChatRoomPage'
 import { MyWalletPage } from '@/pages/me/MyWalletPage'
 import { ChargeSuccessPage } from '@/pages/me/wallet/ChargeSuccessPage'
@@ -35,7 +34,6 @@ import { SearchPage } from '@/pages/search/SearchPage'
 import { NotificationsPage } from '@/pages/notifications/NotificationsPage'
 import { MyNotificationSettingsPage } from '@/pages/me/MyNotificationSettingsPage'
 import { ChatListPage } from '@/pages/chat/ChatListPage'
-import { ChatRoomPage } from '@/pages/chat/ChatRoomPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 /** /seller/orders/:orderId → /orders/:orderId */
@@ -89,7 +87,6 @@ export const routes: RouteObject[] = [
       { path: '/cart/payment/success', element: requireAuth(<PaymentSuccessPage />) },
       { path: '/cart/payment/fail', element: requireAuth(<PaymentFailPage />) },
       { path: '/orders/:orderId', element: requireAuth(<OrderDetailPage />) },
-      { path: '/chats/:roomId', element: requireAuth(<ChatRoomPage />) },
       {
         path: '/me',
         element: requireAuth(<MyPageLayout />),
@@ -102,7 +99,6 @@ export const routes: RouteObject[] = [
           { path: 'products', element: <MyProductsPage /> },
           { path: 'sales', element: <MySalesPage /> },
           { path: 'settlements', element: <MySettlementsPage /> },
-          { path: 'chats', element: <MyChatRoomsPage /> },
           { path: 'wallet', element: <MyWalletPage /> },
           // 토스 결제창 successUrl / failUrl (lib/toss.ts 의 CHARGE_SUCCESS_PATH / CHARGE_FAIL_PATH 와 같아야 한다)
           { path: 'wallet/charge/success', element: <ChargeSuccessPage /> },
