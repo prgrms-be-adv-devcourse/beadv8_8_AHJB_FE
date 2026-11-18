@@ -1,7 +1,7 @@
 import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
 import { refreshSession } from '@/api/client'
 import { tokenStore } from '@/api/tokenStore'
-import type { ChatMessagePush } from '@/types/chat'
+import type { ChatMessagePush, ChatPush, ChatReadPush } from '@/types/chat'
 import type { ApiErrorBody } from '@/types/common'
 
 /** 배포 기본값. Vercel rewrites 는 WebSocket 을 넘기지 못해 API 서버로 직접 붙는다 */
@@ -21,6 +21,8 @@ function wsBaseUrl(): string {
 export interface ChatSocketHandlers {
   /** 같은 방의 누군가(나 포함)가 보낸 메시지 */
   onMessage: (message: ChatMessagePush) => void
+  /** 같은 방의 누군가(나 포함)가 읽은 위치를 옮겼을 때 */
+  onRead: (read: ChatReadPush) => void
   /** 내 전송이 거부됐을 때 (종료된 방, 글자 수 등). 연결은 유지된다 */
   onError: (error: ApiErrorBody) => void
   onConnected: () => void
@@ -57,7 +59,10 @@ export class ChatSocket {
         this.retriedRefresh = false
         this.subscriptions = [
           client.subscribe(`/topic/chat-rooms/${this.roomId}`, (frame: IMessage) => {
-            this.handlers.onMessage(JSON.parse(frame.body) as ChatMessagePush)
+            const push = JSON.parse(frame.body) as ChatPush
+            // type 이 없는 옛 서버 push 는 메시지로 본다
+            if (push.type === 'READ') this.handlers.onRead(push)
+            else this.handlers.onMessage(push)
           }),
           client.subscribe('/user/queue/errors', (frame: IMessage) => {
             this.handlers.onError(JSON.parse(frame.body) as ApiErrorBody)

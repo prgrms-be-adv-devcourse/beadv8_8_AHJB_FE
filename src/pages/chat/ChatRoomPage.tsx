@@ -37,6 +37,7 @@ function dayKey(value: string): string {
 function toMessage(push: ChatMessagePush, room: ChatRoomDetail): ChatMessage {
   return {
     messageId: push.messageId,
+    type: 'TEXT',
     mine: push.senderRole === room.myRole,
     content: push.content,
     createdAt: push.createdAt,
@@ -64,9 +65,17 @@ export function ChatRoomPage() {
   const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([])
   const [socketState, setSocketState] = useState<SocketState>('connecting')
   const [draft, setDraft] = useState('')
+  // 상대가 읽은 마지막 메시지 id. 방 조회값으로 시작해 READ push 로 갱신한다
+  const [counterpartLastReadId, setCounterpartLastReadId] = useState<number | null>(null)
   const socketRef = useRef<ChatSocket | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  // 서버에 마지막으로 보고한 내 읽은 위치 (같은 위치를 두 번 보내지 않으려고)
+  const reportedReadRef = useRef(0)
   const room = roomQuery.data
+
+  useEffect(() => {
+    setCounterpartLastReadId(room?.counterpartLastReadId ?? null)
+  }, [room?.counterpartLastReadId])
 
   // 저장된 메시지(최신순) 를 오래된 순으로 뒤집고, 그 뒤에 실시간으로 온 메시지를 잇는다 (messageId 로 중복 제거)
   const messages = useMemo(() => {
@@ -86,6 +95,11 @@ export function ChatRoomPage() {
         )
         // 목록 화면의 "마지막 대화" 갱신
         void queryClient.invalidateQueries({ queryKey: ['chat', 'rooms'] })
+      },
+      onRead: (read) => {
+        // 상대가 읽은 위치만 반영한다 (내 읽음은 내가 이미 안다). 뒤로는 안 간다
+        if (read.readerRole === room.myRole) return
+        setCounterpartLastReadId((prev) => (prev === null || read.lastReadMessageId > prev ? read.lastReadMessageId : prev))
       },
       onError: (error) => showToast(error.message, { tone: 'error' }),
       onConnected: () => setSocketState('connected'),
@@ -108,6 +122,28 @@ export function ChatRoomPage() {
     const list = listRef.current
     if (list) list.scrollTop = list.scrollHeight
   }, [messages.length])
+
+  // 화면에 보이는 마지막 메시지까지 읽음 처리. 탭이 보일 때만, 같은 위치는 한 번만 보낸다.
+  // 실패해도(옛 서버 등) 채팅은 그대로 동작하고 읽음 표시만 빠진다
+  const latestMessageId = messages.length ? messages[messages.length - 1].messageId : 0
+  useEffect(() => {
+    if (!room || !latestMessageId) return
+    const report = () => {
+      if (document.visibilityState !== 'visible' || latestMessageId <= reportedReadRef.current) return
+      const target = latestMessageId
+      chatApi
+        .read(room.roomId, target)
+        .then(() => {
+          reportedReadRef.current = Math.max(reportedReadRef.current, target)
+          void queryClient.invalidateQueries({ queryKey: ['chat', 'unread'] })
+          void queryClient.invalidateQueries({ queryKey: ['chat', 'rooms'] })
+        })
+        .catch(() => {})
+    }
+    report()
+    document.addEventListener('visibilitychange', report)
+    return () => document.removeEventListener('visibilitychange', report)
+  }, [room, latestMessageId, queryClient])
 
   const canSend = room?.status === 'OPEN' && socketState === 'connected'
 
@@ -185,13 +221,21 @@ export function ChatRoomPage() {
               const day = dayKey(message.createdAt)
               const showDay = day !== lastDay
               lastDay = day
+              const isRead = message.mine && counterpartLastReadId !== null && message.messageId <= counterpartLastReadId
               return (
                 <div key={message.messageId} style={{ display: 'contents' }}>
                   {showDay && <span className={styles.dayLabel}>{formatKoreanDate(day)}</span>}
-                  <div className={`${styles.bubbleRow} ${message.mine ? styles.bubbleRowMine : ''}`}>
-                    <div className={`${styles.bubble} ${message.mine ? styles.bubbleMine : ''}`}>{message.content}</div>
-                    <span className={`${styles.time} num`}>{formatTime(message.createdAt)}</span>
-                  </div>
+                  {message.type === 'SYSTEM' ? (
+                    <div className={styles.systemMessage}>{message.content}</div>
+                  ) : (
+                    <div className={`${styles.bubbleRow} ${message.mine ? styles.bubbleRowMine : ''}`}>
+                      <div className={`${styles.bubble} ${message.mine ? styles.bubbleMine : ''}`}>{message.content}</div>
+                      <span className={`${styles.meta} ${message.mine ? styles.metaMine : ''}`}>
+                        {isRead && <span className={styles.readLabel}>읽음</span>}
+                        <span className={`${styles.time} num`}>{formatTime(message.createdAt)}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               )
             })

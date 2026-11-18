@@ -40,8 +40,10 @@ import type { CartItem, CartPaymentResult } from '@/types/cart'
 import type {
   ChatMessageListParams,
   ChatMessageListResponse,
+  ChatReadResponse,
   ChatRoomDetail,
   ChatRoomListResponse,
+  ChatUnreadCountResponse,
 } from '@/types/chat'
 import type {
   NotificationListParams,
@@ -320,4 +322,8 @@ export const chatApi = {
   room: (roomId: Id) => http.get<ChatRoomDetail>('chat.room', `/api/v1/chat-rooms/${roomId}`),
   messages: (roomId: Id, params: ChatMessageListParams = {}) =>
     http.get<ChatMessageListResponse>('chat.messages', `/api/v1/chat-rooms/${roomId}/messages`, params),
+  /** 화면에 보이는 마지막 메시지까지 읽음 처리. 읽은 위치는 앞으로만 움직인다 */
+  read: (roomId: Id, lastReadMessageId: number) =>
+    http.patch<ChatReadResponse>('chat.read', `/api/v1/chat-rooms/${roomId}/read`, { lastReadMessageId }),
+  unreadCount: () => http.get<ChatUnreadCountResponse>('chat.unreadCount', '/api/v1/chat-rooms/unread-count'),
 }

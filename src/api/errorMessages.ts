@@ -82,6 +82,7 @@ const USER_MESSAGES: Record<string, string> = {
   CHAT003: '거래가 끝나 대화가 종료된 채팅방이에요.',
   CHAT004: RETRY,
   CHAT005: '메시지는 1~1000자로 보내 주세요.',
+  CHAT006: '읽음 처리할 메시지를 찾지 못했어요.',
 
   // 주문·배송·환불
   ORDER001: '주문을 찾을 수 없어요.',

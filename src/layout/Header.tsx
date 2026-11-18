@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { cartApi, notificationApi, walletApi } from '@/api/endpoints'
+import { cartApi, chatApi, notificationApi, walletApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
 import { Input } from '@/components/form/Field'
@@ -45,6 +45,16 @@ export function Header() {
     refetchOnWindowFocus: true,
   })
   const unreadCount = unreadQuery.data?.count ?? 0
+  // 안 읽은 채팅방 수. 방 밖에서는 WebSocket 이 없어 장바구니처럼 폴링한다. 실패하면(옛 서버) 배지만 안 띄운다
+  const chatUnreadQuery = useQuery({
+    queryKey: ['chat', 'unread'],
+    queryFn: chatApi.unreadCount,
+    enabled: isLoggedIn,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  })
+  const chatUnreadCount = chatUnreadQuery.data?.count ?? 0
 
   const cartCount = cartQuery.data?.length ?? 0
   const paymentDueSoon = (cartQuery.data ?? []).some(
@@ -111,9 +121,16 @@ export function Header() {
               <NavLink
                 to="/chats"
                 className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
-                aria-label="채팅"
+                aria-label={chatUnreadCount ? `채팅 ${chatUnreadCount}개 방 안 읽음` : '채팅'}
               >
-                <Icon name="chat" size={18} />
+                <span className={styles.iconWrap}>
+                  <Icon name="chat" size={18} />
+                  {chatUnreadCount ? (
+                    <span className={`${styles.count} ${styles.countHot} num`}>
+                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                    </span>
+                  ) : null}
+                </span>
               </NavLink>
               <NavLink
                 to="/notifications"

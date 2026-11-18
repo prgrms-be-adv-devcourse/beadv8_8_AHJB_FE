@@ -80,6 +80,7 @@ export const ERROR_TABLE = {
   CHAT002: [403, '채팅방 참여자만 접근 가능'],
   CHAT003: [409, '종료된 채팅방'],
   CHAT005: [400, '메시지는 1~1000자'],
+  CHAT006: [400, '채팅방에 없는 메시지'],
 } as const satisfies Record<string, readonly [number, string]>;
 
 export type ErrorCode = keyof typeof ERROR_TABLE;
