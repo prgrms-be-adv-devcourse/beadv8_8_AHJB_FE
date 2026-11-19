@@ -50,7 +50,10 @@ export interface MemberRecord {
   id: number;
   uuid: string;
   email: string;
+  /** 카카오로 가입한 회원은 '' (이메일 로그인 불가) */
   password: string;
+  /** 카카오 회원번호. 이메일로 가입한 회원은 없음 */
+  kakaoId?: string | null;
   nickname: string;
   username: string;
   phone: string;

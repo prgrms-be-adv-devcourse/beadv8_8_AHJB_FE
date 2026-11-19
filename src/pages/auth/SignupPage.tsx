@@ -9,7 +9,9 @@ import { Checkbox, Field, Input } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { formatPhone } from '@/lib/format'
+import { clearPendingKakaoSignup, getPendingKakaoSignup, safeRedirect, startKakaoLogin } from '@/lib/kakaoAuth'
 import styles from './Auth.module.css'
+import { KakaoLoginButton } from './KakaoLoginButton'
 
 /** 이메일 형식 */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -56,12 +58,23 @@ type ErrorKey =
   | 'addressDetail'
   | 'terms'
 
-/** 회원가입 (/signup) */
-export function SignupPage() {
+interface SignupPageProps {
+  /**
+   * email = 일반 가입 (/signup)
+   * kakao = 카카오 첫 로그인 후 추가 정보 입력 (/signup/kakao). 비밀번호 없이 가입 토큰으로 가입한다
+   */
+  mode?: 'email' | 'kakao'
+}
+
+/** 회원가입 (/signup, /signup/kakao) */
+export function SignupPage({ mode = 'email' }: SignupPageProps) {
+  const isKakao = mode === 'kakao'
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { login } = useAuth()
+  const { login, kakaoSignup } = useAuth()
   const toast = useToast()
+  // 가입 토큰은 메모리에만 있다. 새로고침하면 없어지고 카카오 로그인부터 다시 한다
+  const [kakaoPending] = useState(() => (isKakao ? getPendingKakaoSignup() : null))
   const [form, setForm] = useState<SignupForm>({
     email: '',
     password: '',
@@ -109,16 +122,21 @@ export function SignupPage() {
     email: form.email
       ? EMAIL_PATTERN.test(form.email)
         ? emailCheck.value === form.email && emailCheck.status === 'taken'
-          ? '이미 사용중인 이메일이에요.'
+          ? isKakao
+            ? '이미 이메일로 가입된 계정이에요. 이메일로 로그인해 주세요.'
+            : '이미 사용중인 이메일이에요.'
           : null
         : '이메일 형식을 확인해 주세요.'
       : '이메일을 입력해 주세요.',
-    password: form.password.length < 8 ? '비밀번호를 8자 이상 입력해 주세요.' : null,
-    passwordConfirm: form.passwordConfirm
-      ? form.passwordConfirm !== form.password
-        ? '비밀번호가 일치하지 않아요.'
-        : null
-      : '비밀번호를 한 번 더 입력해 주세요.',
+    // 카카오 가입은 비밀번호가 없다
+    password: isKakao ? null : form.password.length < 8 ? '비밀번호를 8자 이상 입력해 주세요.' : null,
+    passwordConfirm: isKakao
+      ? null
+      : form.passwordConfirm
+        ? form.passwordConfirm !== form.password
+          ? '비밀번호가 일치하지 않아요.'
+          : null
+        : '비밀번호를 한 번 더 입력해 주세요.',
     nickname: form.nickname.trim()
       ? form.nickname.length > 50
         ? '닉네임은 50자까지예요.'
@@ -151,11 +169,81 @@ export function SignupPage() {
   /** 제출을 한 번 했거나, 이 칸만 먼저 보여줄 조건(force)이면 에러를 보여준다 */
   const visibleError = (key: ErrorKey, force = false) => (submitted || force ? errors[key] : null)
 
+  const addressBody = () => ({
+    alias: form.alias || undefined,
+    recipient: recipient.trim(),
+    recipientPhone,
+    zipcode: form.zipcode.trim(),
+    address: form.address.trim(),
+    addressDetail: form.addressDetail.trim() || undefined,
+  })
+
+  const welcome = () =>
+    toast(`가입을 환영해요, ${form.nickname}님! 예치금을 충전하면 바로 입찰할 수 있어요.`, {
+      tone: 'success',
+      action: { label: '충전하기', to: '/me/wallet' },
+    })
+
+  /** 카카오 가입 = 가입 + 로그인 한 번에 */
+  const submitKakao = async (signupToken: string, redirect: string) => {
+    setSubmitting(true)
+    try {
+      await kakaoSignup({
+        signupToken,
+        email: form.email,
+        nickname: form.nickname.trim(),
+        username: form.username.trim(),
+        phone: digitsOnly(form.phone),
+        birthDate: form.birthDate || undefined,
+        address: addressBody(),
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setSubmitting(false)
+      switch (apiError.code) {
+        case 'MEMBER001':
+          // 같은 이메일의 일반 계정과 자동 연동하지 않는다 (안내만)
+          setEmailCheck({ status: 'taken', value: form.email })
+          return
+        case 'MEMBER002':
+          setNicknameCheck({ status: 'taken', value: form.nickname })
+          return
+        case 'AUTH110':
+        case 'AUTH111':
+          clearPendingKakaoSignup()
+          toast(apiError.message, { tone: 'error' })
+          navigate(`/login${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`, { replace: true })
+          return
+        case 'AUTH112':
+          // 다른 탭 등에서 이미 가입됨 → 카카오 로그인을 다시 하면 LOGIN 으로 처리된다
+          clearPendingKakaoSignup()
+          toast(apiError.message)
+          try {
+            startKakaoLogin(redirect)
+          } catch {
+            navigate('/login', { replace: true })
+          }
+          return
+        default:
+          setServerError(apiError.message)
+          return
+      }
+    }
+    clearPendingKakaoSignup()
+    setSubmitting(false)
+    welcome()
+    navigate(redirect, { replace: true })
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmitted(true)
     setServerError(null)
     if (Object.values(errors).some(Boolean)) return
+    if (isKakao) {
+      if (kakaoPending) await submitKakao(kakaoPending.signupToken, kakaoPending.redirect)
+      return
+    }
     setSubmitting(true)
     try {
       await authApi.signup({
@@ -166,14 +254,7 @@ export function SignupPage() {
         username: form.username.trim(),
         phone: digitsOnly(form.phone),
         birthDate: form.birthDate || undefined,
-        address: {
-          alias: form.alias || undefined,
-          recipient: recipient.trim(),
-          recipientPhone,
-          zipcode: form.zipcode.trim(),
-          address: form.address.trim(),
-          addressDetail: form.addressDetail.trim() || undefined,
-        },
+        address: addressBody(),
       })
     } catch (err) {
       const apiError = err as ApiError
@@ -196,22 +277,51 @@ export function SignupPage() {
     } finally {
       setSubmitting(false)
     }
-    toast(`가입을 환영해요, ${form.nickname}님! 예치금을 충전하면 바로 입찰할 수 있어요.`, {
-      tone: 'success',
-      action: { label: '충전하기', to: '/me/wallet' },
-    })
+    welcome()
     navigate(redirect || '/', { replace: true })
   }
 
   const passwordConfirmForced = form.passwordConfirm.length >= form.password.length && form.passwordConfirm.length > 0
+  const emailRedirect = safeRedirect(params.get('redirect'))
+
+  // 새로고침 등으로 가입 토큰이 없으면 카카오 로그인부터 다시
+  if (isKakao && !kakaoPending) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.head}>
+            <h1 className={styles.title}>카카오로 가입하기</h1>
+            <p className={styles.sub}>가입 정보가 만료됐어요. 카카오 로그인부터 다시 해 주세요.</p>
+          </div>
+          <KakaoLoginButton redirect={emailRedirect} label="카카오로 다시 시작하기" />
+          <div className={styles.links}>
+            <Link to="/login">로그인 화면으로</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
       <div className={`${styles.card} ${styles.wider}`}>
         <div className={styles.head}>
-          <h1 className={styles.title}>회원가입</h1>
-          <p className={styles.sub}>가입하면 구매자로 시작해요. 경매를 올리려면 마이페이지에서 판매자 등록을 해요.</p>
+          <h1 className={styles.title}>{isKakao ? '카카오로 가입하기' : '회원가입'}</h1>
+          <p className={styles.sub}>
+            {isKakao
+              ? '카카오 계정 확인이 끝났어요. 거래에 필요한 정보를 10분 안에 입력해 주세요.'
+              : '가입하면 구매자로 시작해요. 경매를 올리려면 마이페이지에서 판매자 등록을 해요.'}
+          </p>
         </div>
+
+        {isKakao ? null : (
+          <>
+            <KakaoLoginButton redirect={emailRedirect} label="카카오로 3초 만에 시작하기" />
+            <div className={styles.divider}>
+              <span>또는 이메일로 가입</span>
+            </div>
+          </>
+        )}
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           <Field
@@ -222,7 +332,13 @@ export function SignupPage() {
                 ? '사용할 수 있는 이메일이에요.'
                 : null
             }
-            hint={emailCheck.status === 'checking' ? '확인 중…' : '로그인 아이디로 써요.'}
+            hint={
+              emailCheck.status === 'checking'
+                ? '확인 중…'
+                : isKakao
+                  ? '거래 알림과 결제 안내를 받을 이메일이에요.'
+                  : '로그인 아이디로 써요.'
+            }
           >
             {(id, describedBy) => (
               <Input
@@ -238,40 +354,42 @@ export function SignupPage() {
             )}
           </Field>
 
-          <div className={styles.grid2}>
-            <Field
-              label="비밀번호"
-              error={visibleError(
-                'password',
-                form.password.length > 0 && form.password.length < 8 && form.passwordConfirm.length > 0,
-              )}
-            >
-              {(id, describedBy) => (
-                <Input
-                  id={id}
-                  type="password"
-                  autoComplete="new-password"
-                  aria-describedby={describedBy}
-                  value={form.password}
-                  onChange={bind('password')}
-                  invalid={!!visibleError('password')}
-                />
-              )}
-            </Field>
-            <Field label="비밀번호 확인" error={visibleError('passwordConfirm', passwordConfirmForced)}>
-              {(id, describedBy) => (
-                <Input
-                  id={id}
-                  type="password"
-                  autoComplete="new-password"
-                  aria-describedby={describedBy}
-                  value={form.passwordConfirm}
-                  onChange={bind('passwordConfirm')}
-                  invalid={!!visibleError('passwordConfirm', passwordConfirmForced)}
-                />
-              )}
-            </Field>
-          </div>
+          {isKakao ? null : (
+            <div className={styles.grid2}>
+              <Field
+                label="비밀번호"
+                error={visibleError(
+                  'password',
+                  form.password.length > 0 && form.password.length < 8 && form.passwordConfirm.length > 0,
+                )}
+              >
+                {(id, describedBy) => (
+                  <Input
+                    id={id}
+                    type="password"
+                    autoComplete="new-password"
+                    aria-describedby={describedBy}
+                    value={form.password}
+                    onChange={bind('password')}
+                    invalid={!!visibleError('password')}
+                  />
+                )}
+              </Field>
+              <Field label="비밀번호 확인" error={visibleError('passwordConfirm', passwordConfirmForced)}>
+                {(id, describedBy) => (
+                  <Input
+                    id={id}
+                    type="password"
+                    autoComplete="new-password"
+                    aria-describedby={describedBy}
+                    value={form.passwordConfirm}
+                    onChange={bind('passwordConfirm')}
+                    invalid={!!visibleError('passwordConfirm', passwordConfirmForced)}
+                  />
+                )}
+              </Field>
+            </div>
+          )}
 
           <Field
             label="닉네임"
@@ -451,12 +569,14 @@ export function SignupPage() {
           <Button type="submit" size="lg" fullWidth loading={submitting}>
             가입하기
           </Button>
-          <DevApiNote ids={['auth.emailAvailable', 'auth.nicknameAvailable', 'auth.signup']} />
+          <DevApiNote
+            ids={['auth.emailAvailable', 'auth.nicknameAvailable', isKakao ? 'auth.kakaoSignup' : 'auth.signup']}
+          />
         </form>
 
         <div className={styles.links}>
           <span>
-            이미 계정이 있나요? <Link to="/login">로그인</Link>
+            {isKakao ? '다른 방법으로 할래요?' : '이미 계정이 있나요?'} <Link to="/login">로그인</Link>
           </span>
         </div>
       </div>

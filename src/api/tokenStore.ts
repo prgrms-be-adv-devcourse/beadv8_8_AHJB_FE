@@ -32,9 +32,13 @@ function write(key: TokenKey, value: string | null) {
 
 const PROFILE_KEY = 'jjinmak.sessionProfile'
 
-/** 로그인 때 입력한 이메일. 백엔드에 이메일을 돌려주는 API 가 없어서 저장해 둔다 */
+/**
+ * 로그인한 회원의 이메일. member/me/summary 에 이메일이 없어서 저장해 둔다.
+ * 이메일 로그인·카카오 가입은 입력한 이메일, 카카오 로그인은 GET /member/me 로 알아낸 이메일.
+ * 카카오 로그인에서 이메일을 못 가져오면 null.
+ */
 export interface SessionProfile {
-  email: string
+  email: string | null
 }
 
 let memoryProfile: SessionProfile | null = null

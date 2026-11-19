@@ -4,7 +4,7 @@ import { isRealApi } from '@/api/config'
 import { authApi, memberApi } from '@/api/endpoints'
 import { tokenStore, type SessionProfile } from '@/api/tokenStore'
 import { decodeAccessToken } from '@/lib/jwt'
-import type { LoginRequest, LoginResponse } from '@/types/auth'
+import type { KakaoSignupRequest, LoginRequest, LoginResponse } from '@/types/auth'
 import type { Me, MemberSummary } from '@/types/member'
 
 export interface AuthContextValue {
@@ -15,11 +15,22 @@ export interface AuthContextValue {
   /** 토큰은 있는데 내 정보를 불러오는 중 */
   isLoading: boolean
   login: (body: LoginRequest) => Promise<LoginResult>
+  /** 카카오 인가 코드로 로그인. 가입 안 된 카카오 계정이면 가입 토큰을 돌려준다 (세션은 만들지 않는다) */
+  kakaoLogin: (code: string) => Promise<KakaoLoginOutcome>
+  /** 카카오 가입 + 로그인 */
+  kakaoSignup: (body: KakaoSignupRequest) => Promise<LoginResult>
   logout: () => Promise<void>
 }
 
 /** 로그인 결과. 닉네임·정지 여부는 로그인 직후 불러온 내 정보 기준이다 */
 export type LoginResult = LoginResponse & { nickname: string }
+
+export type KakaoLoginOutcome =
+  | { status: 'LOGIN'; result: LoginResult }
+  | { status: 'SIGNUP_REQUIRED'; signupToken: string }
+
+/** 세션을 만드는 응답의 공통 부분 (이메일 로그인·카카오 로그인·카카오 가입) */
+type SessionTokens = Pick<LoginResponse, 'accessToken' | 'refreshToken' | 'suspended'>
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -31,6 +42,12 @@ const AuthContext = createContext<AuthContextValue | null>(null)
  */
 const USE_TOKEN_PROFILE = isRealApi('auth.login')
 
+/**
+ * 카카오 로그인 직후 GET /member/me 로 이메일을 가져와도 되는지.
+ * 세션(토큰)과 member.me 가 같은 쪽(둘 다 실제 / 둘 다 목업)일 때만 맞는 회원의 이메일이 온다.
+ */
+const CAN_FETCH_EMAIL = isRealApi('member.me') === isRealApi('auth.login')
+
 /** 내 정보 요약 쿼리 키. 재발급으로 토큰이 바뀌어도 같은 회원이면 캐시를 그대로 쓰도록 회원 id 로 잡는다 */
 const summaryQueryKey = (memberId: number | null) => ['me', 'summary', memberId]
 
@@ -40,11 +57,12 @@ function meFromSummary(
   profile: SessionProfile | null,
   summary: MemberSummary | undefined,
 ): Me | null {
-  if (memberId === null || !profile || !summary) return null
+  if (memberId === null || !summary) return null
   return {
     memberId,
     uuid: '',
-    email: profile.email,
+    // 카카오 로그인에서 이메일을 못 가져온 경우 빈 값 (화면에 이메일만 비어 보인다)
+    email: profile?.email ?? '',
     nickname: summary.nickname,
     username: '',
     phone: '',
@@ -96,11 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
   const me = USE_TOKEN_PROFILE ? summaryMe : token ? (meQuery.data ?? null) : null
 
-  const login = useCallback(
-    async (body: LoginRequest) => {
-      const result = await authApi.login(body)
+  /** 받은 토큰으로 세션을 만들고 닉네임·정지 여부를 채운다 */
+  const establishSession = useCallback(
+    async (result: SessionTokens, email: string | null): Promise<LoginResult> => {
       tokenStore.set(result.accessToken, result.refreshToken)
-      tokenStore.setProfile({ email: body.email })
+      tokenStore.setProfile({ email })
       // 실제 로그인 응답에는 닉네임이 없어서 닉네임·정지 여부는 방금 불러온 내 정보에서 채운다
       let nickname: string
       let suspended: boolean
@@ -118,9 +136,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         suspended = mockMe.accountStatus === 'SUSPENDED'
       }
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
-      return { ...result, nickname, suspended }
+      return { accessToken: result.accessToken, refreshToken: result.refreshToken, nickname, suspended }
     },
     [queryClient],
+  )
+
+  const login = useCallback(
+    async (body: LoginRequest) => establishSession(await authApi.login(body), body.email),
+    [establishSession],
+  )
+
+  const kakaoLogin = useCallback(
+    async (code: string): Promise<KakaoLoginOutcome> => {
+      const response = await authApi.kakaoLogin({ code })
+      if (response.status === 'SIGNUP_REQUIRED') return { status: 'SIGNUP_REQUIRED', signupToken: response.signupToken }
+      const result = await establishSession(response, null)
+      // 카카오 로그인 응답에는 이메일이 없어서 내 정보 상세에서 가져온다. 실패해도 로그인은 유지한다
+      if (CAN_FETCH_EMAIL) {
+        try {
+          const detail = await queryClient.fetchQuery({ queryKey: ['me', 'detail'], queryFn: memberApi.detail })
+          tokenStore.setProfile({ email: detail.email })
+        } catch {
+          /* 이메일 없이 진행 (결제창 이메일 자동 입력·마이페이지 이메일 표시만 빠진다) */
+        }
+      }
+      return { status: 'LOGIN', result }
+    },
+    [establishSession, queryClient],
+  )
+
+  const kakaoSignup = useCallback(
+    async (body: KakaoSignupRequest) => establishSession(await authApi.kakaoSignup(body), body.email),
+    [establishSession],
   )
 
   const logout = useCallback(async () => {
@@ -144,9 +191,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoggedIn: !!token && !!me,
       isLoading: !!token && (USE_TOKEN_PROFILE ? summaryQuery.isLoading : meQuery.isLoading),
       login,
+      kakaoLogin,
+      kakaoSignup,
       logout,
     }),
-    [token, me, summaryQuery.isLoading, meQuery.isLoading, login, logout],
+    [token, me, summaryQuery.isLoading, meQuery.isLoading, login, kakaoLogin, kakaoSignup, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

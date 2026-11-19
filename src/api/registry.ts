@@ -60,6 +60,22 @@ export const apiRegistry = {
     owner: '차승환',
     status: 'done',
   },
+  'auth.kakaoLogin': {
+    method: 'POST',
+    path: '/api/v1/auth/oauth/kakao',
+    title: '카카오 로그인',
+    owner: '차승환',
+    status: 'done',
+    note: '인가 코드 → LOGIN(토큰) 또는 SIGNUP_REQUIRED(가입 토큰). auth.login 과 함께 실제/목업이 전환된다',
+  },
+  'auth.kakaoSignup': {
+    method: 'POST',
+    path: '/api/v1/auth/oauth/kakao/signup',
+    title: '카카오 회원가입',
+    owner: '차승환',
+    status: 'done',
+    note: '가입 토큰 + 추가 정보 → 가입과 동시에 로그인',
+  },
   'member.registerSeller': {
     method: 'POST',
     path: '/api/v1/member/me/seller',

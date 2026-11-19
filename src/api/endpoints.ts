@@ -1,6 +1,15 @@
 import { http } from './client'
 import type { PageParams, PageResponse } from '@/types/common'
-import type { AvailabilityResponse, LoginRequest, LoginResponse, SignupRequest } from '@/types/auth'
+import type {
+  AvailabilityResponse,
+  KakaoLoginRequest,
+  KakaoLoginResponse,
+  KakaoSignupRequest,
+  KakaoSignupResponse,
+  LoginRequest,
+  LoginResponse,
+  SignupRequest,
+} from '@/types/auth'
 import type {
   AccountStatusInfo,
   Me,
@@ -103,6 +112,12 @@ export const authApi = {
     http.get<AvailabilityResponse>('auth.nicknameAvailable', '/api/v1/auth/nickname-availability', {
       nickname,
     }),
+  /** 카카오 인가 코드로 로그인. 가입 안 된 카카오 계정이면 signupToken 을 준다 */
+  kakaoLogin: (body: KakaoLoginRequest) =>
+    http.post<KakaoLoginResponse>('auth.kakaoLogin', '/api/v1/auth/oauth/kakao', body),
+  /** 201. 가입과 동시에 로그인 (리프레시 토큰은 HttpOnly 쿠키) */
+  kakaoSignup: (body: KakaoSignupRequest) =>
+    http.post<KakaoSignupResponse>('auth.kakaoSignup', '/api/v1/auth/oauth/kakao/signup', body),
 }
 
 /** 회원 */

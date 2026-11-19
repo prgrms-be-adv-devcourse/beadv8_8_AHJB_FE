@@ -8,6 +8,7 @@ import { AuctionListPage } from '@/pages/auctions/AuctionListPage'
 import { ProductDetailPage } from '@/pages/product/ProductDetailPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignupPage } from '@/pages/auth/SignupPage'
+import { KakaoCallbackPage } from '@/pages/auth/KakaoCallbackPage'
 import { SellerRegisterPage } from '@/pages/auth/SellerRegisterPage'
 import { SellPage } from '@/pages/sell/SellPage'
 import { CartPage } from '@/pages/cart/CartPage'
@@ -65,6 +66,10 @@ export const routes: RouteObject[] = [
       { path: '/products/:productId', element: <ProductDetailPage /> },
       { path: '/login', element: <LoginPage /> },
       { path: '/signup', element: <SignupPage /> },
+      // key: /signup 과 같은 컴포넌트라 경로가 바뀔 때 입력 상태를 새로 만든다
+      { path: '/signup/kakao', element: <SignupPage key="kakao" mode="kakao" /> },
+      // 카카오 콘솔·백엔드에 등록된 Redirect URI 와 같아야 한다 (lib/kakaoAuth.ts KAKAO_CALLBACK_PATH)
+      { path: '/oauth/kakao/callback', element: <KakaoCallbackPage /> },
       { path: '/seller/register', element: requireAuth(<SellerRegisterPage />) },
       {
         path: '/sell',
