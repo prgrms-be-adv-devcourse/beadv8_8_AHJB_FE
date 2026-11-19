@@ -338,8 +338,8 @@ export function CartPage() {
                     method === 'DEPOSIT'
                       ? `잔액 ${walletQuery.data ? formatWon(balance) : '–'} · 모자라면 계좌이체로 충전`
                       : method === 'TRANSFER'
-                        ? '토스페이먼츠 결제창에서 바로 결제'
-                        : '토스페이먼츠 결제창에서 바로 결제 · 포인트 적립 제외'
+                        ? '예치금을 쓰지 않고 바로 결제'
+                        : '예치금을 쓰지 않고 바로 결제 · 포인트 적립 제외'
                   }
                 />
               ))}
@@ -413,16 +413,9 @@ export function CartPage() {
               </Button>
             ) : null}
             <p className={styles.rule}>
-              {limitExceeded ? null : payMethod === 'DEPOSIT' && shortage > 0 ? (
-                <>
-                  부족한 {formatWon(shortage)}은 토스페이먼츠 결제창에서 계좌이체로 충전한 뒤 결제돼요.{' '}
-                  {pgAmount > shortage
-                    ? `한 번에 충전할 수 있는 최소 금액이 ${formatWon(pgAmount)}이라, 남는 ${formatWon(pgAmount - shortage)}은 예치금에 남아요. `
-                    : ''}
-                </>
-              ) : null}
-              {!limitExceeded && payMethod !== 'DEPOSIT' && pgAmount > 0
-                ? `토스페이먼츠 결제창에서 ${formatWon(pgAmount)}을 결제해요. 예치금은 쓰지 않아요. `
+              {/* 최소 충전 금액 때문에 부족분보다 많이 충전될 때만 차액이 어디로 가는지 알린다 */}
+              {!limitExceeded && payMethod === 'DEPOSIT' && pgAmount > shortage && shortage > 0
+                ? `부족한 금액은 ${formatWon(shortage)}이지만 최소 충전 금액인 ${formatWon(pgAmount)}이 충전되고, 남는 ${formatWon(pgAmount - shortage)}은 예치금에 남아요. `
                 : ''}
               결제한 금액은 구매확정 전까지 찐막이 보관해요(에스크로). 구매확정하면 판매자에게, 환불되면 결제한 수단으로
               돌아와요.
@@ -434,35 +427,40 @@ export function CartPage() {
       <ConfirmDialog
         open={confirmOpen}
         title={`${formatWon(payTotal)}을 결제할까요?`}
-        confirmLabel={pgAmount > 0 ? '결제창 열기' : '결제하기'}
+        confirmLabel="결제"
         loading={payMutation.isPending}
         onConfirm={() => payMutation.mutate()}
         onClose={() => setConfirmOpen(false)}
       >
-        {selected.length}개 상품
-        {quote
-          ? ` · ${[
-              quote.pointUseAmount > 0 ? `포인트 ${formatPoint(quote.pointUseAmount)}` : null,
-              quote.walletUseAmount > 0 ? `예치금 ${formatWon(quote.walletUseAmount)}` : null,
-              pgAmount > 0
-                ? `${payMethod === 'DEPOSIT' ? '계좌이체 충전' : PAY_METHOD_LABELS[payMethod]} ${formatWon(pgAmount)}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' + ')}`
-          : null}
-        <br />
-        {pgAmount > 0 ? (
-          <>
-            토스페이먼츠 결제창에서{' '}
-            {payMethod === 'DEPOSIT'
-              ? `계좌이체로 ${formatWon(pgAmount)}을 충전하면`
-              : `${formatWon(pgAmount)}을 결제하면`}{' '}
-            주문이 완료돼요.
-            <br />
-          </>
+        {/* 무엇으로 얼마가 나가는지만 알린다 */}
+        {quote ? (
+          <dl className={`${styles.rows} ${styles.confirmRows}`}>
+            {quote.pointUseAmount > 0 ? (
+              <>
+                <dt>포인트</dt>
+                <dd className="num">{formatPoint(quote.pointUseAmount)}</dd>
+              </>
+            ) : null}
+            {quote.walletUseAmount > 0 ? (
+              <>
+                <dt>예치금</dt>
+                <dd className="num">{formatWon(quote.walletUseAmount)}</dd>
+              </>
+            ) : null}
+            {pgAmount > 0 ? (
+              <>
+                <dt>{payMethod === 'DEPOSIT' ? '계좌이체 충전' : PAY_METHOD_LABELS[payMethod]}</dt>
+                <dd className="num">{formatWon(pgAmount)}</dd>
+              </>
+            ) : null}
+            {payMethod === 'DEPOSIT' && pgAmount > shortage ? (
+              <>
+                <dt>충전하고 남는 예치금</dt>
+                <dd className="num">{formatWon(pgAmount - shortage)}</dd>
+              </>
+            ) : null}
+          </dl>
         ) : null}
-        상품마다 주문이 하나씩 만들어지고, 판매자가 송장을 등록하면 배송이 시작돼요.
       </ConfirmDialog>
       <ChargeDialog
         open={chargeOpen}

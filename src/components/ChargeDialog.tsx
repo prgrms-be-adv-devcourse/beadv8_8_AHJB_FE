@@ -185,9 +185,6 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
           </Chip>
         ))}
       </div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-        {mock ? '목업: 토스페이먼츠 결제창 대신 바로 충전돼요.' : '충전하기를 누르면 토스페이먼츠 계좌이체 결제창으로 이동해요.'}
-      </p>
       <DevApiNote ids={['payment.policy', 'payment.chargeRequest', 'payment.chargeConfirm']} />
     </Dialog>
   )
