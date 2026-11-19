@@ -56,8 +56,7 @@ export function AuctionListPage() {
 
   const totalCount = listQuery.data?.totalElements ?? 0
   const totalPages = Math.ceil(totalCount / AUCTION_PAGE_SIZE)
-  // 경매 목록에는 썸네일·상품명이 없어서 상품 목록 API(미구현)로 조합한다
-  const apiIds: ApiKey[] = params.status === 'SCHEDULED' ? ['product.upcoming'] : ['auction.list', 'product.list']
+  const apiIds: ApiKey[] = params.status === 'SCHEDULED' ? ['product.upcoming'] : ['auction.list']
 
   return (
     <div className={`container ${styles.page}`}>

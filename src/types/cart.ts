@@ -12,8 +12,9 @@ export interface CartItem {
   winAt: string
   /** 결제 기한 (낙찰 24시간 뒤) */
   paymentDueAt: string
-  productName: string
-  thumbnailUrl: string | null
+  /** 백엔드 응답에 없는 필드. 화면에서 상품 상세로 채운다 (useWithProductSummaries) */
+  productName?: string
+  thumbnailUrl?: string | null
 }
 
 /**

@@ -8,6 +8,7 @@ import { Chip } from '@/components/form/Field'
 import { OrderCard } from '@/components/order/OrderCard'
 import { SendProductDialog } from '@/components/order/SendProductDialog'
 import { Spinner } from '@/components/Spinner'
+import { useWithProductSummaries } from '@/lib/productSummaries'
 import type { Order, OrderState } from '@/types/order'
 import styles from './MyPage.module.css'
 
@@ -32,10 +33,11 @@ export function MySalesPage() {
     refetchInterval: 8000,
   })
 
+  const allOrders = useWithProductSummaries(ordersQuery.data ?? [])
   const states = SALES_FILTERS.find((filter) => filter.id === filterId)?.states
-  const orders = (ordersQuery.data ?? []).filter((order) => !states || states.includes(order.state))
+  const orders = allOrders.filter((order) => !states || states.includes(order.state))
   const countOf = (filter: (typeof SALES_FILTERS)[number]) =>
-    (ordersQuery.data ?? []).filter((order) => !filter.states || filter.states.includes(order.state)).length
+    allOrders.filter((order) => !filter.states || filter.states.includes(order.state)).length
 
   return (
     <>
@@ -45,7 +47,7 @@ export function MySalesPage() {
           정산 보기
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.seller', 'product.list', 'order.send', 'refund.byOrder']} />
+      <DevApiNote ids={['order.seller', 'product.detail', 'order.send', 'refund.byOrder']} />
       <div className={styles.tabs}>
         {SALES_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>

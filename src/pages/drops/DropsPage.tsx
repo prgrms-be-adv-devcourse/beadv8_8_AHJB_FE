@@ -8,7 +8,6 @@ import { Chip } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
 import { ProductCardSkeleton } from '@/components/ProductCard'
 import { syncServerTime } from '@/lib/clock'
-import { useProductSummaries } from '@/lib/productSummaries'
 import { DutchCard } from './DutchCard'
 import styles from './Drops.module.css'
 
@@ -28,7 +27,6 @@ export function DropsPage() {
     refetchInterval: status === 'IN_PROGRESS' ? 5000 : false,
   })
   const items = listQuery.data?.content ?? []
-  const products = useProductSummaries(items.map((item) => item.productId))
   const totalPages = Math.ceil((listQuery.data?.totalElements ?? 0) / PAGE_SIZE)
 
   useEffect(() => {
@@ -54,7 +52,7 @@ export function DropsPage() {
         </Chip>
       </div>
 
-      <DevApiNote ids={['auction.dutchList', 'product.list']} />
+      <DevApiNote ids={['auction.dutchList']} />
 
       {listQuery.isError ? (
         <ErrorState message={listQuery.error.message} onRetry={() => listQuery.refetch()} />
@@ -73,7 +71,7 @@ export function DropsPage() {
       ) : (
         <div className="grid-products">
           {items.map((item) => (
-            <DutchCard key={item.auctionId} item={item} product={products.get(item.productId)} />
+            <DutchCard key={item.auctionId} item={item} />
           ))}
         </div>
       )}

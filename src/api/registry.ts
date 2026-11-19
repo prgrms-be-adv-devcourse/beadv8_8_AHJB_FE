@@ -120,7 +120,7 @@ export const apiRegistry = {
     title: '상품 등록(+경매 조건)',
     owner: '송현수',
     status: 'done',
-    note: '이미지 presigned 업로드는 TODO',
+    note: '이미지는 product.images 로 먼저 올리고 imageIds 로 보낸다',
   },
   'product.update': {
     method: 'PATCH',
@@ -167,14 +167,6 @@ export const apiRegistry = {
     owner: '송현수',
     status: 'done',
     note: 'multipart file 1장 → { imageId, imageUrl }',
-  },
-  'product.list': {
-    method: 'GET',
-    path: '(미정)',
-    title: '상품 목록 (여러 상품 조회)',
-    owner: '송현수',
-    status: 'proposed',
-    note: '썸네일·상품명이 없는 목록(경매·내 입찰·장바구니·주문·추천·하향식)이 조합에 사용',
   },
   'qna.list': {
     method: 'GET',
@@ -231,7 +223,7 @@ export const apiRegistry = {
     title: '경매 목록 (진행 중 · 종료)',
     owner: '박신형',
     status: 'partial',
-    note: '누락: failureReason. 썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '누락: failureReason. 상품명·사진은 응답에 포함',
   },
   'auction.detail': {
     method: 'GET',
@@ -267,7 +259,7 @@ export const apiRegistry = {
     title: '입찰 중인 경매',
     owner: '박신형',
     status: 'done',
-    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '상품명·사진은 응답에 포함',
   },
   'auction.dutchList': {
     method: 'GET',
@@ -275,7 +267,7 @@ export const apiRegistry = {
     title: '하향식 경매 목록',
     owner: '박신형',
     status: 'done',
-    note: '상품명·사진 없음 → 상품 API 조합',
+    note: '상품명·사진은 응답에 포함',
   },
   'auction.dutchBuy': {
     method: 'POST',
@@ -290,7 +282,7 @@ export const apiRegistry = {
     title: '장바구니(낙찰 상품)',
     owner: '신종혁',
     status: 'done',
-    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '응답에 상품명·사진 없음 → 상품 상세로 조합',
   },
   'cart.pay': {
     method: 'POST',
@@ -305,7 +297,7 @@ export const apiRegistry = {
     title: '구매 주문 목록',
     owner: '신종혁',
     status: 'done',
-    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '응답에 상품명·사진 없음 → 상품 상세로 조합',
   },
   'order.seller': {
     method: 'GET',
@@ -313,7 +305,7 @@ export const apiRegistry = {
     title: '판매 주문 목록',
     owner: '신종혁',
     status: 'done',
-    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '응답에 상품명·사진 없음 → 상품 상세로 조합',
   },
   'order.detail': {
     method: 'GET',
@@ -321,7 +313,7 @@ export const apiRegistry = {
     title: '주문 상세',
     owner: '신종혁',
     status: 'done',
-    note: '썸네일·상품명은 상품 목록 API로 조합 예정',
+    note: '응답에 상품명·사진 없음 → 상품 상세로 조합',
   },
   'order.confirm': {
     method: 'POST',
@@ -665,7 +657,7 @@ export const apiRegistry = {
     title: '인기 경매 추천',
     owner: '담당 확인',
     status: 'done',
-    note: '상품명·사진 없음 → 상품 API 조합',
+    note: '응답에 상품명·사진 없음 → 상품 상세로 조합',
   },
   'recommend.me': {
     method: 'GET',
