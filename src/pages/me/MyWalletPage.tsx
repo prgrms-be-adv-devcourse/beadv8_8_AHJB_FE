@@ -139,7 +139,7 @@ export function MyWalletPage() {
     placeholderData: keepPreviousData,
     enabled: tab === 'points',
   })
-  // 결제 내역: 주문 묶음 단위. 무엇으로 얼마씩 냈는지
+  // 결제 내역: 주문 묶음 단위. 무엇으로 얼마씩 냈는지. 닫힌 결제는 아래 visiblePayments 에서 걸러 낸다
   const paymentsQuery = useQuery({
     queryKey: ['wallet', 'payments', paymentPage],
     queryFn: () => paymentApi.list({ page: paymentPage, size: PAGE_SIZE }),
@@ -154,6 +154,8 @@ export function MyWalletPage() {
   const balance = walletQuery.data?.balance ?? 0
   // 결제창만 열고 나온 건(REQUESTED)은 사용자에겐 "충전"이 아니므로 숨긴다. 백엔드 스케줄러가 알아서 정리한다
   const visibleCharges = chargesQuery.data?.content.filter((c) => c.status !== 'REQUESTED') ?? []
+  // 결제창을 닫거나 결제 기한이 지나 닫힌 결제(FAILED)는 돈이 움직이지 않은 건이라 숨긴다. 결제창을 닫을 때마다 하나씩 생긴다
+  const visiblePayments = paymentsQuery.data?.content.filter((p) => p.status !== 'FAILED') ?? []
   /** 출금하면 이전 충전을 취소할 수 없게 되므로, 지금 취소할 수 있는 충전 건 수를 모달에서 알려 준다 */
   const cancelableCount = chargesQuery.data?.content.filter((c) => c.cancelable && balance >= c.amount).length ?? 0
 
@@ -338,9 +340,9 @@ export function MyWalletPage() {
             <Spinner block />
           ) : paymentsQuery.isError ? (
             <ErrorState message={paymentsQuery.error.message} onRetry={() => void paymentsQuery.refetch()} />
-          ) : paymentsQuery.data?.content.length ? (
+          ) : visiblePayments.length ? (
             <div className={styles.list}>
-              {paymentsQuery.data.content.map((payment) => (
+              {visiblePayments.map((payment) => (
                 <div key={payment.paymentId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
                   <div className={styles.rowBody}>
                     <div className={styles.rowTop}>
