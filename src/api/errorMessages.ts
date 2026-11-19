@@ -89,6 +89,7 @@ const USER_MESSAGES: Record<string, string> = {
   CHAT004: RETRY,
   CHAT005: '메시지는 1~1000자로 보내 주세요.',
   CHAT006: '읽음 처리할 메시지를 찾지 못했어요.',
+  CHAT007: '외부 연락처·계좌·현금 거래를 유도하는 메시지는 보낼 수 없어요.',
 
   // 주문·배송·환불
   ORDER001: '주문을 찾을 수 없어요.',
