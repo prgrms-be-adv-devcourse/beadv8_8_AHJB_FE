@@ -7,7 +7,9 @@ import { DevApiNote } from '@/components/DevApiNote'
 import { Field, Input } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
+import { safeRedirect } from '@/lib/kakaoAuth'
 import styles from './Auth.module.css'
+import { KakaoLoginButton } from './KakaoLoginButton'
 
 /** 로그인 (/login) */
 export function LoginPage() {
@@ -15,7 +17,8 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const toast = useToast()
-  const redirect = params.get('redirect') || '/'
+  // 외부 주소로 튕기지 않도록 앱 안 경로만 허용
+  const redirect = safeRedirect(params.get('redirect'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +66,11 @@ export function LoginPage() {
         <div className={styles.head}>
           <h1 className={styles.title}>로그인</h1>
           <p className={styles.sub}>이번이 진짜 마지막 구매일까요?</p>
+        </div>
+
+        <KakaoLoginButton redirect={redirect} />
+        <div className={styles.divider}>
+          <span>또는 이메일로 로그인</span>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>

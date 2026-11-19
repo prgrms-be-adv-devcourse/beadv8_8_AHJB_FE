@@ -19,6 +19,42 @@ interface SignupBody {
   address: Partial<MemberAddress>;
 }
 
+interface KakaoSignupBody {
+  signupToken: string;
+  email: string;
+  nickname: string;
+  username: string;
+  phone: string;
+  birthDate: string | null;
+  address: Partial<MemberAddress>;
+}
+
+/**
+ * 목업 카카오.
+ * 인가 코드 `mock-kakao.<카카오 회원번호>.<난수>` 를 받으면 그 회원번호의 카카오 계정으로 본다 (lib/kakaoAuth.ts 가 만든다).
+ * 실제 카카오처럼 인가 코드는 한 번만 쓸 수 있다.
+ */
+const usedKakaoCodes = new Set<string>();
+const SIGNUP_TOKEN_TTL_MS = 10 * 60000;
+
+function kakaoIdFromCode(code: unknown): string | null {
+  if (typeof code !== 'string') return null;
+  const match = /^mock-kakao\.(\w+)\.\w+$/.exec(code);
+  return match ? match[1] : null;
+}
+
+/** 가입 토큰 `mock-signup.<카카오 회원번호>.<만료 ms>` */
+function parseSignupToken(token: unknown): { kakaoId: string; expiresAt: number } | null {
+  if (typeof token !== 'string') return null;
+  const match = /^mock-signup\.(\w+)\.(\d+)$/.exec(token);
+  return match ? { kakaoId: match[1], expiresAt: Number(match[2]) } : null;
+}
+
+const mockTokens = (memberId: number) => ({
+  accessToken: `mock.${memberId}.${Date.now().toString(36)}`,
+  refreshToken: `mock-refresh.${memberId}`,
+});
+
 interface LoginBody {
   email: string;
   password: string;
@@ -65,7 +101,8 @@ export function registerAuthRoutes(): void {
   route('POST', '/api/v1/auth/login', (ctx) => {
     const body = ctx.body as Partial<LoginBody> | null | undefined;
     const member = db.members.find((m) => m.email === body?.email);
-    if (!member) fail('AUTH101');
+    // 카카오로 가입한 회원은 비밀번호가 없어서 이메일 로그인이 안 된다
+    if (!member || !member.password) fail('AUTH101');
     if (member.accountStatus === 'BANNED') fail('AUTH102');
     if (member.lockedUntil && member.lockedUntil > now()) fail('AUTH103');
     if (member.password !== body?.password) {
@@ -87,6 +124,73 @@ export function registerAuthRoutes(): void {
       nickname: member.nickname,
       suspended: member.accountStatus === 'SUSPENDED',
     });
+  });
+
+  route('POST', '/api/v1/auth/oauth/kakao', (ctx) => {
+    const code = (ctx.body as { code?: unknown } | null | undefined)?.code;
+    const kakaoId = kakaoIdFromCode(code);
+    if (!kakaoId || usedKakaoCodes.has(code as string)) fail('AUTH108');
+    usedKakaoCodes.add(code as string);
+
+    const member = db.members.find((m) => m.kakaoId === kakaoId);
+    if (!member) {
+      return ok({
+        status: 'SIGNUP_REQUIRED',
+        accessToken: null,
+        suspended: null,
+        signupToken: `mock-signup.${kakaoId}.${now() + SIGNUP_TOKEN_TTL_MS}`,
+      });
+    }
+    if (member.accountStatus === 'BANNED') fail('COMMON102');
+    return ok({
+      status: 'LOGIN',
+      ...mockTokens(member.id),
+      suspended: member.accountStatus === 'SUSPENDED',
+      signupToken: null,
+    });
+  });
+
+  route('POST', '/api/v1/auth/oauth/kakao/signup', (ctx) => {
+    const body = bodyOf<KakaoSignupBody>(ctx);
+    const token = parseSignupToken(body.signupToken);
+    if (!token) fail('AUTH110');
+    if (token.expiresAt < now()) fail('AUTH111');
+    if (db.members.some((m) => m.kakaoId === token.kakaoId)) fail('AUTH112');
+
+    if (!EMAIL_PATTERN.test(body.email ?? '')) fail('COMMON001');
+    if (!body.nickname || body.nickname.length > 50 || !body.username || body.username.length > 50) fail('COMMON001');
+    if (!PHONE_PATTERN.test(body.phone ?? '')) fail('COMMON001');
+    const address = body.address ?? {};
+    if (!address.recipient || !PHONE_PATTERN.test(address.recipientPhone ?? '') || !address.zipcode || !address.address)
+      fail('COMMON001');
+    if (db.members.some((m) => m.email === body.email)) fail('MEMBER001');
+    if (db.members.some((m) => m.nickname === body.nickname)) fail('MEMBER002');
+
+    const id = nextId('members');
+    db.members.push({
+      id,
+      uuid:
+        typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `00000000-0000-4000-8000-${String(id).padStart(12, '0')}`,
+      email: body.email as string,
+      password: '',
+      kakaoId: token.kakaoId,
+      nickname: body.nickname,
+      username: body.username,
+      phone: body.phone as string,
+      birthDate: body.birthDate ?? null,
+      address: address as MemberAddress,
+      seller: null,
+      accountStatus: 'ACTIVE',
+      failedLogins: 0,
+      lockedUntil: null,
+      baseRating: { sum: 0, count: 0 },
+      createdAt: ldt(),
+    });
+    walletOf(id);
+    persist();
+    return ok({ ...mockTokens(id), suspended: false }, 201);
   });
 
   route('POST', '/api/v1/auth/logout', () => noContent(204));

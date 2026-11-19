@@ -29,3 +29,46 @@ export interface LoginResponse {
 export interface AvailabilityResponse {
   available: boolean
 }
+
+/** POST /api/v1/auth/oauth/kakao 요청. code = 카카오 인가 코드 */
+export interface KakaoLoginRequest {
+  code: string
+}
+
+/** 카카오 로그인 결과. 가입된 계정이면 LOGIN, 처음이면 SIGNUP_REQUIRED */
+export type KakaoLoginResponse =
+  | {
+      status: 'LOGIN'
+      accessToken: string
+      suspended: boolean
+      signupToken: null
+      /** 목업만 준다 */
+      refreshToken?: string
+    }
+  | {
+      status: 'SIGNUP_REQUIRED'
+      accessToken: null
+      suspended: null
+      /** 10분 유효. 메모리에만 보관한다 (lib/kakaoAuth.ts) */
+      signupToken: string
+    }
+
+/** POST /api/v1/auth/oauth/kakao/signup 요청. 비밀번호가 없는 것 말고는 일반 가입과 같다 */
+export interface KakaoSignupRequest {
+  signupToken: string
+  email: string
+  nickname: string
+  username: string
+  /** 숫자만 (01012345678) */
+  phone: string
+  birthDate?: string
+  address: MemberAddress
+}
+
+/** 카카오 가입 응답 (201). 가입과 동시에 로그인된다 */
+export interface KakaoSignupResponse {
+  accessToken: string
+  suspended: boolean
+  /** 목업만 준다 */
+  refreshToken?: string
+}
