@@ -120,6 +120,7 @@ const USER_MESSAGES: Record<string, string> = {
   PAYMENT002: '이미 결제한 주문이에요.',
   PAYMENT003: '결제할 상품이 없어요.',
   PAYMENT005: '지금은 처리할 수 없는 결제예요.',
+  PAYMENT007: '결제 금액을 확인해 주세요.',
   PAYMENT008: NOT_ALLOWED,
   PAYMENT009: '지원하지 않는 결제수단이에요.',
   PAYMENT010: '포인트 사용 금액을 다시 확인해 주세요.',

@@ -1,17 +1,18 @@
 import { db, persist } from '../db';
 import { fail } from '../errors';
 import { ok, route, type HandlerContext } from '../router';
-import { addTransaction, payCartItems, requireMe, walletOf } from '../services';
-import type { OrderRecord } from '../types';
-import { FEE_RATE, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
+import { addTransaction, cashAmountOf, earnPointOf, payCartItems, requireMe, shareOf, walletOf } from '../services';
+import type { OrderRecord, PayMethod } from '../types';
+import { FEE_RATE, POINT_EARN_RATE_PERCENT, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 
 // 백엔드 PaymentApiController 와 같은 경로·응답 형태.
 // 목업은 토스 결제창을 거치지 않으므로 ChargeDialog / CartPage 가 요청 직후 바로 승인을 부른다.
 // 충전 건은 승인 전까지만 의미가 있어서 목업 DB 에 저장하지 않고 메모리에만 둔다 (새로고침하면 사라짐).
-// 목업은 아직 예치금 결제만 한다. 포인트 · 직접 결제 필드는 응답 형태만 맞춰 0 / DEPOSIT 으로 내려준다.
+// 결제 금액 구성(포인트 · 예치금 · 직접 결제)과 적립된 포인트는 홀딩 레코드에 남긴다.
 
 type ChargeStatus = 'REQUESTED' | 'CHARGED' | 'USED' | 'CANCELED' | 'ABORTED';
-type ChargePurpose = 'MANUAL' | 'FOR_PAYMENT';
+type ChargePurpose = 'MANUAL' | 'FOR_PAYMENT' | 'DIRECT_PAYMENT';
+type PgMethod = 'TRANSFER' | 'CARD';
 
 interface MockCharge {
   chargeId: number;
@@ -19,14 +20,18 @@ interface MockCharge {
   pgOrderId: string;
   amount: number;
   purpose: ChargePurpose;
+  /** 결제창을 여는 결제수단. 예치금 충전(MANUAL · FOR_PAYMENT)은 항상 TRANSFER */
+  pgMethod: PgMethod;
   status: ChargeStatus;
+  /** 같은 상품을 다른 조건으로 다시 결제 요청해서 못 쓰게 된 결제창인지 (승인하면 CHARGE012) */
+  superseded: boolean;
   method: string | null;
   receiptUrl: string | null;
   requestedAt: string;
   approvedAt: string | null;
   usedAt: string | null;
   canceledAt: string | null;
-  /** FOR_PAYMENT 전용: 주문 결제 정보 */
+  /** FOR_PAYMENT · DIRECT_PAYMENT 전용: 주문 결제 정보 */
   payment: MockPayment | null;
 }
 
@@ -36,22 +41,82 @@ interface MockPayment {
   productIds: number[];
   totalPrice: number;
   chargeAmount: number;
+  payMethod: PayMethod;
+  pointAmount: number;
+  depositAmount: number;
+  pgAmount: number;
   status: 'CHARGING' | 'PAID';
   requestedAt: string;
   paidAt: string | null;
 }
 
-const MANUAL_ORDER_NAME = '찐막 예치금 충전';
-const PAYMENT_ORDER_NAME = '찐막 주문 결제 (부족분 충전)';
+/** 토스 결제창에 표시되는 상품명 (백엔드 ChargeSummaryDto 와 같은 값) */
+const ORDER_NAMES: Record<ChargePurpose, string> = {
+  MANUAL: '찐막 예치금 충전',
+  FOR_PAYMENT: '찐막 주문 결제 (부족분 충전)',
+  DIRECT_PAYMENT: '찐막 주문 결제',
+};
+/** 토스가 승인한 결제수단 표기 */
+const PG_METHOD_LABELS: Record<PgMethod, string> = { TRANSFER: '계좌이체', CARD: '카드' };
 /** 결제 정책 (백엔드 설정값 wallet.* 과 같은 값) */
 const CHARGE_MIN_AMOUNT = 10000;
 const CHARGE_MAX_AMOUNT = 2000000;
-const POINT_EARN_RATE_PERCENT = 1;
 const charges = new Map<string, MockCharge>();
 let chargeSeq = 1;
 
-/** 적립 대상 금액(예치금 결제액에서 배송비를 뺀 금액)에 적립률을 곱해 절사한 포인트 */
-const earnPointOf = (earnBase: number) => Math.floor((Math.max(earnBase, 0) * POINT_EARN_RATE_PERCENT) / 100);
+/** 결제 1건을 어떻게 낼지 정한 결과 (백엔드 PaymentPlan) */
+export interface PaymentPlan {
+  payMethod: PayMethod;
+  totalPrice: number;
+  pointAmount: number;
+  /** 예치금으로 내는 금액. 부족분을 충전해서 내는 금액도 포함한다 */
+  depositAmount: number;
+  /** 결제창에서 직접 결제하는 금액 */
+  pgAmount: number;
+  /** 결제창에서 결제할 금액. 0 이면 결제창 없이 끝난다 */
+  chargeAmount: number;
+  /** 예치금 결제에서 예치금이 모자란 금액 */
+  shortage: number;
+  /** 결제창 금액이 계좌이체 1회 한도를 넘는지 */
+  limitExceeded: boolean;
+}
+
+const PAY_METHODS: readonly PayMethod[] = ['DEPOSIT', 'TRANSFER', 'CARD'];
+
+/** 요청으로 받은 결제수단. 값이 없으면 DEPOSIT, 모르는 값이면 PAYMENT009 */
+export function parsePayMethod(value: unknown): PayMethod {
+  if (value == null || value === '') return 'DEPOSIT';
+  const method = String(value).trim().toUpperCase() as PayMethod;
+  if (!PAY_METHODS.includes(method)) fail('PAYMENT009');
+  return method;
+}
+
+/**
+ * 결제 금액 구성을 정한다 (백엔드 PaymentPlanner.plan). 견적과 결제 요청이 함께 쓴다.
+ * 포인트를 먼저 빼고 남은 금액을 고른 수단으로 낸다. 예치금이 모자라면 부족분을 최소 충전 금액 이상으로 충전한다.
+ * 한도 초과는 여기서 막지 않고 limitExceeded 로만 알린다.
+ */
+export function planPayment(memberId: number, totalPrice: number, payMethod: PayMethod, pointUseAmount: number): PaymentPlan {
+  const wallet = walletOf(memberId);
+  if (!Number.isInteger(totalPrice) || totalPrice <= 0) fail('PAYMENT007');
+  if (!Number.isInteger(pointUseAmount) || pointUseAmount < 0 || pointUseAmount > totalPrice) fail('PAYMENT010');
+  if (pointUseAmount > wallet.pointBalance) fail('WALLET204');
+  const rest = totalPrice - pointUseAmount;
+  const base = { payMethod, totalPrice, pointAmount: pointUseAmount };
+  if (payMethod !== 'DEPOSIT') {
+    return {
+      ...base,
+      depositAmount: 0,
+      pgAmount: rest,
+      chargeAmount: rest,
+      shortage: 0,
+      limitExceeded: payMethod === 'TRANSFER' && rest > CHARGE_MAX_AMOUNT,
+    };
+  }
+  const shortage = Math.max(0, rest - wallet.balance);
+  const chargeAmount = shortage > 0 ? Math.max(shortage, CHARGE_MIN_AMOUNT) : 0;
+  return { ...base, depositAmount: rest, pgAmount: 0, chargeAmount, shortage, limitExceeded: chargeAmount > CHARGE_MAX_AMOUNT };
+}
 
 /** 백엔드 ChargeSummaryDto 형태 */
 function toChargeSummary(charge: MockCharge) {
@@ -59,14 +124,14 @@ function toChargeSummary(charge: MockCharge) {
     chargeId: charge.chargeId,
     pgOrderId: charge.pgOrderId,
     amount: charge.amount,
-    orderName: charge.purpose === 'FOR_PAYMENT' ? PAYMENT_ORDER_NAME : MANUAL_ORDER_NAME,
+    orderName: ORDER_NAMES[charge.purpose],
     purpose: charge.purpose,
     status: charge.status,
     cancelable: charge.status === 'CHARGED',
     usedAmount: charge.status === 'USED' ? charge.amount : 0,
     remainingAmount: charge.status === 'CHARGED' ? charge.amount : 0,
     canceledAmount: charge.status === 'CANCELED' ? charge.amount : 0,
-    pgMethod: 'TRANSFER' as const,
+    pgMethod: charge.pgMethod,
     method: charge.method,
     receiptUrl: charge.receiptUrl,
     requestedAt: charge.requestedAt,
@@ -85,6 +150,10 @@ function toChargeSummary(charge: MockCharge) {
 interface PaymentView {
   orderGroupId: number;
   totalPrice: number;
+  payMethod: PayMethod;
+  pointAmount: number;
+  depositAmount: number;
+  pgAmount: number;
   chargeAmount: number;
   orderCount: number;
   status: 'CHARGING' | 'PAID';
@@ -101,10 +170,21 @@ function findPayment(memberId: number, orderGroupId: number): PaymentView | unde
   const charge =
     [...charges.values()].find((c) => c.memberId === memberId && c.payment?.orderGroupId === orderGroupId) ?? null;
   if (orders.length) {
+    // 끝난 결제의 금액 구성은 주문별 홀딩에서 모은다. 충전 건은 메모리에만 있어 새로고침 뒤에는 없을 수 있다
+    const shares = orders.map((o) => holdingOf(o.id)).map((h) => (h ? shareOf(h) : null));
+    const sumOf = (key: 'pointAmount' | 'depositAmount' | 'pgAmount') =>
+      shares.reduce((acc, s) => acc + (s?.[key] ?? 0), 0);
+    const totalPrice = orders.reduce((acc, o) => acc + amountOf(o), 0);
+    const pointAmount = sumOf('pointAmount');
+    const pgAmount = sumOf('pgAmount');
     return {
       orderGroupId,
-      totalPrice: orders.reduce((acc, o) => acc + amountOf(o), 0),
-      chargeAmount: charge?.amount ?? 0,
+      totalPrice,
+      payMethod: shares[0]?.payMethod ?? 'DEPOSIT',
+      pointAmount,
+      depositAmount: totalPrice - pointAmount - pgAmount,
+      pgAmount,
+      chargeAmount: charge?.amount ?? pgAmount,
       orderCount: orders.length,
       status: 'PAID',
       requestedAt: charge?.payment?.requestedAt ?? orders[0].createdAt,
@@ -117,6 +197,10 @@ function findPayment(memberId: number, orderGroupId: number): PaymentView | unde
   return {
     orderGroupId,
     totalPrice: charge.payment.totalPrice,
+    payMethod: charge.payment.payMethod,
+    pointAmount: charge.payment.pointAmount,
+    depositAmount: charge.payment.depositAmount,
+    pgAmount: charge.payment.pgAmount,
     chargeAmount: charge.amount,
     orderCount: charge.payment.productIds.length,
     status: 'CHARGING',
@@ -137,22 +221,28 @@ function paymentsOf(memberId: number): PaymentView[] {
     if (c.memberId === memberId && c.payment) groupIds.add(c.payment.orderGroupId);
   });
   return [...groupIds]
-    .sort((a, b) => b - a)
     .map((id) => findPayment(memberId, id))
-    .filter((p): p is PaymentView => p !== undefined);
+    .filter((p): p is PaymentView => p !== undefined)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt) || b.orderGroupId - a.orderGroupId);
 }
 
-/** 금액 구성 (백엔드 PaymentSummaryDto · PaymentDetailDto 공통). 목업은 전액 예치금 */
+/** 직접 결제가 승인된 결제수단 표기. 직접 결제가 아니거나 승인 전이면 null */
+function approvedPgMethodOf(payMethod: PayMethod, pgAmount: number, paid: boolean, charge: MockCharge | null): string | null {
+  if (payMethod === 'DEPOSIT' || pgAmount <= 0 || !paid) return null;
+  return charge?.method ?? PG_METHOD_LABELS[payMethod];
+}
+
+/** 금액 구성 (백엔드 PaymentSummaryDto · PaymentDetailDto 공통) */
 function toPaymentBase(payment: PaymentView) {
   return {
     paymentId: payment.orderGroupId,
     orderGroupId: payment.orderGroupId,
     totalPrice: payment.totalPrice,
-    payMethod: 'DEPOSIT' as const,
-    pointAmount: 0,
-    walletUsedAmount: payment.totalPrice,
-    pgAmount: 0,
-    pgMethod: null,
+    payMethod: payment.payMethod,
+    pointAmount: payment.pointAmount,
+    walletUsedAmount: payment.depositAmount,
+    pgAmount: payment.pgAmount,
+    pgMethod: approvedPgMethodOf(payment.payMethod, payment.pgAmount, payment.status === 'PAID', payment.charge),
     chargeAmount: payment.chargeAmount,
     status: payment.status,
     requestedAt: payment.requestedAt,
@@ -171,8 +261,11 @@ function refundedAtOf(orderId: number): string | null {
 }
 
 /** 구매 확정하면 적립될 예상 포인트. 아직 확정 전(HELD)인 주문만 */
-const expectedEarnPointOf = (order: OrderRecord) =>
-  holdingOf(order.id)?.status === 'HELD' ? earnPointOf(order.winningPrice) : 0;
+function expectedEarnPointOf(order: OrderRecord): number {
+  const holding = holdingOf(order.id);
+  if (holding?.status !== 'HELD') return 0;
+  return earnPointOf(cashAmountOf(shareOf(holding)), order.winningPrice, order.deliveryFee);
+}
 
 /** 백엔드 PaymentDetailDto 형태 */
 function toPaymentDetail(payment: PaymentView) {
@@ -203,7 +296,14 @@ function requirePayment(ctx: HandlerContext, rawId: string): PaymentView {
   return payment;
 }
 
-function newCharge(memberId: number, amount: number, purpose: ChargePurpose, at: number, payment: MockPayment | null): MockCharge {
+function newCharge(
+  memberId: number,
+  amount: number,
+  purpose: ChargePurpose,
+  pgMethod: PgMethod,
+  at: number,
+  payment: MockPayment | null,
+): MockCharge {
   const chargeId = chargeSeq++;
   const charge: MockCharge = {
     chargeId,
@@ -211,7 +311,9 @@ function newCharge(memberId: number, amount: number, purpose: ChargePurpose, at:
     pgOrderId: `mock-charge-${memberId}-${chargeId}-${at.toString(36)}`,
     amount,
     purpose,
+    pgMethod,
     status: 'REQUESTED',
+    superseded: false,
     method: null,
     receiptUrl: null,
     requestedAt: ldt(at),
@@ -225,38 +327,44 @@ function newCharge(memberId: number, amount: number, purpose: ChargePurpose, at:
 }
 
 /**
- * 장바구니 결제에서 예치금이 부족할 때 (handlers/cart.ts 가 호출).
- * 부족분만큼 FOR_PAYMENT 충전 건을 만들고 결제창 파라미터(백엔드 PaymentResponseDto.Data)를 돌려준다.
+ * 장바구니 결제에서 결제창을 거쳐야 할 때 (handlers/cart.ts 가 호출).
+ * 예치금 결제면 부족분 충전 건(FOR_PAYMENT, 계좌이체), 직접 결제면 직접 결제 건(DIRECT_PAYMENT)을 만들고
+ * 결제창 파라미터(백엔드 PaymentResponseDto.Data)를 돌려준다.
+ * 같은 상품으로 먼저 띄운 결제창이 있으면 그 결제창은 못 쓰게 한다 (승인하면 CHARGE012).
  */
-export function createPaymentCharge(
-  memberId: number,
-  orderGroupId: number,
-  productIds: number[],
-  totalPrice: number,
-  chargeAmount: number,
-  at: number,
-) {
+export function createPaymentCharge(memberId: number, orderGroupId: number, productIds: number[], plan: PaymentPlan, at: number) {
+  charges.forEach((c) => {
+    if (c.memberId !== memberId || c.status !== 'REQUESTED' || !c.payment) return;
+    if (c.payment.productIds.some((id) => productIds.includes(id))) c.superseded = true;
+  });
+  const direct = plan.pgAmount > 0;
+  const pgMethod: PgMethod = plan.payMethod === 'CARD' ? 'CARD' : 'TRANSFER';
   const payment: MockPayment = {
     orderGroupId,
     productIds,
-    totalPrice,
-    chargeAmount,
+    totalPrice: plan.totalPrice,
+    chargeAmount: plan.chargeAmount,
+    payMethod: plan.payMethod,
+    pointAmount: plan.pointAmount,
+    depositAmount: plan.depositAmount,
+    pgAmount: plan.pgAmount,
     status: 'CHARGING',
     requestedAt: ldt(at),
     paidAt: null,
   };
-  const charge = newCharge(memberId, chargeAmount, 'FOR_PAYMENT', at, payment);
+  const purpose: ChargePurpose = direct ? 'DIRECT_PAYMENT' : 'FOR_PAYMENT';
+  const charge = newCharge(memberId, plan.chargeAmount, purpose, pgMethod, at, payment);
   return {
     paymentId: orderGroupId,
-    totalPrice,
-    chargeAmount,
+    totalPrice: plan.totalPrice,
+    chargeAmount: plan.chargeAmount,
     pgOrderId: charge.pgOrderId,
-    orderName: PAYMENT_ORDER_NAME,
-    pgMethod: 'TRANSFER' as const,
-    payMethod: 'DEPOSIT' as const,
-    pointAmount: 0,
-    depositAmount: totalPrice,
-    pgAmount: 0,
+    orderName: ORDER_NAMES[purpose],
+    pgMethod,
+    payMethod: plan.payMethod,
+    pointAmount: plan.pointAmount,
+    depositAmount: plan.depositAmount,
+    pgAmount: plan.pgAmount,
   };
 }
 
@@ -282,12 +390,13 @@ function findChargeById(chargeId: number): MockCharge {
 }
 
 export function registerPaymentRoutes(): void {
-  /** 수동 충전 요청: pgOrderId 발급. 백엔드 검증은 양수뿐이고 1,000원 단위·상한은 프론트 ChargeDialog 가 맡는다 */
+  /** 수동 충전 요청: pgOrderId 발급. 금액이 최소·최대 충전 금액을 벗어나면 CHARGE010 (1,000원 단위는 프론트 ChargeDialog 만의 규칙) */
   route('POST', '/api/v1/payments/charges', (ctx) => {
     const me = requireMe(ctx);
     const amount = Number((ctx.body as { amount?: unknown } | null | undefined)?.amount);
     if (!Number.isInteger(amount) || amount <= 0) fail('CHARGE002');
-    const charge = newCharge(me.id, amount, 'MANUAL', now(), null);
+    if (amount < CHARGE_MIN_AMOUNT || amount > CHARGE_MAX_AMOUNT) fail('CHARGE010');
+    const charge = newCharge(me.id, amount, 'MANUAL', 'TRANSFER', now(), null);
     return ok(toChargeSummary(charge), 201);
   });
 
@@ -302,32 +411,45 @@ export function registerPaymentRoutes(): void {
     const at = now();
     addTransaction(charge.memberId, 'CHARGE', charge.amount, 'CHARGE', charge.chargeId, '예치금 충전 (토스페이먼츠)', at);
     charge.status = 'CHARGED';
-    charge.method = '카드';
+    charge.method = '계좌이체';
     charge.approvedAt = ldt(at);
     persist();
     return ok(toChargeSummary(charge));
   });
 
   /**
-   * 주문 결제 승인: 부족분 충전(CHARGE 입금) → 장바구니 결제(지갑 차감·주문·홀딩) 를 한 번에.
+   * 주문 결제 승인. 부족분 충전이면 충전(CHARGE 입금) → 장바구니 결제(포인트 · 예치금 차감, 주문, 홀딩)를 한 번에,
+   * 직접 결제면 예치금을 거치지 않고 포인트 차감 → 주문 · 홀딩만 한다.
    * 이미 PAID 인 결제를 다시 보내면 그대로 돌려준다 (멱등).
    */
   route('POST', '/api/v1/payments/confirm', (ctx) => {
     const { charge, amount } = findChargeForConfirm(ctx);
-    if (charge.purpose !== 'FOR_PAYMENT' || !charge.payment) fail('CHARGE008'); // 수동 충전 건을 주문 승인으로 보냄
+    if (charge.purpose === 'MANUAL' || !charge.payment) fail('CHARGE008'); // 수동 충전 건을 주문 승인으로 보냄
     const payment = charge.payment;
     const summary = () => ok(toPaymentSummary(requirePayment(ctx, String(payment.orderGroupId))));
     if (payment.status === 'PAID') return summary();
     if (charge.status !== 'REQUESTED') fail('CHARGE004');
     if (charge.amount !== amount) fail('CHARGE003');
+    if (charge.superseded) fail('CHARGE012'); // 수단 · 포인트를 바꿔 다시 결제 요청하기 전의 결제창
+
+    // 결제창에 있는 동안 포인트나 예치금이 줄었으면 승인 전에 막는다 (돈이 움직이지 않는다)
+    const direct = charge.purpose === 'DIRECT_PAYMENT';
+    const wallet = walletOf(charge.memberId);
+    if (wallet.pointBalance < payment.pointAmount) fail('WALLET204');
+    if (wallet.balance + (direct ? 0 : charge.amount) < payment.depositAmount) fail('WALLET201');
 
     const at = now();
-    addTransaction(charge.memberId, 'CHARGE', charge.amount, 'CHARGE', charge.chargeId, '주문 결제 부족분 충전 (토스페이먼츠)', at);
+    if (!direct) {
+      addTransaction(charge.memberId, 'CHARGE', charge.amount, 'CHARGE', charge.chargeId, '주문 결제 부족분 충전 (토스페이먼츠)', at);
+    }
     charge.status = 'CHARGED';
-    charge.method = '카드';
+    charge.method = PG_METHOD_LABELS[charge.pgMethod];
     charge.approvedAt = ldt(at);
     // 장바구니 상품이 그새 사라졌으면(기한 만료 등) payCartItems 가 CART00x 로 실패한다. 충전은 들어온 채 남는다 (실제 백엔드는 토스 취소로 보상)
-    payCartItems(charge.memberId, payment.productIds, at, false, payment.orderGroupId);
+    payCartItems(charge.memberId, payment.productIds, at, false, payment.orderGroupId, {
+      payMethod: payment.payMethod,
+      pointAmount: payment.pointAmount,
+    });
     charge.status = 'USED';
     charge.usedAt = ldt(at);
     payment.status = 'PAID';
@@ -360,21 +482,22 @@ export function registerPaymentRoutes(): void {
     const holding = order ? holdingOf(order.id) : undefined;
     if (!order || !holding) fail('WALLET301');
     if (order.winnerId !== me.id) fail('PAYMENT008');
+    const share = shareOf(holding);
+    const charge = findPayment(me.id, order.orderGroupId)?.charge ?? null;
     return ok({
       paymentId: order.orderGroupId,
       orderGroupId: order.orderGroupId,
       orderId: order.id,
-      payMethod: 'DEPOSIT',
-      pgMethod: null,
+      payMethod: share.payMethod,
+      pgMethod: approvedPgMethodOf(share.payMethod, share.pgAmount, true, charge),
       winningPrice: order.winningPrice,
       deliveryFee: order.deliveryFee,
       amount: holding.amount,
-      pointAmount: 0,
-      depositAmount: holding.amount,
-      pgAmount: 0,
+      pointAmount: share.pointAmount,
+      depositAmount: share.depositAmount,
+      pgAmount: share.pgAmount,
       expectedEarnPoint: expectedEarnPointOf(order),
-      // 목업에는 아직 포인트 적립이 없다
-      earnedPoint: 0,
+      earnedPoint: holding.earnedPoint ?? 0,
       status: holding.status,
       heldAt: order.createdAt,
       confirmedAt: order.confirmedAt,
@@ -427,31 +550,34 @@ export function registerPaymentRoutes(): void {
   });
 
   /**
-   * 결제 전 견적 (백엔드 PaymentQuoteDto). 저장하지 않는다.
-   * 목업은 예치금 결제만 계산한다: payMethod · pointUseAmount 는 무시하고, 부족분을 최소 충전 금액으로 올리지 않는다.
+   * 결제 전 견적 (백엔드 PaymentQuoteDto). 저장하지 않는다. 결제 요청과 같은 계산(planPayment)을 쓴다.
+   * 포인트 사용액이 결제 금액을 넘으면 PAYMENT010, 포인트 잔액보다 많으면 WALLET204. 한도 초과는 오류 대신 chargeLimitExceeded 로 알린다.
    */
   route('GET', '/api/v1/payments/quote', (ctx) => {
     const me = requireMe(ctx);
     const amount = Number(ctx.params.get('amount'));
-    if (!Number.isFinite(amount) || amount <= 0) fail('COMMON001');
-    const deliveryFee = Math.max(0, Number(ctx.params.get('deliveryFee')) || 0);
-    const balance = walletOf(me.id).balance;
-    const shortage = Math.max(0, amount - balance);
+    const deliveryFee = Number(ctx.params.get('deliveryFee') ?? 0);
+    if (!Number.isInteger(deliveryFee) || deliveryFee < 0 || (deliveryFee > 0 && deliveryFee >= amount)) fail('PAYMENT007');
+    const payMethod = parsePayMethod(ctx.params.get('payMethod'));
+    const plan = planPayment(me.id, amount, payMethod, Number(ctx.params.get('pointUseAmount') ?? 0));
+    const { balance, pointBalance } = walletOf(me.id);
+    const direct = plan.pgAmount > 0;
+    const chargeAmount = direct ? 0 : plan.chargeAmount;
     return ok({
       balance,
-      pointBalance: 0,
+      pointBalance,
       amount,
-      payMethod: 'DEPOSIT',
-      pointUseAmount: 0,
-      walletUseAmount: amount - shortage,
-      shortage,
-      needsCharge: shortage > 0,
-      chargeAmount: shortage,
-      balanceAfterPayment: balance + shortage - amount,
-      pgAmount: shortage,
-      pgMethod: shortage > 0 ? 'TRANSFER' : null,
-      chargeLimitExceeded: shortage > CHARGE_MAX_AMOUNT,
-      expectedEarnPoint: earnPointOf(amount - deliveryFee),
+      payMethod,
+      pointUseAmount: plan.pointAmount,
+      walletUseAmount: plan.depositAmount - plan.shortage,
+      shortage: plan.shortage,
+      needsCharge: plan.shortage > 0,
+      chargeAmount,
+      balanceAfterPayment: balance + chargeAmount - plan.depositAmount,
+      pgAmount: plan.chargeAmount,
+      pgMethod: plan.chargeAmount > 0 ? (payMethod === 'CARD' ? 'CARD' : 'TRANSFER') : null,
+      chargeLimitExceeded: plan.limitExceeded,
+      expectedEarnPoint: earnPointOf(cashAmountOf(plan), amount - deliveryFee, deliveryFee),
       earnRatePercent: POINT_EARN_RATE_PERCENT,
     });
   });

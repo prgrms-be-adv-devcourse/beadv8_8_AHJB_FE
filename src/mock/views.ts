@@ -130,13 +130,14 @@ export const toRefundProcessView = (refund: RefundRecord) => ({
 
 /**
  * 내 지갑 (백엔드 BalanceResponseDto 형태).
- * 목업은 주머니가 하나라 정산금도 balance 에 합쳐져 있고 settlementBalance 는 항상 0 이다. 포인트도 아직 없어 pointBalance 는 0 이다.
+ * 목업은 정산금 주머니가 따로 없어 정산금도 balance 에 합쳐져 있고 settlementBalance 는 항상 0 이다.
  * 보관 중 금액(heldTotal)은 /wallet/me/holdings 에서 준다.
  */
 export function toWalletView(memberId: number) {
+  const wallet = walletOf(memberId);
   return {
-    balance: walletOf(memberId).balance,
+    balance: wallet.balance,
     settlementBalance: 0,
-    pointBalance: 0,
+    pointBalance: wallet.pointBalance,
   };
 }

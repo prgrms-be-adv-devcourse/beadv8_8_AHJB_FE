@@ -2,7 +2,7 @@ import type { AuctionDuration, Category, Manufacturer, ShippingFeeType } from '@
 import type { FailureReason } from '@/types/auction'
 import type { Carrier, DeliveryCode } from '@/types/order'
 import type { LedgerEntry, TransactionType, WalletAccount, WithdrawalStatus } from '@/types/wallet'
-import type { ChargePurpose, ChargeStatus } from '@/types/payment'
+import type { ChargePurpose, ChargeStatus, PayMethod } from '@/types/payment'
 import type { AccountStatus, WarningReason } from '@/types/member'
 
 /** 카테고리 이름 */
@@ -155,7 +155,7 @@ export function describeLedgerEntry(entry: LedgerEntry): string {
     case 'CHARGE':
       return '토스페이먼츠 충전'
     case 'CHARGE_CANCEL':
-      return '충전 취소 (카드 환불)'
+      return '충전 취소 (계좌 환불)'
     case 'WITHDRAWAL':
       return '예치금 출금 (등록 계좌)'
     case 'HOLD_PAY':
@@ -191,6 +191,13 @@ export const CHARGE_STATUS_LABELS: Record<ChargeStatus, string> = {
   USED: '주문에 사용',
   CANCELED: '충전 취소',
   ABORTED: '결제 안 됨',
+}
+
+/** 주문 결제수단 (포인트로 내고 남은 금액을 내는 수단) */
+export const PAY_METHOD_LABELS: Record<PayMethod, string> = {
+  DEPOSIT: '예치금',
+  TRANSFER: '계좌이체',
+  CARD: '카드·간편결제',
 }
 
 /** 충전 목적 */

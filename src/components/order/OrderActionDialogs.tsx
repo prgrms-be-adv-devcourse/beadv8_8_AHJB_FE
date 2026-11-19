@@ -46,9 +46,9 @@ export function OrderActionDialogs({ kind, order, refundId, onClose }: OrderActi
         반품 방법은 거래 채팅으로 판매자와 정해 주세요.
         <br />
         <br />
-        <strong style={{ color: 'var(--text)' }}>환불금 {formatWon(total)}은 카드가 아니라 예치금으로 돌아와요.</strong> 돌아온
-        예치금은 바로 다음 결제에 쓸 수 있고, 카드로 돌려받고 싶으면 예치금 화면에서 출금하면 돼요. 환불로 돌아온 금액은 충전
-        취소 대상이 아니에요.
+        <strong style={{ color: 'var(--text)' }}>환불금 {formatWon(total)}은 결제한 수단 그대로 돌아와요.</strong> 포인트로 낸
+        금액은 포인트로, 예치금으로 낸 금액은 예치금으로 돌아오고, 계좌이체나 카드로 직접 결제한 금액은 그 결제가 취소돼요.
+        예치금으로 돌아온 금액은 충전 취소 대상이 아니에요.
       </ConfirmDialog>
       <ConfirmDialog
         open={kind === 'accept'}
@@ -58,7 +58,7 @@ export function OrderActionDialogs({ kind, order, refundId, onClose }: OrderActi
         onConfirm={() => refundId && actions.accept.mutate(refundId, { onSettled: onClose })}
         onClose={onClose}
       >
-        결제 금액이 구매자 예치금으로 돌아가고, 이 주문은 정산 대상에서 빠져요. 구매자에게는 환불 패널티가 남아요.
+        결제 금액이 구매자가 결제한 수단으로 돌아가고, 이 주문은 정산 대상에서 빠져요. 구매자에게는 환불 패널티가 남아요.
         되돌릴 수 없어요.
       </ConfirmDialog>
       <ConfirmDialog

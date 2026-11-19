@@ -15,7 +15,16 @@ export type OrderState =
 export type RefundStatus = 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
 export type SettlementStatus = 'PENDING' | 'COMPLETED';
 export type HoldingStatus = 'HELD' | 'CONFIRMED' | 'RELEASED' | 'REFUNDED';
-export type TransactionType = 'CHARGE' | 'CHARGE_CANCEL' | 'WITHDRAWAL' | 'HOLD_PAY' | 'REFUND_RECEIVE' | 'SETTLEMENT_RECEIVE';
+export type TransactionType =
+  | 'CHARGE'
+  | 'CHARGE_CANCEL'
+  | 'WITHDRAWAL'
+  | 'HOLD_PAY'
+  | 'REFUND_RECEIVE'
+  | 'SETTLEMENT_RECEIVE'
+  | 'POINT_EARN'
+  | 'POINT_HOLD_PAY'
+  | 'POINT_REFUND_RECEIVE';
 export type TransactionReferenceType = 'CHARGE' | 'ORDER' | 'REFUND' | 'SETTLEMENT';
 export type WarningReason = 'REFUND_PENALTY' | 'PAYMENT_DEFAULT';
 export type DeliveryCode =
@@ -181,13 +190,18 @@ export interface DeliveryRecord {
 export interface WalletRecord {
   memberId: number;
   balance: number;
+  /** 포인트 잔액. 구매 확정 때 적립되고 주문 결제에 쓰면 줄어든다 */
+  pointBalance: number;
 }
 
 export interface TransactionRecord {
   id: number;
   memberId: number;
+  /** 어느 주머니의 내역인지. 없으면 DEPOSIT(예치금) */
+  account?: 'POINT';
   type: TransactionType;
   amount: number;
+  /** 그 주머니의 거래 후 잔액 */
   balanceAfter: number;
   referenceType: TransactionReferenceType;
   referenceId: number | null;
@@ -195,11 +209,22 @@ export interface TransactionRecord {
   createdAt: string;
 }
 
+/** 주문 결제에서 포인트로 내고 남은 금액을 낸 결제수단 (백엔드 PayMethod) */
+export type PayMethod = 'DEPOSIT' | 'TRANSFER' | 'CARD';
+
 export interface HoldingRecord {
   orderId: number;
   winnerId: number;
   amount: number;
   status: HoldingStatus;
+  /** 결제수단. 없으면 DEPOSIT (시드 · 예전 레코드) */
+  payMethod?: PayMethod;
+  /** amount 중 포인트로 낸 금액. 없으면 0 */
+  pointAmount?: number;
+  /** amount 중 결제창에서 직접 결제한 금액. 없으면 0. 나머지(amount - pointAmount - pgAmount)가 예치금으로 낸 금액 */
+  pgAmount?: number;
+  /** 구매 확정으로 적립된 포인트. 확정 전이면 없음 */
+  earnedPoint?: number;
 }
 
 export interface RefundRecord {

@@ -14,7 +14,7 @@ import { Chip } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
-import { formatDateTime, formatWon } from '@/lib/format'
+import { formatDateTime, formatPoint, formatWon } from '@/lib/format'
 import {
   CHARGE_PURPOSE_LABELS,
   CHARGE_STATUS_LABELS,
@@ -23,20 +23,23 @@ import {
   WITHDRAWAL_STATUS_LABELS,
   describeLedgerEntry,
 } from '@/lib/labels'
+import { PAYMENT_STATUS_META, paymentParts, usePaymentPolicy } from '@/lib/payment'
 import type { Tone } from '@/lib/status'
 import type { ChargeStatus, ChargeSummary } from '@/types/payment'
-import type { Withdrawal, WithdrawalStatus } from '@/types/wallet'
+import type { LedgerEntry, Withdrawal, WithdrawalStatus } from '@/types/wallet'
 import styles from './MyPage.module.css'
 
 /** 내역 한 페이지 크기 */
 const PAGE_SIZE = 10
 
 /** 카드 아래 내역 탭. 기본은 충전 내역 */
-type HistoryTab = 'charges' | 'withdrawals' | 'ledger'
+type HistoryTab = 'charges' | 'payments' | 'withdrawals' | 'ledger' | 'points'
 const HISTORY_TABS: Array<{ id: HistoryTab; label: string }> = [
   { id: 'charges', label: '충전 내역' },
+  { id: 'payments', label: '결제 내역' },
   { id: 'withdrawals', label: '출금 내역' },
   { id: 'ledger', label: '예치금 내역' },
+  { id: 'points', label: '포인트 내역' },
 ]
 
 /** 출금 상태별 배지 색 */
@@ -55,7 +58,45 @@ const CHARGE_TONES: Record<ChargeStatus, Tone> = {
   ABORTED: 'ended',
 }
 
-/** /me/wallet 예치금 */
+/** 예치금 내역 탭에 보여 줄 원장 줄인지 (예치금 · 정산금 주머니의 사용자용 유형) */
+const isDepositLedgerRow = (tx: LedgerEntry) => tx.account !== 'POINT' && !HIDDEN_LEDGER_TYPES.has(tx.type)
+
+/** 원장 한 줄. 포인트 주머니의 금액은 P 로, 나머지는 원으로 보여 준다 */
+function LedgerRow({ tx }: { tx: LedgerEntry }) {
+  const format = tx.account === 'POINT' ? formatPoint : formatWon
+  return (
+    <div className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+      <div className={styles.rowBody}>
+        <div className={styles.rowTop}>
+          <Badge tone={tx.amount > 0 ? 'live' : 'neutral'}>
+            {tx.account === 'POINT' ? (tx.amount > 0 ? '적립' : '사용') : tx.amount > 0 ? '입금' : '출금'}
+          </Badge>
+          <span className={`${styles.rowMeta} num`}>{formatDateTime(tx.createdAt)}</span>
+        </div>
+        <p className={styles.rowTitle}>
+          {describeLedgerEntry(tx)}
+          {tx.referenceType === 'ORDER' && tx.referenceId != null ? (
+            <>
+              {' · '}
+              <Link to={`/orders/${tx.referenceId}`}>주문 #{tx.referenceId}</Link>
+            </>
+          ) : null}
+        </p>
+      </div>
+      <div className={styles.rowSide}>
+        <span className={`${styles.amount} num ${tx.amount > 0 ? styles.plus : ''}`}>
+          {tx.amount > 0 ? '+' : '−'}
+          {format(Math.abs(tx.amount))}
+        </span>
+        <span className={`${styles.rowMeta} num`}>
+          {tx.account === 'DEPOSIT' ? '잔액' : `${WALLET_ACCOUNT_LABELS[tx.account]} 잔액`} {format(tx.balanceAfter)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/** /me/wallet 예치금 · 포인트 */
 export function MyWalletPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -67,6 +108,9 @@ export function MyWalletPage() {
   const [page, setPage] = useState(0)
   const [withdrawalPage, setWithdrawalPage] = useState(0)
   const [ledgerPage, setLedgerPage] = useState(0)
+  const [pointPage, setPointPage] = useState(0)
+  const [paymentPage, setPaymentPage] = useState(0)
+  const policy = usePaymentPolicy()
   const [cancelTarget, setCancelTarget] = useState<ChargeSummary | null>(null)
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
   // 판매자: 받을 예정 금액(정산 전 홀딩 합계). 합계만 필요해서 1건만 받는다
@@ -81,12 +125,26 @@ export function MyWalletPage() {
     placeholderData: keepPreviousData,
     enabled: tab === 'withdrawals',
   })
-  // 예치금 내역: 원장을 은행 입출금 내역처럼. 수수료·시스템 지갑 전용 유형은 화면에서 숨긴다
+  // 예치금 내역: 원장을 은행 입출금 내역처럼. 수수료·시스템 지갑 전용 유형과 포인트 줄(포인트 내역 탭에 있다)은 화면에서 숨긴다
   const ledgerQuery = useQuery({
     queryKey: ['wallet', 'ledger', ledgerPage],
     queryFn: () => walletApi.ledger({ page: ledgerPage, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
     enabled: tab === 'ledger',
+  })
+  // 포인트 내역: 원장에서 포인트 주머니만
+  const pointLedgerQuery = useQuery({
+    queryKey: ['wallet', 'ledger', 'POINT', pointPage],
+    queryFn: () => walletApi.ledger({ account: 'POINT', page: pointPage, size: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    enabled: tab === 'points',
+  })
+  // 결제 내역: 주문 묶음 단위. 무엇으로 얼마씩 냈는지. 닫힌 결제는 아래 visiblePayments 에서 걸러 낸다
+  const paymentsQuery = useQuery({
+    queryKey: ['wallet', 'payments', paymentPage],
+    queryFn: () => paymentApi.list({ page: paymentPage, size: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+    enabled: tab === 'payments',
   })
   const chargesQuery = useQuery({
     queryKey: ['wallet', 'charges', page],
@@ -96,6 +154,8 @@ export function MyWalletPage() {
   const balance = walletQuery.data?.balance ?? 0
   // 결제창만 열고 나온 건(REQUESTED)은 사용자에겐 "충전"이 아니므로 숨긴다. 백엔드 스케줄러가 알아서 정리한다
   const visibleCharges = chargesQuery.data?.content.filter((c) => c.status !== 'REQUESTED') ?? []
+  // 결제창을 닫거나 결제 기한이 지나 닫힌 결제(FAILED)는 돈이 움직이지 않은 건이라 숨긴다. 결제창을 닫을 때마다 하나씩 생긴다
+  const visiblePayments = paymentsQuery.data?.content.filter((p) => p.status !== 'FAILED') ?? []
   /** 출금하면 이전 충전을 취소할 수 없게 되므로, 지금 취소할 수 있는 충전 건 수를 모달에서 알려 준다 */
   const cancelableCount = chargesQuery.data?.content.filter((c) => c.cancelable && balance >= c.amount).length ?? 0
 
@@ -118,7 +178,7 @@ export function MyWalletPage() {
   const cancel = useMutation<ChargeSummary, ApiError, number>({
     mutationFn: (chargeId) => paymentApi.cancelCharge(chargeId),
     onSuccess: (charge) => {
-      toast(`${formatWon(charge.amount)} 충전을 취소했어요. 결제하신 카드로 환불돼요.`, { tone: 'success' })
+      toast(`${formatWon(charge.amount)} 충전을 취소했어요. 결제하신 계좌로 환불돼요.`, { tone: 'success' })
       setCancelTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
     },
@@ -145,6 +205,8 @@ export function MyWalletPage() {
           'payment.chargeConfirm',
           'payment.charges',
           'payment.chargeCancel',
+          'payment.list',
+          'payment.policy',
         ]}
       />
 
@@ -174,6 +236,16 @@ export function MyWalletPage() {
               출금
             </Button>
           </div>
+        </div>
+        <div className={styles.sumCard}>
+          <span className={styles.sumLabel}>포인트</span>
+          <span className={`${styles.sumValue} num`}>
+            {walletQuery.data ? formatPoint(walletQuery.data.pointBalance) : '–'}
+          </span>
+          <span className={styles.sumSub}>
+            구매확정하면 예치금 · 계좌이체 결제액의 {policy ? `${policy.pointEarnRatePercent}%` : '일부'}가 적립돼요 (배송비
+            제외)
+          </span>
         </div>
         {isSeller ? (
           <div className={styles.sumCard}>
@@ -262,6 +334,51 @@ export function MyWalletPage() {
             onChange={setPage}
           />
         </>
+      ) : tab === 'payments' ? (
+        <>
+          {paymentsQuery.isLoading ? (
+            <Spinner block />
+          ) : paymentsQuery.isError ? (
+            <ErrorState message={paymentsQuery.error.message} onRetry={() => void paymentsQuery.refetch()} />
+          ) : visiblePayments.length ? (
+            <div className={styles.list}>
+              {visiblePayments.map((payment) => (
+                <div key={payment.paymentId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+                  <div className={styles.rowBody}>
+                    <div className={styles.rowTop}>
+                      <Badge tone={PAYMENT_STATUS_META[payment.status].tone}>
+                        {PAYMENT_STATUS_META[payment.status].label}
+                      </Badge>
+                      <span className={`${styles.rowMeta} num`}>
+                        {formatDateTime(payment.paidAt ?? payment.requestedAt)}
+                      </span>
+                    </div>
+                    <p className={styles.rowTitle}>
+                      <Link to={`/cart/payment/complete?paymentId=${payment.paymentId}`}>
+                        주문 {payment.orderCount}건 결제
+                      </Link>
+                    </p>
+                    <p className={`${styles.rowMeta} num`}>
+                      {paymentParts({ ...payment, depositAmount: payment.walletUsedAmount })
+                        .map((part) => `${part.label} ${part.text}`)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                  <div className={styles.rowSide}>
+                    <span className={`${styles.amount} num`}>{formatWon(payment.totalPrice)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState icon="receipt" title="아직 결제 내역이 없어요" description="낙찰받은 상품을 결제하면 여기부터 기록돼요." />
+          )}
+          <Pagination
+            page={paymentPage}
+            totalPages={Math.ceil((paymentsQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+            onChange={setPaymentPage}
+          />
+        </>
       ) : tab === 'withdrawals' ? (
         <>
           {withdrawalsQuery.isLoading ? (
@@ -295,53 +412,54 @@ export function MyWalletPage() {
             onChange={setWithdrawalPage}
           />
         </>
-      ) : (
+      ) : tab === 'ledger' ? (
         <>
           {ledgerQuery.isLoading ? (
             <Spinner block />
           ) : ledgerQuery.isError ? (
             <ErrorState message={ledgerQuery.error.message} onRetry={() => void ledgerQuery.refetch()} />
-          ) : ledgerQuery.data?.content.some((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type)) ? (
+          ) : ledgerQuery.data?.content.some(isDepositLedgerRow) ? (
             <div className={styles.list}>
               {ledgerQuery.data.content
-                .filter((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type))
+                .filter(isDepositLedgerRow)
                 .map((tx) => (
-                  <div key={tx.id} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
-                    <div className={styles.rowBody}>
-                      <div className={styles.rowTop}>
-                        <Badge tone={tx.amount > 0 ? 'live' : 'neutral'}>{tx.amount > 0 ? '입금' : '출금'}</Badge>
-                        <span className={`${styles.rowMeta} num`}>{formatDateTime(tx.createdAt)}</span>
-                      </div>
-                      <p className={styles.rowTitle}>
-                        {describeLedgerEntry(tx)}
-                        {tx.referenceType === 'ORDER' && tx.referenceId != null ? (
-                          <>
-                            {' · '}
-                            <Link to={`/orders/${tx.referenceId}`}>주문 #{tx.referenceId}</Link>
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                    <div className={styles.rowSide}>
-                      <span className={`${styles.amount} num ${tx.amount > 0 ? styles.plus : ''}`}>
-                        {tx.amount > 0 ? '+' : '−'}
-                        {formatWon(Math.abs(tx.amount))}
-                      </span>
-                      <span className={`${styles.rowMeta} num`}>
-                        {tx.account === 'DEPOSIT' ? '잔액' : `${WALLET_ACCOUNT_LABELS[tx.account]} 잔액`}{' '}
-                        {formatWon(tx.balanceAfter)}
-                      </span>
-                    </div>
-                  </div>
+                  <LedgerRow key={tx.id} tx={tx} />
                 ))}
             </div>
-      ) : (
+          ) : (
             <EmptyState icon="wallet" title="아직 예치금 내역이 없어요" description="충전·결제·환불이 생기면 여기부터 기록돼요." />
           )}
           <Pagination
             page={ledgerPage}
             totalPages={Math.ceil((ledgerQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
             onChange={setLedgerPage}
+          />
+        </>
+      ) : (
+        <>
+          {pointLedgerQuery.isLoading ? (
+            <Spinner block />
+          ) : pointLedgerQuery.isError ? (
+            <ErrorState message={pointLedgerQuery.error.message} onRetry={() => void pointLedgerQuery.refetch()} />
+          ) : pointLedgerQuery.data?.content.some((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type)) ? (
+            <div className={styles.list}>
+              {pointLedgerQuery.data.content
+                .filter((tx) => !HIDDEN_LEDGER_TYPES.has(tx.type))
+                .map((tx) => (
+                  <LedgerRow key={tx.id} tx={tx} />
+                ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon="sparkle"
+              title="아직 포인트 내역이 없어요"
+              description="구매확정으로 포인트가 적립되거나 결제에 쓰면 여기부터 기록돼요."
+            />
+          )}
+          <Pagination
+            page={pointPage}
+            totalPages={Math.ceil((pointLedgerQuery.data?.totalElements ?? 0) / PAGE_SIZE)}
+            onChange={setPointPage}
           />
         </>
       )}
@@ -359,7 +477,7 @@ export function MyWalletPage() {
           <>
             <br />
             <strong>취소할 수 있는 충전 {cancelableCount}건이 있어요.</strong> 출금하면 이전 충전은 더 이상 취소할 수 없으니,
-            카드 환불을 원하시면 먼저 충전 취소를 해 주세요.
+            결제하신 계좌로 환불받으려면 먼저 충전 취소를 해 주세요.
           </>
         ) : null}
       </ConfirmDialog>
@@ -372,7 +490,7 @@ export function MyWalletPage() {
         onConfirm={() => cancelTarget && cancel.mutate(cancelTarget.chargeId)}
         onClose={() => setCancelTarget(null)}
       >
-        예치금에서 {cancelTarget ? formatWon(cancelTarget.amount) : ''}이 빠지고, 결제하신 카드로 환불돼요.
+        예치금에서 {cancelTarget ? formatWon(cancelTarget.amount) : ''}이 빠지고, 결제하신 계좌로 환불돼요.
         <br />
         취소 후 잔액 {cancelTarget ? formatWon(balance - cancelTarget.amount) : ''}
       </ConfirmDialog>

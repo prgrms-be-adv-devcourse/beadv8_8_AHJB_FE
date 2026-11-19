@@ -39,7 +39,7 @@ export function OrderRefundCard({ refund, order, role }: OrderRefundCardProps) {
         <dd className="num">{refund.processedAt ? formatDateTime(refund.processedAt) : '판매자 확인 전'}</dd>
       </dl>
         <p className={styles.muted}>
-            환불 금액은 결제한 전액(낙찰가 + 배송비 {formatWon(order.deliveryFee)})이에요. 판매자가 수락하면 지갑으로 돌아와요.
+            환불 금액은 결제한 전액(낙찰가 + 배송비 {formatWon(order.deliveryFee)})이에요. 판매자가 수락하면 결제한 수단 그대로 돌아와요.
             {refund.status === 'COMPLETED' && role === 'buyer' ? ' 환불이 완료돼 환불 패널티(경고 1회)가 남았어요.' : ''}
         </p>
     </section>
