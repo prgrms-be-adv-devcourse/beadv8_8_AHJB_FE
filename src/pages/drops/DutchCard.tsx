@@ -6,13 +6,12 @@ import { productPath } from '@/components/ProductCard'
 import cardStyles from '@/components/ProductCard.module.css'
 import { useNow } from '@/lib/clock'
 import { formatWon } from '@/lib/format'
-import type { ProductSummary } from '@/lib/productSummaries'
 import type { DutchAuctionSummary } from '@/types/auction'
 import { dropPercent, dutchStatusBadge, formatShortCountdown } from './dutch'
 import styles from './Drops.module.css'
 
 /** 하향식 경매 카드 */
-export function DutchCard({ item, product }: { item: DutchAuctionSummary; product: ProductSummary | undefined }) {
+export function DutchCard({ item }: { item: DutchAuctionSummary }) {
   const now = useNow()
   const badge = dutchStatusBadge(item)
   const live = item.status === 'IN_PROGRESS'
@@ -23,7 +22,7 @@ export function DutchCard({ item, product }: { item: DutchAuctionSummary; produc
     <article className={`${cardStyles.card} ${live ? '' : cardStyles.ended}`}>
       <Link to={productPath(item.productId)} className={cardStyles.link}>
         <div className={cardStyles.media}>
-          <Img src={product?.thumbnailUrl} alt={product?.productName ?? ''} className={cardStyles.image} />
+          <Img src={item.thumbnailUrl} alt={item.productName ?? ''} className={cardStyles.image} />
           {live && item.nextDropAt ? (
             <span className={`${cardStyles.timer} num`}>
               <Icon name="clock" size={12} />
@@ -36,7 +35,7 @@ export function DutchCard({ item, product }: { item: DutchAuctionSummary; produc
             <Badge tone={badge.tone}>{badge.label}</Badge>
             {percent > 0 ? <Badge variant="outline">-{percent}%</Badge> : null}
           </div>
-          <h3 className={cardStyles.title}>{product?.productName ?? '상품 정보 불러오는 중'}</h3>
+          <h3 className={cardStyles.title}>{item.productName ?? '상품 정보 없음'}</h3>
           <p className={`${cardStyles.meta} num`}>시작가 {formatWon(item.startPrice)}</p>
           <div className={cardStyles.priceRow}>
             <span className={cardStyles.priceLabel}>{live ? '지금 가격' : item.status === 'FAILED' ? '' : '판매가'}</span>

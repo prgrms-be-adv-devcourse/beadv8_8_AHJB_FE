@@ -16,6 +16,7 @@ import { OrderActionDialogs, type OrderActionKind } from '@/components/order/Ord
 import { SendProductDialog } from '@/components/order/SendProductDialog'
 import { useNow } from '@/lib/clock'
 import { formatCountdown, formatDateTime } from '@/lib/format'
+import { useWithProductSummaries } from '@/lib/productSummaries'
 import { ORDER_STATE_META, ORDER_STEPS, orderStepIndex } from '@/lib/status'
 import productStyles from '@/pages/product/ProductDetailPage.module.css'
 import type { OrderState } from '@/types/order'
@@ -45,7 +46,7 @@ export function OrderDetailPage() {
     queryFn: () => orderApi.detail(orderId),
     refetchInterval: 6000,
   })
-  const order = orderQuery.data
+  const [order] = useWithProductSummaries(orderQuery.data ? [orderQuery.data] : [])
   const hasDelivery = !!order && !NO_DELIVERY_STATES.includes(order.state)
 
   const deliveryQuery = useQuery({
@@ -146,7 +147,7 @@ export function OrderDetailPage() {
                   : ''}
               </span>
             </div>
-            <DevApiNote ids={['order.detail', 'product.list']} />
+            <DevApiNote ids={['order.detail', 'product.detail']} />
 
             {role === 'buyer' && order.state === 'SHIPPED' ? (
               <div className={styles.actions}>

@@ -142,6 +142,10 @@ export interface DutchAuctionListParams extends PageParams {
 export interface DutchAuctionSummary {
   auctionId: number
   productId: number
+  /** 상품을 못 찾으면 null */
+  productName: string | null
+  /** 대표 이미지가 없으면 null */
+  thumbnailUrl: string | null
   status: AuctionStatus
   startPrice: number
   /** 진행 중: 지금 가격 / 판매됨: 낙찰가 / 유찰: null */

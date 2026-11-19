@@ -130,7 +130,8 @@ export function registerDutchRoutes(): void {
       .sort((a, b) => b.startAt - a.startAt)
       .map((r) => {
         const { nextPrice: _nextPrice, ...item } = infoOf(r, at);
-        return item;
+        const product = db.products.find((p) => p.id === r.productId);
+        return { ...item, productName: product?.name ?? null, thumbnailUrl: product?.imageUrls[0] ?? null };
       });
     return ok({ ...paginate(items, page, size), serverTime: ldt(at) });
   });

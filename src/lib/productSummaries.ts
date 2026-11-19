@@ -10,8 +10,8 @@ export interface ProductSummary {
 }
 
 /**
- * 상품 id 들의 이름·사진을 모아 온다 (경매·추천 목록 응답에는 상품명·사진이 없다).
- * 지금은 상품 상세를 id 마다 부른다. 상품 목록 API(registry product.list, 미구현)가 생기면 이 훅 안만 바꾼다.
+ * 상품 id 들의 이름·사진을 모아 온다 (추천·장바구니·주문 응답에는 상품명·사진이 없다).
+ * 지금은 상품 상세를 id 마다 부른다. 여러 상품을 한 번에 조회하는 API가 생기면 이 훅 안만 바꾼다.
  * 상세 화면과 같은 queryKey 라 캐시를 같이 쓴다.
  */
 export function useProductSummaries(productIds: number[]): Map<number, ProductSummary> {
@@ -35,4 +35,23 @@ export function useProductSummaries(productIds: number[]): Map<number, ProductSu
     }
   })
   return map
+}
+
+interface WithProduct {
+  productId: number
+  productName?: string | null
+  thumbnailUrl?: string | null
+}
+
+/**
+ * 상품명이 비어 있는 항목(장바구니·주문 응답)에 상품명·사진을 채운다.
+ * 응답에 이미 상품명이 있는 항목은 그대로 두고 조회하지 않는다. 상품을 못 찾으면 비어 있는 채로 둔다.
+ */
+export function useWithProductSummaries<T extends WithProduct>(items: T[]): T[] {
+  const products = useProductSummaries(items.filter((item) => !item.productName).map((item) => item.productId))
+  return items.map((item) => {
+    const product = item.productName ? undefined : products.get(item.productId)
+    if (!product) return item
+    return { ...item, productName: product.productName, thumbnailUrl: item.thumbnailUrl ?? product.thumbnailUrl }
+  })
 }

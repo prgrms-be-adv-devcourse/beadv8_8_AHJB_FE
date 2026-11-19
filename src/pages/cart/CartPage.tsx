@@ -18,6 +18,7 @@ import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { useNow } from '@/lib/clock'
 import { formatCountdown, formatDateTime, formatRelativeTime, formatWon } from '@/lib/format'
+import { useWithProductSummaries } from '@/lib/productSummaries'
 import {
   ORDER_PAYMENT_FAIL_PATH,
   ORDER_PAYMENT_SUCCESS_PATH,
@@ -48,7 +49,7 @@ export function CartPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [chargeOpen, setChargeOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
-  const items = cartQuery.data ?? []
+  const items = useWithProductSummaries(cartQuery.data ?? [])
 
   // 처음 불러왔을 때 전부 선택
   useEffect(() => {
@@ -159,7 +160,7 @@ export function CartPage() {
         <p className={styles.sub}>
           낙찰받은 상품이 담겨요. 낙찰 후 24시간 안에 결제하지 않으면 낙찰이 무효되고 경고(결제 미이행)를 받아요.
         </p>
-        <DevApiNote ids={['cart.list', 'product.list', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
+        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
       </div>
 
       {cartQuery.isLoading ? (

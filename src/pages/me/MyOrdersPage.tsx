@@ -8,6 +8,7 @@ import { Chip } from '@/components/form/Field'
 import { OrderCard } from '@/components/order/OrderCard'
 import { ORDER_FILTERS, type OrderFilterId } from '@/components/order/constants'
 import { Spinner } from '@/components/Spinner'
+import { useWithProductSummaries } from '@/lib/productSummaries'
 import styles from './MyPage.module.css'
 
 type OrderFilter = (typeof ORDER_FILTERS)[number]
@@ -21,10 +22,11 @@ export function MyOrdersPage() {
     refetchInterval: 10000,
   })
 
+  const allOrders = useWithProductSummaries(ordersQuery.data ?? [])
   const states = ORDER_FILTERS.find((filter) => filter.id === filterId)!.states
-  const visibleOrders = (ordersQuery.data ?? []).filter((order) => !states || states.includes(order.state))
+  const visibleOrders = allOrders.filter((order) => !states || states.includes(order.state))
   const countOf = (filter: OrderFilter) =>
-    (ordersQuery.data ?? []).filter((order) => !filter.states || filter.states.includes(order.state)).length
+    allOrders.filter((order) => !filter.states || filter.states.includes(order.state)).length
 
   return (
     <>
@@ -34,7 +36,7 @@ export function MyOrdersPage() {
           장바구니
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.winner', 'product.list']} />
+      <DevApiNote ids={['order.winner', 'product.detail']} />
       <div className={styles.tabs}>
         {ORDER_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>
