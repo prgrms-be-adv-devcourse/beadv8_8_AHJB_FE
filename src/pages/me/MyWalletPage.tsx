@@ -328,7 +328,7 @@ export function MyWalletPage() {
                         {formatWon(Math.abs(tx.amount))}
                       </span>
                       <span className={`${styles.rowMeta} num`}>
-                        {tx.account === 'SETTLEMENT' ? `${WALLET_ACCOUNT_LABELS.SETTLEMENT} 잔액` : '잔액'}{' '}
+                        {tx.account === 'DEPOSIT' ? '잔액' : `${WALLET_ACCOUNT_LABELS[tx.account]} 잔액`}{' '}
                         {formatWon(tx.balanceAfter)}
                       </span>
                     </div>

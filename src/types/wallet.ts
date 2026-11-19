@@ -7,12 +7,17 @@
  * - GET /api/v1/wallet/me/withdrawals  → PageResponse<Withdrawal>
  */
 
-/** 지갑 안의 잔액 구분. DEPOSIT = 예치금(결제에 쓰는 돈), SETTLEMENT = 정산금(판매 대금, 예치금과 분리 보관) */
-export type WalletAccount = 'DEPOSIT' | 'SETTLEMENT'
+/**
+ * 지갑 안의 잔액 구분.
+ * DEPOSIT = 예치금(결제에 쓰는 돈), SETTLEMENT = 정산금(판매 대금, 예치금과 분리 보관),
+ * POINT = 포인트(결제에 쓸 수 있으나 출금할 수 없음, 1포인트 = 1원)
+ */
+export type WalletAccount = 'DEPOSIT' | 'SETTLEMENT' | 'POINT'
 
 /**
  * 원장 거래 유형 (백엔드 WalletTransactionType 전체).
- * 사용자 지갑에 실제로 찍히는 건 CHARGE, CHARGE_CANCEL, WITHDRAWAL, HOLD_PAY, SETTLEMENT_RECEIVE, REFUND_RECEIVE, REVERSAL 이고
+ * 사용자 지갑에 실제로 찍히는 건 CHARGE, CHARGE_CANCEL, WITHDRAWAL, HOLD_PAY, SETTLEMENT_RECEIVE, REFUND_RECEIVE,
+ * POINT_EARN, POINT_HOLD_PAY, POINT_REFUND_RECEIVE, REVERSAL 이고
  * 나머지는 시스템 지갑(ESCROW·FEE) 전용이라 화면에는 나오지 않는다.
  */
 export type TransactionType =
@@ -27,15 +32,23 @@ export type TransactionType =
   | 'FEE_RECEIVE'
   | 'REFUND_PAY'
   | 'REFUND_RECEIVE'
+  | 'POINT_EARN'
+  | 'POINT_HOLD_PAY'
+  | 'POINT_HOLD_RECEIVE'
+  | 'POINT_REFUND_PAY'
+  | 'POINT_REFUND_RECEIVE'
+  | 'PG_HOLD_RECEIVE'
+  | 'PG_REFUND_PAY'
   | 'REVERSAL'
 
 /** 원장 기록의 원인. PAYMENT = 충전 건(Charge) id, ORDER = 주문 id, WITHDRAWAL = 출금 건 id */
 export type TransactionReferenceType = 'PAYMENT' | 'ORDER' | 'WITHDRAWAL'
 
-/** GET /api/v1/wallet/me. balance = 예치금, settlementBalance = 정산금 */
+/** GET /api/v1/wallet/me. balance = 예치금, settlementBalance = 정산금, pointBalance = 포인트 */
 export interface Wallet {
   balance: number
   settlementBalance: number
+  pointBalance: number
 }
 
 /** 원장 한 줄 (백엔드 LedgerEntryDto) */
@@ -59,6 +72,7 @@ export interface LedgerEntry {
 export interface LedgerPage {
   balance: number
   settlementBalance: number
+  pointBalance: number
   content: LedgerEntry[]
   page: number
   size: number
@@ -93,6 +107,15 @@ export interface Holding {
   deliveryFee: number
   /** 묶인 금액 = winningPrice + deliveryFee */
   amount: number
+  /**
+   * 이 주문 대금을 포인트 · 예치금 · 직접 결제로 각각 얼마씩 냈는지 (합 == amount). 환불하면 이 구성 그대로 돌아간다.
+   * 구매자에게만 내려주고 판매자가 볼 때(role=SELLER)는 0 이다
+   */
+  pointAmount: number
+  depositAmount: number
+  pgAmount: number
+  /** 구매 확정으로 구매자에게 적립된 포인트. 확정 전이거나 적립 대상 금액이 없으면 0. 판매자가 볼 때는 0 */
+  earnedPoint: number
   feeAmount: number
   /** 판매자 실지급액 = amount − feeAmount */
   settlementAmount: number

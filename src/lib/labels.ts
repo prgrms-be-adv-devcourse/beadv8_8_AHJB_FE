@@ -116,6 +116,13 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   FEE_RECEIVE: '수수료 입금',
   REFUND_PAY: '환불 지급',
   REFUND_RECEIVE: '환불 입금',
+  POINT_EARN: '포인트 적립',
+  POINT_HOLD_PAY: '포인트 사용',
+  POINT_HOLD_RECEIVE: '포인트 결제 보관',
+  POINT_REFUND_PAY: '포인트 환불 지급',
+  POINT_REFUND_RECEIVE: '포인트 환불',
+  PG_HOLD_RECEIVE: '직접 결제 보관',
+  PG_REFUND_PAY: '직접 결제 환불 지급',
   REVERSAL: '정정',
 }
 
@@ -123,6 +130,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
 export const WALLET_ACCOUNT_LABELS: Record<WalletAccount, string> = {
   DEPOSIT: '예치금',
   SETTLEMENT: '정산금',
+  POINT: '포인트',
 }
 
 /** 사용자 지갑 내역에서 숨기는 원장 유형 (수수료·시스템 지갑 전용) */
@@ -132,6 +140,10 @@ export const HIDDEN_LEDGER_TYPES: ReadonlySet<TransactionType> = new Set<Transac
   'HOLD_RECEIVE',
   'SETTLEMENT_PAY',
   'REFUND_PAY',
+  'POINT_HOLD_RECEIVE',
+  'POINT_REFUND_PAY',
+  'PG_HOLD_RECEIVE',
+  'PG_REFUND_PAY',
 ])
 
 /**
@@ -152,6 +164,12 @@ export function describeLedgerEntry(entry: LedgerEntry): string {
       return '판매 대금 정산 입금'
     case 'REFUND_RECEIVE':
       return '주문 환불 입금'
+    case 'POINT_EARN':
+      return '구매 확정 포인트 적립'
+    case 'POINT_HOLD_PAY':
+      return '주문 결제 포인트 사용'
+    case 'POINT_REFUND_RECEIVE':
+      return '주문 환불 포인트 반환'
     case 'REVERSAL':
       return '기록 정정'
     default:
@@ -179,6 +197,7 @@ export const CHARGE_STATUS_LABELS: Record<ChargeStatus, string> = {
 export const CHARGE_PURPOSE_LABELS: Record<ChargePurpose, string> = {
   MANUAL: '예치금 충전',
   FOR_PAYMENT: '주문 결제 부족분',
+  DIRECT_PAYMENT: '주문 직접 결제',
 }
 
 /** 경고 사유 */

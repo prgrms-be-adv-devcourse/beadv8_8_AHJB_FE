@@ -287,9 +287,10 @@ export const apiRegistry = {
   'cart.pay': {
     method: 'POST',
     path: '/api/v1/cart/payment',
-    title: '선택 상품 결제(예치금)',
+    title: '선택 상품 결제 요청',
     owner: '신종혁',
     status: 'done',
+    note: '{ productIds, paymentMethod(DEPOSIT|TRANSFER|CARD, 생략 시 DEPOSIT), pointUseAmount }. 결제창이 필요하면 isPaid:false + data(pgOrderId, chargeAmount, pgMethod)',
   },
   'order.winner': {
     method: 'GET',
@@ -358,7 +359,7 @@ export const apiRegistry = {
     title: '내 잔액',
     owner: '김지유',
     status: 'done',
-    note: '응답 { balance(예치금), settlementBalance(정산금) }. 프론트 타입 Wallet 과 다름 → 연동 시 타입 수정',
+    note: '응답 { balance(예치금), settlementBalance(정산금), pointBalance(포인트) }',
   },
   'wallet.ledger': {
     method: 'GET',
@@ -366,7 +367,7 @@ export const apiRegistry = {
     title: '내 원장(입출금 내역)',
     owner: '김지유',
     status: 'done',
-    note: 'account(DEPOSIT|SETTLEMENT), type, page, size(최대 50)',
+    note: 'account(DEPOSIT|SETTLEMENT|POINT), type, page, size(최대 50)',
   },
   'wallet.holdings': {
     method: 'GET',
@@ -374,7 +375,7 @@ export const apiRegistry = {
     title: '내 홀딩(묶인 돈 / 정산 예정)',
     owner: '김지유',
     status: 'done',
-    note: 'role(BUYER|SELLER), status(HELD|CONFIRMED|RELEASED|REFUNDED). heldTotal 이 에스크로 보관 금액',
+    note: 'role(BUYER|SELLER), status(HELD|CONFIRMED|RELEASED|REFUNDED). heldTotal 이 에스크로 보관 금액. 구매자에게는 주문별 결제 구성·적립 포인트 포함',
   },
   'wallet.withdraw': {
     method: 'POST',
@@ -397,7 +398,7 @@ export const apiRegistry = {
     title: '충전 요청(결제창 열기 전)',
     owner: '김지유',
     status: 'done',
-    note: '{ amount } → 201 ChargeSummary. pgOrderId/amount/orderName 을 토스 SDK 에 넘긴다',
+    note: '{ amount } → 201 ChargeSummary. pgOrderId/amount/orderName/pgMethod 를 토스 SDK 에 넘긴다. 계좌이체(TRANSFER)만 가능, 금액 범위 밖이면 CHARGE010',
   },
   'payment.chargeConfirm': {
     method: 'POST',
@@ -405,7 +406,7 @@ export const apiRegistry = {
     title: '충전 승인(successUrl 복귀 후)',
     owner: '김지유',
     status: 'done',
-    note: '{ pgOrderId, paymentKey, amount }. 멱등',
+    note: '{ pgOrderId, paymentKey, amount }. 멱등. 계좌이체가 아닌 수단이면 자동 취소(CHARGE009)',
   },
   'payment.chargeCancel': {
     method: 'POST',
@@ -437,7 +438,7 @@ export const apiRegistry = {
     title: '내 결제 내역(주문 묶음 단위)',
     owner: '김지유',
     status: 'done',
-    note: 'walletUsedAmount(예치금) + chargeAmount(카드 부족분). page, size(최대 50)',
+    note: 'pointAmount(포인트) + walletUsedAmount(예치금) + pgAmount(직접 결제) = totalPrice. page, size(최대 50)',
   },
   'payment.detail': {
     method: 'GET',
@@ -445,15 +446,39 @@ export const apiRegistry = {
     title: '내 결제 상세',
     owner: '김지유',
     status: 'done',
-    note: '주문별 금액 · 환불 여부 · 연결된 충전 건',
+    note: '금액 구성 · 주문별 금액 · 환불 여부 · 연결된 토스 결제 건 · expectedEarnPoint',
+  },
+  'payment.byOrderGroup': {
+    method: 'GET',
+    path: '/api/v1/payments/me/order-groups/{orderGroupId}',
+    title: '주문 그룹으로 내 결제 상세',
+    owner: '김지유',
+    status: 'done',
+    note: '응답은 결제 상세와 같음. 결제창 없이 끝난 결제는 paymentId 가 없어 결제 완료 화면에서 사용',
+  },
+  'payment.orderPayment': {
+    method: 'GET',
+    path: '/api/v1/payments/me/orders/{orderId}',
+    title: '주문 1건의 결제 정보',
+    owner: '김지유',
+    status: 'done',
+    note: '포인트 · 예치금 · 직접 결제 구성, 예상·실제 적립 포인트. 구매자만 (그 외 PAYMENT008, 결제 전 WALLET301)',
+  },
+  'payment.policy': {
+    method: 'GET',
+    path: '/api/v1/payments/policy',
+    title: '결제 정책',
+    owner: '김지유',
+    status: 'done',
+    note: '{ chargeMinAmount, chargeMaxAmount, pointEarnRatePercent, feeRatePercent }',
   },
   'payment.confirm': {
     method: 'POST',
     path: '/api/v1/payments/confirm',
-    title: '주문 결제 승인(부족분 토스 결제 후)',
+    title: '주문 결제 승인(결제창을 거친 뒤)',
     owner: '김지유',
     status: 'done',
-    note: '{ pgOrderId, paymentKey, amount } → 승인 · 충전 · 홀딩 한 번에. 응답 orderGroupId. 주문 흐름과 연결 필요',
+    note: '{ pgOrderId, paymentKey, amount } → 부족분 충전 또는 직접 결제를 승인하고 홀딩까지 한 번에. 멱등. 응답 orderGroupId',
   },
   'payment.quote': {
     method: 'GET',
@@ -461,7 +486,7 @@ export const apiRegistry = {
     title: '결제 전 견적',
     owner: '김지유',
     status: 'done',
-    note: '?amount= → { balance, walletUseAmount, shortage, needsCharge }. 저장 안 함',
+    note: 'amount, payMethod, pointUseAmount, deliveryFee → 금액 구성 · pgAmount · pgMethod · chargeLimitExceeded · expectedEarnPoint. 저장 안 함',
   },
   'refund.detail': {
     method: 'GET',
