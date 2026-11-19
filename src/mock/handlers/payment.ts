@@ -1,14 +1,14 @@
 import { db, persist } from '../db';
 import { fail } from '../errors';
 import { ok, route, type HandlerContext } from '../router';
-import { addTransaction, payCartItems, requireMe, shareOf, walletOf } from '../services';
+import { addTransaction, cashAmountOf, earnPointOf, payCartItems, requireMe, shareOf, walletOf } from '../services';
 import type { OrderRecord, PayMethod } from '../types';
-import { FEE_RATE, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
+import { FEE_RATE, POINT_EARN_RATE_PERCENT, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 
 // 백엔드 PaymentApiController 와 같은 경로·응답 형태.
 // 목업은 토스 결제창을 거치지 않으므로 ChargeDialog / CartPage 가 요청 직후 바로 승인을 부른다.
 // 충전 건은 승인 전까지만 의미가 있어서 목업 DB 에 저장하지 않고 메모리에만 둔다 (새로고침하면 사라짐).
-// 결제 금액 구성(포인트 · 예치금 · 직접 결제)은 홀딩 레코드에 남긴다. 포인트 적립과 포인트 원장은 아직 없다.
+// 결제 금액 구성(포인트 · 예치금 · 직접 결제)과 적립된 포인트는 홀딩 레코드에 남긴다.
 
 type ChargeStatus = 'REQUESTED' | 'CHARGED' | 'USED' | 'CANCELED' | 'ABORTED';
 type ChargePurpose = 'MANUAL' | 'FOR_PAYMENT' | 'DIRECT_PAYMENT';
@@ -61,24 +61,8 @@ const PG_METHOD_LABELS: Record<PgMethod, string> = { TRANSFER: '계좌이체', C
 /** 결제 정책 (백엔드 설정값 wallet.* 과 같은 값) */
 const CHARGE_MIN_AMOUNT = 10000;
 const CHARGE_MAX_AMOUNT = 2000000;
-const POINT_EARN_RATE_PERCENT = 1;
 const charges = new Map<string, MockCharge>();
 let chargeSeq = 1;
-
-/**
- * 적립 포인트 (백엔드 PointPolicy.earnOf). cashAmount = 주문 금액 중 예치금 · 계좌이체 직접 결제로 낸 금액.
- * 배송비 몫을 빼려고 낙찰가 비율만큼만 적립 대상으로 보고, 적립률을 곱해 절사한다
- */
-function earnPointOf(cashAmount: number, winningPrice: number, deliveryFee: number): number {
-  const orderAmount = winningPrice + deliveryFee;
-  if (cashAmount <= 0 || winningPrice <= 0) return 0;
-  const eligible = Math.floor((Math.min(cashAmount, orderAmount) * winningPrice) / orderAmount);
-  return Math.floor((eligible * POINT_EARN_RATE_PERCENT) / 100);
-}
-
-/** 금액 구성에서 적립 대상이 되는 현금성 결제액. 카드·간편결제 직접 결제와 포인트로 낸 금액은 빠진다 */
-const cashAmountOf = (share: { payMethod: PayMethod; depositAmount: number; pgAmount: number }) =>
-  share.depositAmount + (share.payMethod === 'TRANSFER' ? share.pgAmount : 0);
 
 /** 결제 1건을 어떻게 낼지 정한 결과 (백엔드 PaymentPlan) */
 export interface PaymentPlan {
@@ -237,9 +221,9 @@ function paymentsOf(memberId: number): PaymentView[] {
     if (c.memberId === memberId && c.payment) groupIds.add(c.payment.orderGroupId);
   });
   return [...groupIds]
-    .sort((a, b) => b - a)
     .map((id) => findPayment(memberId, id))
-    .filter((p): p is PaymentView => p !== undefined);
+    .filter((p): p is PaymentView => p !== undefined)
+    .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt) || b.orderGroupId - a.orderGroupId);
 }
 
 /** 직접 결제가 승인된 결제수단 표기. 직접 결제가 아니거나 승인 전이면 null */
@@ -513,8 +497,7 @@ export function registerPaymentRoutes(): void {
       depositAmount: share.depositAmount,
       pgAmount: share.pgAmount,
       expectedEarnPoint: expectedEarnPointOf(order),
-      // 목업에는 아직 포인트 적립이 없다
-      earnedPoint: 0,
+      earnedPoint: holding.earnedPoint ?? 0,
       status: holding.status,
       heldAt: order.createdAt,
       confirmedAt: order.confirmedAt,

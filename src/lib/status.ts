@@ -67,7 +67,7 @@ export const ORDER_STATE_META: Record<OrderState, OrderStateMeta> = {
   WAITING: {
     label: '결제 대기',
     tone: 'scheduled',
-    buyerHint: '예치금 결제를 처리하고 있어요.',
+    buyerHint: '결제를 처리하고 있어요.',
     sellerHint: '구매자 결제를 기다려요.',
   },
   PAID: {
@@ -79,7 +79,7 @@ export const ORDER_STATE_META: Record<OrderState, OrderStateMeta> = {
   FAILED: {
     label: '결제 실패',
     tone: 'ended',
-    buyerHint: '예치금이 부족해 결제하지 못했어요.',
+    buyerHint: '결제를 완료하지 못했어요.',
     sellerHint: '구매자 결제가 실패했어요.',
   },
   SHIPPING: {
@@ -109,7 +109,7 @@ export const ORDER_STATE_META: Record<OrderState, OrderStateMeta> = {
   REFUNDED: {
     label: '환불 완료',
     tone: 'ended',
-    buyerHint: '결제 금액이 예치금으로 돌아갔어요.',
+    buyerHint: '결제 금액이 결제한 수단으로 돌아갔어요.',
     sellerHint: '환불을 수락해 정산에서 빠졌어요.',
   },
   DELIVERY_ERROR: {

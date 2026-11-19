@@ -25,7 +25,17 @@ const toWithdrawalView = ({ memberId: _memberId, ...w }: MockWithdrawal) => w;
 // 백엔드 WalletApiController 와 같은 경로·응답 형태. 목업 DB 레코드는 그대로 두고 응답 시점에 변환한다.
 
 /** 목업 거래 유형 → 백엔드 WalletTransactionType. 목업은 사용자 지갑에 찍히는 유형만 쓴다 */
-type LedgerType = 'CHARGE' | 'CHARGE_CANCEL' | 'WITHDRAWAL' | 'HOLD_PAY' | 'SETTLEMENT_RECEIVE' | 'REFUND_RECEIVE' | 'REVERSAL';
+type LedgerType =
+  | 'CHARGE'
+  | 'CHARGE_CANCEL'
+  | 'WITHDRAWAL'
+  | 'HOLD_PAY'
+  | 'SETTLEMENT_RECEIVE'
+  | 'REFUND_RECEIVE'
+  | 'POINT_EARN'
+  | 'POINT_HOLD_PAY'
+  | 'POINT_REFUND_RECEIVE'
+  | 'REVERSAL';
 type ReferenceType = 'PAYMENT' | 'ORDER' | 'WITHDRAWAL';
 type HoldingRole = 'BUYER' | 'SELLER';
 
@@ -52,11 +62,11 @@ function toReference(tx: TransactionRecord): { referenceType: ReferenceType; ref
   }
 }
 
-/** 원장 한 줄 (백엔드 LedgerEntryDto). 목업은 주머니가 하나라 account 는 항상 DEPOSIT */
+/** 원장 한 줄 (백엔드 LedgerEntryDto). 목업에는 예치금과 포인트 주머니만 있다 */
 function toLedgerEntry(tx: TransactionRecord) {
   return {
     id: tx.id,
-    account: 'DEPOSIT' as const,
+    account: tx.account ?? ('DEPOSIT' as const),
     type: tx.type as LedgerType,
     amount: tx.amount,
     balanceAfter: tx.balanceAfter,
@@ -83,11 +93,11 @@ function toHoldingView(holding: HoldingRecord, role: HoldingRole) {
     winningPrice,
     deliveryFee,
     amount: holding.amount,
-    // 결제 구성은 구매자에게만. 포인트 적립은 목업에 아직 없다
+    // 결제 구성과 적립 포인트는 구매자에게만
     pointAmount: role === 'BUYER' ? share.pointAmount : 0,
     depositAmount: role === 'BUYER' ? share.depositAmount : 0,
     pgAmount: role === 'BUYER' ? share.pgAmount : 0,
-    earnedPoint: 0,
+    earnedPoint: role === 'BUYER' ? (holding.earnedPoint ?? 0) : 0,
     feeAmount,
     settlementAmount: holding.amount - feeAmount,
     status: holding.status,
@@ -102,16 +112,17 @@ export function registerWalletRoutes(): void {
   /** 잔액. balance = 예치금, settlementBalance = 정산금(목업은 0), pointBalance = 포인트 */
   route('GET', '/api/v1/wallet/me', (ctx) => ok(toWalletView(requireMe(ctx).id)));
 
-  /** 원장. account / type 필터, 최신순, size 최대 50 */
+  /** 원장. account(DEPOSIT · SETTLEMENT · POINT) / type 필터, 최신순, size 최대 50 */
   route('GET', '/api/v1/wallet/me/ledger', (ctx) => {
     const me = requireMe(ctx);
     const { page, size } = getPageParams(ctx.params, 20);
     const account = ctx.params.get('account');
     const type = ctx.params.get('type');
-    // 목업은 예치금 원장만 있어서 SETTLEMENT · POINT 를 요청하면 빈 목록
-    if (account === 'SETTLEMENT' || account === 'POINT') return ok({ ...toWalletView(me.id), ...paginate([], page, size) });
+    // 목업에는 정산금 주머니가 없어서 SETTLEMENT 를 요청하면 빈 목록. account 를 안 주면 예치금 · 포인트를 함께 준다
+    if (account === 'SETTLEMENT') return ok({ ...toWalletView(me.id), ...paginate([], page, size) });
     const entries = db.transactions
       .filter((tx) => tx.memberId === me.id && (!type || tx.type === type))
+      .filter((tx) => !account || (tx.account ?? 'DEPOSIT') === account)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id)
       .map(toLedgerEntry);
     return ok({ ...toWalletView(me.id), ...paginate(entries, page, size) });

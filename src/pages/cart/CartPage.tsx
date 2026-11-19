@@ -26,6 +26,7 @@ import {
   TOSS_USER_CANCEL,
   closeTossPaymentWindow,
   openTossPaymentWindow,
+  orderPaymentCompletePath,
   tossErrorCode,
 } from '@/lib/toss'
 import type { PayMethod } from '@/types/payment'
@@ -51,8 +52,8 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced
 }
 
-/** 결제 요청 결과. PAID = 끝남, REDIRECTED = 토스 결제창으로 이동 중(이 페이지를 떠난다) */
-type PayOutcome = 'PAID' | 'REDIRECTED'
+/** 결제 요청 결과. PAID = 끝남(orderGroupId 로 결제 완료 화면을 연다), REDIRECTED = 토스 결제창으로 이동 중(이 페이지를 떠난다) */
+type PayOutcome = { status: 'PAID'; orderGroupId: number | null } | { status: 'REDIRECTED' }
 
 /** 장바구니 (/cart) — 낙찰 상품 결제 */
 export function CartPage() {
@@ -122,7 +123,7 @@ export function CartPage() {
         selected.map((item) => item.productId),
         { paymentMethod: payMethod, pointUseAmount: pointUse },
       )
-      if (!result || result.isPaid) return 'PAID'
+      if (!result || result.isPaid) return { status: 'PAID', orderGroupId: result?.orderGroupId ?? null }
       if (!result.data) {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
       }
@@ -130,7 +131,7 @@ export function CartPage() {
       if (!isRealApi('payment.confirm')) {
         // 목업: 토스 결제창을 거치지 않고 바로 승인
         await paymentApi.confirmPayment({ pgOrderId, paymentKey: `mock_${paymentId}`, amount: chargeAmount })
-        return 'PAID'
+        return { status: 'PAID', orderGroupId: result.orderGroupId }
       }
       // 확인 모달(<dialog>)이 결제창을 가리므로 먼저 닫는다
       setConfirmOpen(false)
@@ -143,17 +144,18 @@ export function CartPage() {
         successPath: ORDER_PAYMENT_SUCCESS_PATH,
         failPath: ORDER_PAYMENT_FAIL_PATH,
       })
-      return 'REDIRECTED'
+      return { status: 'REDIRECTED' }
     },
     onSuccess: (outcome) => {
       setConfirmOpen(false)
-      if (outcome !== 'PAID') return
+      if (outcome.status !== 'PAID') return
       toast(`${selected.length}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',
         action: { label: '구매 주문', to: '/me/orders' },
       })
       void queryClient.invalidateQueries()
-      navigate('/me/orders')
+      // 결제 완료 화면에서 무엇으로 얼마씩 냈는지 보여 준다. 주문 그룹 id 를 못 받았으면 구매 주문으로 간다
+      navigate(outcome.orderGroupId !== null ? orderPaymentCompletePath(outcome.orderGroupId) : '/me/orders')
     },
     onError: (error) => {
       setConfirmOpen(false)

@@ -57,7 +57,7 @@ export function useOrderActions() {
       mutationFn: (refundId: number) => refundApi.accept(refundId),
       onSuccess: () => {
         invalidateAll()
-        toast('환불을 수락했어요. 결제 금액이 구매자 예치금으로 돌아가고 정산에서 빠져요.', { tone: 'success' })
+        toast('환불을 수락했어요. 결제 금액이 구매자가 결제한 수단으로 돌아가고 정산에서 빠져요.', { tone: 'success' })
       },
       onError,
     }),

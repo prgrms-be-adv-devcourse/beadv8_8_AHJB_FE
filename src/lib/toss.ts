@@ -7,6 +7,8 @@ export const CHARGE_FAIL_PATH = '/me/wallet/charge/fail'
 /** 주문 결제(장바구니)의 결제창에서 돌아오는 경로 */
 export const ORDER_PAYMENT_SUCCESS_PATH = '/cart/payment/success'
 export const ORDER_PAYMENT_FAIL_PATH = '/cart/payment/fail'
+/** 주문 결제가 끝난 뒤 금액 구성을 보여 주는 화면. ?orderGroupId= 로 연다 */
+export const orderPaymentCompletePath = (orderGroupId: number) => `/cart/payment/complete?orderGroupId=${orderGroupId}`
 
 /**
  * 결제창에서 돌아온 뒤 이동할 곳을 successUrl/failUrl 쿼리(returnTo)에 실어 보낸다.

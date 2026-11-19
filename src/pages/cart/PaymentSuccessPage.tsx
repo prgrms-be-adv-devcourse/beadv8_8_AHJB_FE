@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { formatWon } from '@/lib/format'
-import { readTossSuccessParams } from '@/lib/toss'
+import { orderPaymentCompletePath, readTossSuccessParams } from '@/lib/toss'
 import type { PaymentSummary } from '@/types/payment'
 import styles from './CartPage.module.css'
 
@@ -60,7 +60,7 @@ export function PaymentSuccessPage() {
       })
       // 주문 상태는 결제 완료 이벤트로 바뀌므로 목록·장바구니·지갑을 모두 다시 불러온다
       void queryClient.invalidateQueries()
-      navigate('/me/orders', { replace: true })
+      navigate(orderPaymentCompletePath(payment.orderGroupId), { replace: true })
     },
   })
 

@@ -40,6 +40,8 @@ export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(r
 
 // ---------- 수수료 / 배송비 / 입찰 단위 ----------
 export const FEE_RATE = 0.1;
+/** 포인트 적립률(%). 백엔드 설정값 wallet.point.earn-rate-percent 와 같은 값 */
+export const POINT_EARN_RATE_PERCENT = 1;
 export const feeOf = (winningPrice: number) => Math.floor(winningPrice * FEE_RATE);
 
 export const SHIPPING_FEE: Record<FeeType, number | null> = {

@@ -17,6 +17,7 @@ import type {
   WalletRecord,
 } from './types';
 import {
+  POINT_EARN_RATE_PERCENT,
   bidUnitOf,
   feeOf,
   formatLocalDateTime as ldt,
@@ -116,6 +117,48 @@ export function addTransaction(
   });
 }
 
+/** 포인트 잔액 변경 + 포인트 내역 기록. amount 가 0 이면 아무것도 남기지 않는다 */
+export function addPointTransaction(
+  memberId: number,
+  type: TransactionType,
+  amount: number,
+  referenceType: TransactionReferenceType,
+  referenceId: number | null,
+  description: string,
+  at: number = now(),
+): void {
+  if (amount === 0) return;
+  const wallet = walletOf(memberId);
+  wallet.pointBalance += amount;
+  db.transactions.push({
+    id: nextId('transactions'),
+    memberId,
+    account: 'POINT',
+    type,
+    amount,
+    balanceAfter: wallet.pointBalance,
+    referenceType,
+    referenceId,
+    description,
+    createdAt: ldt(at),
+  });
+}
+
+/**
+ * 적립 포인트 (백엔드 PointPolicy.earnOf). cashAmount = 주문 금액 중 예치금 · 계좌이체 직접 결제로 낸 금액.
+ * 배송비 몫을 빼려고 낙찰가 비율만큼만 적립 대상으로 보고, 적립률을 곱해 절사한다
+ */
+export function earnPointOf(cashAmount: number, winningPrice: number, deliveryFee: number): number {
+  const orderAmount = winningPrice + deliveryFee;
+  if (cashAmount <= 0 || winningPrice <= 0) return 0;
+  const eligible = Math.floor((Math.min(cashAmount, orderAmount) * winningPrice) / orderAmount);
+  return Math.floor((eligible * POINT_EARN_RATE_PERCENT) / 100);
+}
+
+/** 금액 구성에서 적립 대상이 되는 현금성 결제액. 카드·간편결제 직접 결제와 포인트로 낸 금액은 빠진다 */
+export const cashAmountOf = (share: { payMethod: PayMethod; depositAmount: number; pgAmount: number }) =>
+  share.depositAmount + (share.payMethod === 'TRANSFER' ? share.pgAmount : 0);
+
 // ---------- 경매 ----------
 const DURATION_MS: Record<Exclude<AuctionDuration, 'CUSTOM'>, number> = {
   DAYS_1: 864e5,
@@ -187,7 +230,7 @@ export function placeBid(auction: AuctionRecord, bidderId: number, bidPrice: num
 }
 
 // ---------- 주문 ----------
-/** 구매확정: 경매 완료, 보관금 확정, 정산서(PENDING) 생성 */
+/** 구매확정: 경매 완료, 보관금 확정, 구매자 포인트 적립, 정산서(PENDING) 생성 */
 export function confirmPurchase(order: OrderRecord, at: number): void {
   order.state = 'CONFIRMED';
   order.confirmedAt = ldt(at);
@@ -195,8 +238,12 @@ export function confirmPurchase(order: OrderRecord, at: number): void {
   const auction = db.auctions.find((a) => a.id === order.auctionId);
   if (auction) auction.status = 'COMPLETED';
   const holding = db.holdings.find((h) => h.orderId === order.id);
-  if (holding) holding.status = 'CONFIRMED';
   const product = db.products.find((p) => p.id === order.productId) as ProductRecord;
+  if (holding) {
+    holding.status = 'CONFIRMED';
+    holding.earnedPoint = earnPointOf(cashAmountOf(shareOf(holding)), order.winningPrice, order.deliveryFee);
+    addPointTransaction(order.winnerId, 'POINT_EARN', holding.earnedPoint, 'ORDER', order.id, `${product.name} 구매 확정 적립`, at);
+  }
   const feeAmount = feeOf(order.winningPrice);
   db.settlements.push({
     id: nextId('settlements'),
@@ -300,7 +347,8 @@ export function payCartItems(
   }));
   db.orders.push(...orders);
   const names = orders.map((o) => (db.products.find((p) => p.id === o.productId) as ProductRecord).name);
-  // 예치금으로 낸 금액만 예치금 원장에 남는다. 포인트는 잔액만 줄인다 (포인트 원장은 아직 없음)
+  const title = orders.length > 1 ? `${names[0]} 외 ${orders.length - 1}건 결제` : `${names[0]} 결제`;
+  // 예치금으로 낸 금액은 예치금 내역에, 포인트로 낸 금액은 포인트 내역에 남는다
   if (!direct && rest > 0) {
     addTransaction(
       memberId,
@@ -308,11 +356,11 @@ export function payCartItems(
       -rest,
       'ORDER',
       orderGroupId,
-      orders.length > 1 ? `${names[0]} 외 ${orders.length - 1}건 결제` : `${names[0]} 결제`,
+      title,
       at,
     );
   }
-  wallet.pointBalance -= pointAmount;
+  addPointTransaction(memberId, 'POINT_HOLD_PAY', -pointAmount, 'ORDER', orderGroupId, title, at);
   // 포인트를 주문 금액에 비례해 나눈다 (백엔드 PaymentShare.allocate 와 같은 누적 절사)
   let amountSoFar = 0;
   let pointSoFar = 0;
@@ -357,7 +405,7 @@ export function acceptRefund(refund: RefundRecord, at: number): void {
     if (share.depositAmount > 0) {
       addTransaction(order.winnerId, 'REFUND_RECEIVE', share.depositAmount, 'REFUND', refund.id, `${product.name} 환불`, at);
     }
-    walletOf(order.winnerId).pointBalance += share.pointAmount;
+    addPointTransaction(order.winnerId, 'POINT_REFUND_RECEIVE', share.pointAmount, 'REFUND', refund.id, `${product.name} 환불`, at);
   }
   db.pending[`refundComplete:${refund.id}`] = at + 1500;
 }

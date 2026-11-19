@@ -186,8 +186,8 @@ export function buildSeed(version: number): MockDb {
       db.wallets.push({
         memberId: id,
         balance: id <= 2 ? 0 : Math.round((200 + random() * 800) * 1000),
-        // 데모 회원 1번만 포인트를 들고 시작한다 (장바구니에서 포인트 사용을 해 볼 수 있게)
-        pointBalance: id === 1 ? DEMO_POINT_BALANCE : 0,
+        // 데모 회원 1번의 포인트는 아래에서 적립 내역과 함께 넣는다
+        pointBalance: 0,
       });
     },
   );
@@ -1468,6 +1468,21 @@ RGB 출력 확인, 롬팩 슬롯 접점 세척. 조이스틱 레버 감 좋아�
     });
     db.wallets.find((w) => w.memberId === memberId)!.balance = balance;
   }
+
+  // 데모 회원 1번은 포인트를 들고 시작한다 (장바구니에서 포인트 사용을 해 볼 수 있게). 포인트 내역에도 한 줄 남긴다
+  db.wallets.find((w) => w.memberId === 1)!.pointBalance = DEMO_POINT_BALANCE;
+  db.transactions.push({
+    id: seq('transactions', 1000),
+    memberId: 1,
+    account: 'POINT',
+    type: 'POINT_EARN',
+    amount: DEMO_POINT_BALANCE,
+    balanceAfter: DEMO_POINT_BALANCE,
+    referenceType: 'ORDER',
+    referenceId: null,
+    description: '구매 확정 적립',
+    createdAt: ldt(nowMs - 3 * DAY),
+  });
 
   // 데모 외 회원은 거래 내역 없이 잔액에만 반영
   walletEvents
