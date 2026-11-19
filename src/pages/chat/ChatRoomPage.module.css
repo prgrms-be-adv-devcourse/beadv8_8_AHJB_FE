@@ -116,6 +116,34 @@
   font-weight: 600;
   color: var(--primary);
 }
+.blocked {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: var(--space-4) 0;
+  padding: var(--space-12) var(--space-14);
+  border-left: 3px solid var(--coral);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--white);
+}
+.blockedTitle {
+  font-size: 14px;
+  line-height: 20px;
+  color: #d8342c;
+}
+.blockedBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+.blockedMeta {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-muted);
+}
 .systemMessage {
   align-self: center;
   max-width: 80%;

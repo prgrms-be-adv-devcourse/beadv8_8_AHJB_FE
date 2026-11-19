@@ -88,6 +88,7 @@ export const ERROR_TABLE = {
   CHAT003: [409, '종료된 채팅방'],
   CHAT005: [400, '메시지는 1~1000자'],
   CHAT006: [400, '채팅방에 없는 메시지'],
+  CHAT007: [400, '외부 채널·현금 거래 유도 메시지는 보낼 수 없어요'],
 } as const satisfies Record<string, readonly [number, string]>;
 
 export type ErrorCode = keyof typeof ERROR_TABLE;
