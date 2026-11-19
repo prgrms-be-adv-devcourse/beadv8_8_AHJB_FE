@@ -65,7 +65,7 @@ export function CartPage() {
   const payTotal = priceTotal + deliveryTotal
   const balance = walletQuery.data?.balance ?? 0
 
-  // 결제 전 견적: 예치금에서 얼마, 카드로 얼마 나가는지. 응답 전에는 잔액으로 직접 계산한 값을 쓴다
+  // 결제 전 견적: 예치금에서 얼마, 계좌이체로 얼마 나가는지. 응답 전에는 잔액으로 직접 계산한 값을 쓴다
   const quoteQuery = useQuery({
     queryKey: ['payment', 'quote', payTotal],
     queryFn: () => paymentApi.quote({ amount: payTotal }),
@@ -87,7 +87,7 @@ export function CartPage() {
       if (!result.data) {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
       }
-      const { pgOrderId, chargeAmount, orderName, paymentId } = result.data
+      const { pgOrderId, chargeAmount, orderName, paymentId, pgMethod } = result.data
       if (!isRealApi('payment.confirm')) {
         // 목업: 토스 결제창을 거치지 않고 바로 승인
         await paymentApi.confirmPayment({ pgOrderId, paymentKey: `mock_${paymentId}`, amount: chargeAmount })
@@ -95,14 +95,20 @@ export function CartPage() {
       }
       // 확인 모달(<dialog>)이 결제창을 가리므로 먼저 닫는다
       setConfirmOpen(false)
-      await openTossPaymentWindow({
-        pgOrderId,
-        amount: chargeAmount,
-        orderName,
-        customerEmail: tokenStore.getProfile()?.email,
-        successPath: ORDER_PAYMENT_SUCCESS_PATH,
-        failPath: ORDER_PAYMENT_FAIL_PATH,
-      })
+      try {
+        await openTossPaymentWindow({
+          pgOrderId,
+          amount: chargeAmount,
+          orderName,
+          method: pgMethod,
+          customerEmail: tokenStore.getProfile()?.email,
+          successPath: ORDER_PAYMENT_SUCCESS_PATH,
+          failPath: `${ORDER_PAYMENT_FAIL_PATH}?orderGroupId=${result.orderGroupId}`,
+        })
+      } catch (error) {
+        await cartApi.cancelPayment(result.orderGroupId).catch(() => undefined)
+        throw error
+      }
       return 'REDIRECTED'
     },
     onSuccess: (outcome) => {
@@ -121,7 +127,7 @@ export function CartPage() {
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
       void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })
-      // 결제창을 닫은 건 에러가 아니다. 만들어진 주문은 다시 결제하기로 이어가거나 1시간 뒤 정리된다
+      // 결제창을 닫은 건 에러가 아니다
       if (tossErrorCode(error) === TOSS_USER_CANCEL) {
         toast('결제창을 닫았어요. 다시 결제하기를 누르면 이어서 결제할 수 있어요.')
         return
@@ -160,7 +166,7 @@ export function CartPage() {
         <p className={styles.sub}>
           낙찰받은 상품이 담겨요. 낙찰 후 24시간 안에 결제하지 않으면 낙찰이 무효되고 경고(결제 미이행)를 받아요.
         </p>
-        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
+        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'cart.cancel', 'wallet.me', 'payment.quote', 'payment.confirm']} />
       </div>
 
       {cartQuery.isLoading ? (
@@ -250,9 +256,7 @@ export function CartPage() {
                 <>
                   <dt>예치금으로</dt>
                   <dd className="num">{formatWon(walletUse)}</dd>
-                  <dt>
-                    <Icon name="card" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> 카드로
-                  </dt>
+                  <dt>계좌이체로</dt>
                   <dd className={`num ${styles.short}`}>{formatWon(shortage)}</dd>
                 </>
               ) : (
@@ -278,7 +282,7 @@ export function CartPage() {
             ) : null}
             <p className={styles.rule}>
               {shortage
-                ? '부족한 금액은 토스페이먼츠 결제창에서 카드로 결제돼요. 예치금과 카드 결제분을 합쳐 결제가 완료돼요. '
+                ? '부족한 금액은 토스페이먼츠 결제창에서 계좌이체로 결제돼요. 예치금과 계좌이체 결제분을 합쳐 결제가 완료돼요. '
                 : ''}
               결제한 금액은 구매확정 전까지 찐막이 보관해요(에스크로). 구매확정하면 판매자에게, 환불되면 내 지갑으로
               돌아와요.
@@ -297,9 +301,9 @@ export function CartPage() {
       >
         {shortage ? (
           <>
-            {selected.length}개 상품 · 예치금 {formatWon(walletUse)} + 카드 {formatWon(shortage)}
+            {selected.length}개 상품 · 예치금 {formatWon(walletUse)} + 계좌이체 {formatWon(shortage)}
             <br />
-            토스페이먼츠 결제창에서 부족한 {formatWon(shortage)}만 카드로 결제하면 주문이 완료돼요.
+            토스페이먼츠 결제창에서 부족한 {formatWon(shortage)}만 계좌이체로 결제하면 주문이 완료돼요.
           </>
         ) : (
           <>
