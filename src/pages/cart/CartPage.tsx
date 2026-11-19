@@ -68,7 +68,7 @@ export function CartPage() {
   // 결제 전 견적: 예치금에서 얼마, 카드로 얼마 나가는지. 응답 전에는 잔액으로 직접 계산한 값을 쓴다
   const quoteQuery = useQuery({
     queryKey: ['payment', 'quote', payTotal],
-    queryFn: () => paymentApi.quote(payTotal),
+    queryFn: () => paymentApi.quote({ amount: payTotal }),
     enabled: payTotal > 0,
   })
   const shortage = quoteQuery.data?.shortage ?? Math.max(0, payTotal - balance)

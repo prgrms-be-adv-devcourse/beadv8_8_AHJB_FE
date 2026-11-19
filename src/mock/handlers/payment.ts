@@ -1,12 +1,14 @@
-import { persist } from '../db';
+import { db, persist } from '../db';
 import { fail } from '../errors';
 import { ok, route, type HandlerContext } from '../router';
 import { addTransaction, payCartItems, requireMe, walletOf } from '../services';
-import { formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
+import type { OrderRecord } from '../types';
+import { FEE_RATE, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 
 // 백엔드 PaymentApiController 와 같은 경로·응답 형태.
 // 목업은 토스 결제창을 거치지 않으므로 ChargeDialog / CartPage 가 요청 직후 바로 승인을 부른다.
 // 충전 건은 승인 전까지만 의미가 있어서 목업 DB 에 저장하지 않고 메모리에만 둔다 (새로고침하면 사라짐).
+// 목업은 아직 예치금 결제만 한다. 포인트 · 직접 결제 필드는 응답 형태만 맞춰 0 / DEPOSIT 으로 내려준다.
 
 type ChargeStatus = 'REQUESTED' | 'CHARGED' | 'USED' | 'CANCELED' | 'ABORTED';
 type ChargePurpose = 'MANUAL' | 'FOR_PAYMENT';
@@ -28,8 +30,8 @@ interface MockCharge {
   payment: MockPayment | null;
 }
 
+/** 결제창을 거치는 주문 결제. 결제(Payment)를 따로 저장하지 않으므로 paymentId 는 orderGroupId 와 같은 값을 쓴다 */
 interface MockPayment {
-  paymentId: number;
   orderGroupId: number;
   productIds: number[];
   totalPrice: number;
@@ -41,9 +43,15 @@ interface MockPayment {
 
 const MANUAL_ORDER_NAME = '찐막 예치금 충전';
 const PAYMENT_ORDER_NAME = '찐막 주문 결제 (부족분 충전)';
+/** 결제 정책 (백엔드 설정값 wallet.* 과 같은 값) */
+const CHARGE_MIN_AMOUNT = 10000;
+const CHARGE_MAX_AMOUNT = 2000000;
+const POINT_EARN_RATE_PERCENT = 1;
 const charges = new Map<string, MockCharge>();
 let chargeSeq = 1;
-let paymentSeq = 1;
+
+/** 적립 대상 금액(예치금 결제액에서 배송비를 뺀 금액)에 적립률을 곱해 절사한 포인트 */
+const earnPointOf = (earnBase: number) => Math.floor((Math.max(earnBase, 0) * POINT_EARN_RATE_PERCENT) / 100);
 
 /** 백엔드 ChargeSummaryDto 형태 */
 function toChargeSummary(charge: MockCharge) {
@@ -57,6 +65,8 @@ function toChargeSummary(charge: MockCharge) {
     cancelable: charge.status === 'CHARGED',
     usedAmount: charge.status === 'USED' ? charge.amount : 0,
     remainingAmount: charge.status === 'CHARGED' ? charge.amount : 0,
+    canceledAmount: charge.status === 'CANCELED' ? charge.amount : 0,
+    pgMethod: 'TRANSFER' as const,
     method: charge.method,
     receiptUrl: charge.receiptUrl,
     requestedAt: charge.requestedAt,
@@ -68,19 +78,129 @@ function toChargeSummary(charge: MockCharge) {
   };
 }
 
-/** 백엔드 PaymentSummaryDto 형태 */
-function toPaymentSummary(payment: MockPayment) {
+/**
+ * 주문 묶음 결제 1건. 끝난 결제는 주문 그룹의 주문들에서, 결제창을 기다리는 결제는 메모리의 충전 건에서 만든다.
+ * 결제 전에는 주문이 아직 없어서 orders 가 비어 있다 (백엔드는 결제 요청 때 주문을 먼저 만든다).
+ */
+interface PaymentView {
+  orderGroupId: number;
+  totalPrice: number;
+  chargeAmount: number;
+  orderCount: number;
+  status: 'CHARGING' | 'PAID';
+  requestedAt: string;
+  paidAt: string | null;
+  orders: OrderRecord[];
+  charge: MockCharge | null;
+}
+
+const amountOf = (order: OrderRecord) => order.winningPrice + order.deliveryFee;
+
+function findPayment(memberId: number, orderGroupId: number): PaymentView | undefined {
+  const orders = db.orders.filter((o) => o.winnerId === memberId && o.orderGroupId === orderGroupId);
+  const charge =
+    [...charges.values()].find((c) => c.memberId === memberId && c.payment?.orderGroupId === orderGroupId) ?? null;
+  if (orders.length) {
+    return {
+      orderGroupId,
+      totalPrice: orders.reduce((acc, o) => acc + amountOf(o), 0),
+      chargeAmount: charge?.amount ?? 0,
+      orderCount: orders.length,
+      status: 'PAID',
+      requestedAt: charge?.payment?.requestedAt ?? orders[0].createdAt,
+      paidAt: orders[0].createdAt,
+      orders,
+      charge,
+    };
+  }
+  if (!charge?.payment) return undefined;
   return {
-    paymentId: payment.paymentId,
+    orderGroupId,
+    totalPrice: charge.payment.totalPrice,
+    chargeAmount: charge.amount,
+    orderCount: charge.payment.productIds.length,
+    status: 'CHARGING',
+    requestedAt: charge.payment.requestedAt,
+    paidAt: null,
+    orders: [],
+    charge,
+  };
+}
+
+/** 내 결제 전체 (최신순) */
+function paymentsOf(memberId: number): PaymentView[] {
+  const groupIds = new Set<number>();
+  db.orders.forEach((o) => {
+    if (o.winnerId === memberId) groupIds.add(o.orderGroupId);
+  });
+  charges.forEach((c) => {
+    if (c.memberId === memberId && c.payment) groupIds.add(c.payment.orderGroupId);
+  });
+  return [...groupIds]
+    .sort((a, b) => b - a)
+    .map((id) => findPayment(memberId, id))
+    .filter((p): p is PaymentView => p !== undefined);
+}
+
+/** 금액 구성 (백엔드 PaymentSummaryDto · PaymentDetailDto 공통). 목업은 전액 예치금 */
+function toPaymentBase(payment: PaymentView) {
+  return {
+    paymentId: payment.orderGroupId,
     orderGroupId: payment.orderGroupId,
     totalPrice: payment.totalPrice,
-    walletUsedAmount: payment.totalPrice - payment.chargeAmount,
+    payMethod: 'DEPOSIT' as const,
+    pointAmount: 0,
+    walletUsedAmount: payment.totalPrice,
+    pgAmount: 0,
+    pgMethod: null,
     chargeAmount: payment.chargeAmount,
-    orderCount: payment.productIds.length,
     status: payment.status,
     requestedAt: payment.requestedAt,
     paidAt: payment.paidAt,
   };
+}
+
+/** 백엔드 PaymentSummaryDto 형태 */
+const toPaymentSummary = (payment: PaymentView) => ({ ...toPaymentBase(payment), orderCount: payment.orderCount });
+
+const holdingOf = (orderId: number) => db.holdings.find((h) => h.orderId === orderId);
+
+function refundedAtOf(orderId: number): string | null {
+  const refund = db.refunds.find((r) => r.orderId === orderId && (r.status === 'ACCEPTED' || r.status === 'COMPLETED'));
+  return refund?.processedAt ?? null;
+}
+
+/** 구매 확정하면 적립될 예상 포인트. 아직 확정 전(HELD)인 주문만 */
+const expectedEarnPointOf = (order: OrderRecord) =>
+  holdingOf(order.id)?.status === 'HELD' ? earnPointOf(order.winningPrice) : 0;
+
+/** 백엔드 PaymentDetailDto 형태 */
+function toPaymentDetail(payment: PaymentView) {
+  return {
+    ...toPaymentBase(payment),
+    failureReason: null,
+    expectedEarnPoint: payment.orders.reduce((acc, o) => acc + expectedEarnPointOf(o), 0),
+    items: payment.orders.map((order) => {
+      const refunded = holdingOf(order.id)?.status === 'REFUNDED';
+      return {
+        orderId: order.id,
+        sellerId: order.sellerId,
+        winningPrice: order.winningPrice,
+        deliveryFee: order.deliveryFee,
+        amount: amountOf(order),
+        refunded,
+        refundedAt: refunded ? refundedAtOf(order.id) : null,
+      };
+    }),
+    charges: payment.charge ? [toChargeSummary(payment.charge)] : [],
+  };
+}
+
+/** 경로의 id 로 내 결제를 찾는다. 없거나 남의 결제면 PAYMENT001 */
+function requirePayment(ctx: HandlerContext, rawId: string): PaymentView {
+  const payment = findPayment(requireMe(ctx).id, Number(rawId));
+  if (!payment) fail('PAYMENT001');
+  return payment;
 }
 
 function newCharge(memberId: number, amount: number, purpose: ChargePurpose, at: number, payment: MockPayment | null): MockCharge {
@@ -117,7 +237,6 @@ export function createPaymentCharge(
   at: number,
 ) {
   const payment: MockPayment = {
-    paymentId: paymentSeq++,
     orderGroupId,
     productIds,
     totalPrice,
@@ -128,11 +247,16 @@ export function createPaymentCharge(
   };
   const charge = newCharge(memberId, chargeAmount, 'FOR_PAYMENT', at, payment);
   return {
-    paymentId: payment.paymentId,
+    paymentId: orderGroupId,
     totalPrice,
     chargeAmount,
     pgOrderId: charge.pgOrderId,
     orderName: PAYMENT_ORDER_NAME,
+    pgMethod: 'TRANSFER' as const,
+    payMethod: 'DEPOSIT' as const,
+    pointAmount: 0,
+    depositAmount: totalPrice,
+    pgAmount: 0,
   };
 }
 
@@ -192,7 +316,8 @@ export function registerPaymentRoutes(): void {
     const { charge, amount } = findChargeForConfirm(ctx);
     if (charge.purpose !== 'FOR_PAYMENT' || !charge.payment) fail('CHARGE008'); // 수동 충전 건을 주문 승인으로 보냄
     const payment = charge.payment;
-    if (payment.status === 'PAID') return ok(toPaymentSummary(payment));
+    const summary = () => ok(toPaymentSummary(requirePayment(ctx, String(payment.orderGroupId))));
+    if (payment.status === 'PAID') return summary();
     if (charge.status !== 'REQUESTED') fail('CHARGE004');
     if (charge.amount !== amount) fail('CHARGE003');
 
@@ -208,8 +333,64 @@ export function registerPaymentRoutes(): void {
     payment.status = 'PAID';
     payment.paidAt = ldt(at);
     persist();
-    return ok(toPaymentSummary(payment));
+    return summary();
   });
+
+  /** 내 결제 내역 (주문 묶음 단위, 최신순) */
+  route('GET', '/api/v1/payments/me', (ctx) => {
+    const me = requireMe(ctx);
+    const { page, size } = getPageParams(ctx.params, 20);
+    return ok(paginate(paymentsOf(me.id).map(toPaymentSummary), page, size));
+  });
+
+  /** 내 결제 상세 */
+  route('GET', '/api/v1/payments/me/:paymentId', (ctx) =>
+    ok(toPaymentDetail(requirePayment(ctx, ctx.pathParams.paymentId))),
+  );
+
+  /** 주문 그룹으로 내 결제 상세. 응답은 결제 상세와 같다 */
+  route('GET', '/api/v1/payments/me/order-groups/:orderGroupId', (ctx) =>
+    ok(toPaymentDetail(requirePayment(ctx, ctx.pathParams.orderGroupId))),
+  );
+
+  /** 주문 1건의 결제 정보 (백엔드 OrderPaymentDto). 구매자만. 결제가 끝나지 않은 주문은 WALLET301 */
+  route('GET', '/api/v1/payments/me/orders/:orderId', (ctx) => {
+    const me = requireMe(ctx);
+    const order = db.orders.find((o) => o.id === Number(ctx.pathParams.orderId));
+    const holding = order ? holdingOf(order.id) : undefined;
+    if (!order || !holding) fail('WALLET301');
+    if (order.winnerId !== me.id) fail('PAYMENT008');
+    return ok({
+      paymentId: order.orderGroupId,
+      orderGroupId: order.orderGroupId,
+      orderId: order.id,
+      payMethod: 'DEPOSIT',
+      pgMethod: null,
+      winningPrice: order.winningPrice,
+      deliveryFee: order.deliveryFee,
+      amount: holding.amount,
+      pointAmount: 0,
+      depositAmount: holding.amount,
+      pgAmount: 0,
+      expectedEarnPoint: expectedEarnPointOf(order),
+      // 목업에는 아직 포인트 적립이 없다
+      earnedPoint: 0,
+      status: holding.status,
+      heldAt: order.createdAt,
+      confirmedAt: order.confirmedAt,
+      refundedAt: holding.status === 'REFUNDED' ? refundedAtOf(order.id) : null,
+    });
+  });
+
+  /** 결제 정책 (백엔드 PaymentPolicyDto) */
+  route('GET', '/api/v1/payments/policy', () =>
+    ok({
+      chargeMinAmount: CHARGE_MIN_AMOUNT,
+      chargeMaxAmount: CHARGE_MAX_AMOUNT,
+      pointEarnRatePercent: POINT_EARN_RATE_PERCENT,
+      feeRatePercent: Math.round(FEE_RATE * 100),
+    }),
+  );
 
   /** 내 충전 내역 (최신순). /charges/:chargeId 보다 먼저 등록해 'me' 가 id 로 잡히지 않게 한다 */
   route('GET', '/api/v1/payments/charges/me', (ctx) => {
@@ -245,13 +426,33 @@ export function registerPaymentRoutes(): void {
     return ok(toChargeSummary(charge));
   });
 
-  /** 결제 전 견적: 지금 잔액으로 amount 를 결제하면 예치금/카드가 각각 얼마인지. 저장하지 않는다 */
+  /**
+   * 결제 전 견적 (백엔드 PaymentQuoteDto). 저장하지 않는다.
+   * 목업은 예치금 결제만 계산한다: payMethod · pointUseAmount 는 무시하고, 부족분을 최소 충전 금액으로 올리지 않는다.
+   */
   route('GET', '/api/v1/payments/quote', (ctx) => {
     const me = requireMe(ctx);
     const amount = Number(ctx.params.get('amount'));
     if (!Number.isFinite(amount) || amount <= 0) fail('COMMON001');
+    const deliveryFee = Math.max(0, Number(ctx.params.get('deliveryFee')) || 0);
     const balance = walletOf(me.id).balance;
     const shortage = Math.max(0, amount - balance);
-    return ok({ balance, amount, walletUseAmount: amount - shortage, shortage, needsCharge: shortage > 0 });
+    return ok({
+      balance,
+      pointBalance: 0,
+      amount,
+      payMethod: 'DEPOSIT',
+      pointUseAmount: 0,
+      walletUseAmount: amount - shortage,
+      shortage,
+      needsCharge: shortage > 0,
+      chargeAmount: shortage,
+      balanceAfterPayment: balance + shortage - amount,
+      pgAmount: shortage,
+      pgMethod: shortage > 0 ? 'TRANSFER' : null,
+      chargeLimitExceeded: shortage > CHARGE_MAX_AMOUNT,
+      expectedEarnPoint: earnPointOf(amount - deliveryFee),
+      earnRatePercent: POINT_EARN_RATE_PERCENT,
+    });
   });
 }

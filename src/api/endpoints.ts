@@ -45,7 +45,7 @@ import type {
   InstantWinResponse,
   MyBid,
 } from '@/types/auction'
-import type { CartItem, CartPaymentResult } from '@/types/cart'
+import type { CartItem, CartPaymentRequest, CartPaymentResult } from '@/types/cart'
 import type {
   ChatMessageListParams,
   ChatMessageListResponse,
@@ -78,8 +78,13 @@ import type {
   ChargeConfirmRequest,
   ChargeListParams,
   ChargeSummary,
+  OrderPayment,
   PaymentConfirmRequest,
+  PaymentDetail,
+  PaymentListParams,
+  PaymentPolicy,
   PaymentQuote,
+  PaymentQuoteParams,
   PaymentSummary,
 } from '@/types/payment'
 import type { Refund, RefundProcessResult } from '@/types/refund'
@@ -208,8 +213,12 @@ export const auctionApi = {
 /** 장바구니 */
 export const cartApi = {
   list: () => http.get<CartItem[]>('cart.list', '/api/v1/cart'),
-  pay: (productIds: number[]) =>
-    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds }),
+  /**
+   * 결제 요청. 결제수단(생략하면 예치금)과 포인트 사용액(생략하면 0)을 함께 보낸다.
+   * 결제창을 거쳐야 하면 isPaid:false + data(결제창 파라미터)가 온다
+   */
+  pay: (productIds: number[], options: Omit<CartPaymentRequest, 'productIds'> = {}) =>
+    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds, ...options }),
 }
 
 /** 주문 */
@@ -227,7 +236,7 @@ export const orderApi = {
 
 /** 지갑. 백엔드 WalletApiController */
 export const walletApi = {
-  /** 잔액. balance = 예치금, settlementBalance = 정산금 */
+  /** 잔액. balance = 예치금, settlementBalance = 정산금, pointBalance = 포인트 */
   me: () => http.get<Wallet>('wallet.me', '/api/v1/wallet/me'),
   /** 원장(입출금 내역). 최신순, size 최대 50 */
   ledger: (params: LedgerParams = {}) => http.get<LedgerPage>('wallet.ledger', '/api/v1/wallet/me/ledger', params),
@@ -243,7 +252,7 @@ export const walletApi = {
 
 /** 결제 · 충전 (백엔드 PaymentApiController) */
 export const paymentApi = {
-  /** 충전 요청. 응답의 pgOrderId / amount / orderName 을 토스 결제창에 넘긴다 */
+  /** 충전 요청. 응답의 pgOrderId / amount / orderName / pgMethod 를 토스 결제창에 넘긴다. 금액이 정책 범위를 벗어나면 CHARGE010 */
   requestCharge: (amount: number) =>
     http.post<ChargeSummary>('payment.chargeRequest', '/api/v1/payments/charges', { amount }),
   /** 충전 승인. 토스 successUrl 쿼리(paymentKey, orderId, amount)를 그대로 넘긴다. 멱등 */
@@ -258,11 +267,25 @@ export const paymentApi = {
   /** 충전 취소. cancelable 인 건만. 예치금에서 차감한 뒤 토스 결제를 취소한다 */
   cancelCharge: (chargeId: number) =>
     http.post<ChargeSummary>('payment.chargeCancel', `/api/v1/payments/charges/${chargeId}/cancel`),
-  /** 주문 결제 승인. 토스 승인 → 부족분 충전 → 주문 대금 홀딩까지 한 번에. 멱등 */
+  /** 주문 결제 승인. 부족분 충전이면 토스 승인 → 충전 → 홀딩, 직접 결제면 토스 승인 → 홀딩까지 한 번에. 멱등 */
   confirmPayment: (body: PaymentConfirmRequest) =>
     http.post<PaymentSummary>('payment.confirm', '/api/v1/payments/confirm', body),
-  /** 결제 전 견적: 지금 잔액으로 amount 를 결제하면 예치금/카드가 각각 얼마인지 */
-  quote: (amount: number) => http.get<PaymentQuote>('payment.quote', '/api/v1/payments/quote', { amount }),
+  /** 결제 전 견적: 이 결제수단·포인트 사용액으로 결제하면 무엇으로 얼마씩 나가고 결제창에서 얼마를 결제하는지 */
+  quote: (params: PaymentQuoteParams) =>
+    http.get<PaymentQuote>('payment.quote', '/api/v1/payments/quote', params),
+  /** 내 결제 내역 (주문 묶음 단위). 최신순, size 최대 50 */
+  list: (params: PaymentListParams = {}) =>
+    http.get<PageResponse<PaymentSummary>>('payment.list', '/api/v1/payments/me', params),
+  /** 내 결제 상세 */
+  detail: (paymentId: Id) => http.get<PaymentDetail>('payment.detail', `/api/v1/payments/me/${paymentId}`),
+  /** 주문 그룹으로 결제 상세 조회. 결제창 없이 끝난 결제는 paymentId 를 모르므로 결제 완료 화면에서 쓴다 */
+  byOrderGroup: (orderGroupId: Id) =>
+    http.get<PaymentDetail>('payment.byOrderGroup', `/api/v1/payments/me/order-groups/${orderGroupId}`),
+  /** 주문 1건의 결제 정보 (구매자만). 결제가 끝나지 않은 주문이면 WALLET301 */
+  orderPayment: (orderId: Id) =>
+    http.get<OrderPayment>('payment.orderPayment', `/api/v1/payments/me/orders/${orderId}`),
+  /** 결제 정책: 충전 금액 범위, 포인트 적립률, 수수료율 */
+  policy: () => http.get<PaymentPolicy>('payment.policy', '/api/v1/payments/policy'),
 }
 
 /** 환불 */
