@@ -42,6 +42,8 @@ export type KakaoLoginResponse =
       accessToken: string
       suspended: boolean
       signupToken: null
+      /** LOGIN 에서는 항상 null */
+      email: null
       /** 목업만 준다 */
       refreshToken?: string
     }
@@ -51,12 +53,18 @@ export type KakaoLoginResponse =
       suspended: null
       /** 10분 유효. 메모리에만 보관한다 (lib/kakaoAuth.ts) */
       signupToken: string
+      /**
+       * 카카오가 유효·인증한 이메일. 있으면 가입 토큰에도 담겨 있어서 가입 때 BE 가 이 값으로 가입시킨다(요청 email 무시).
+       * 미인증·만료 등으로 없으면 null → 사용자가 직접 입력한다.
+       */
+      email: string | null
     }
 
 /** POST /api/v1/auth/oauth/kakao/signup 요청. 비밀번호가 없는 것 말고는 일반 가입과 같다 */
 export interface KakaoSignupRequest {
   signupToken: string
-  email: string
+  /** 로그인 응답에 email 이 있었으면 BE 가 무시한다(보내도 됨). null 이었으면 필수 */
+  email?: string
   nickname: string
   username: string
   /** 숫자만 (01012345678) */

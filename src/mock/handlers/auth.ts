@@ -50,6 +50,19 @@ function parseSignupToken(token: unknown): { kakaoId: string; expiresAt: number 
   return match ? { kakaoId: match[1], expiresAt: Number(match[2]) } : null;
 }
 
+/**
+ * 목업 카카오 계정의 인증 이메일 (실제는 카카오가 준다. 유효·인증된 이메일만, 아니면 null).
+ * 회원번호 접두어로 경우를 나눈다 (lib/kakaoAuth.ts 의 mockKakaoId 주석 참고).
+ * - noemail… → null (이메일 미인증 → 사용자가 직접 입력)
+ * - dup…     → 시드 회원 이메일 (이미 이메일 회원 → AUTH113)
+ * - 그 외    → kakao<회원번호>@kakao.mock
+ */
+function mockKakaoEmail(kakaoId: string): string | null {
+  if (kakaoId.startsWith('noemail')) return null;
+  if (kakaoId.startsWith('dup')) return 'demo@jjinmak.kr';
+  return `kakao${kakaoId}@kakao.mock`;
+}
+
 const mockTokens = (memberId: number) => ({
   accessToken: `mock.${memberId}.${Date.now().toString(36)}`,
   refreshToken: `mock-refresh.${memberId}`,
@@ -134,11 +147,15 @@ export function registerAuthRoutes(): void {
 
     const member = db.members.find((m) => m.kakaoId === kakaoId);
     if (!member) {
+      const email = mockKakaoEmail(kakaoId);
+      // 인증 이메일이 이미 이메일 회원이면 가입 토큰 없이 거절 (직접 입력 경로는 가입 API 의 MEMBER001 이 검사)
+      if (email && db.members.some((m) => m.email === email)) fail('AUTH113');
       return ok({
         status: 'SIGNUP_REQUIRED',
         accessToken: null,
         suspended: null,
         signupToken: `mock-signup.${kakaoId}.${now() + SIGNUP_TOKEN_TTL_MS}`,
+        email,
       });
     }
     if (member.accountStatus === 'BANNED') fail('COMMON102');
@@ -147,6 +164,7 @@ export function registerAuthRoutes(): void {
       ...mockTokens(member.id),
       suspended: member.accountStatus === 'SUSPENDED',
       signupToken: null,
+      email: null,
     });
   });
 
@@ -157,13 +175,15 @@ export function registerAuthRoutes(): void {
     if (token.expiresAt < now()) fail('AUTH111');
     if (db.members.some((m) => m.kakaoId === token.kakaoId)) fail('AUTH112');
 
-    if (!EMAIL_PATTERN.test(body.email ?? '')) fail('COMMON001');
+    // 가입 토큰에 인증 이메일이 있으면 요청 email 은 무시한다. 없으면 요청 email 필수
+    const email = mockKakaoEmail(token.kakaoId) ?? body.email;
+    if (!EMAIL_PATTERN.test(email ?? '')) fail('COMMON001');
     if (!body.nickname || body.nickname.length > 50 || !body.username || body.username.length > 50) fail('COMMON001');
     if (!PHONE_PATTERN.test(body.phone ?? '')) fail('COMMON001');
     const address = body.address ?? {};
     if (!address.recipient || !PHONE_PATTERN.test(address.recipientPhone ?? '') || !address.zipcode || !address.address)
       fail('COMMON001');
-    if (db.members.some((m) => m.email === body.email)) fail('MEMBER001');
+    if (db.members.some((m) => m.email === email)) fail('MEMBER001');
     if (db.members.some((m) => m.nickname === body.nickname)) fail('MEMBER002');
 
     const id = nextId('members');
@@ -173,7 +193,7 @@ export function registerAuthRoutes(): void {
         typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
           : `00000000-0000-4000-8000-${String(id).padStart(12, '0')}`,
-      email: body.email as string,
+      email: email as string,
       password: '',
       kakaoId: token.kakaoId,
       nickname: body.nickname,

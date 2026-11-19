@@ -20,7 +20,12 @@ const STATE_KEY = 'jjinmak.kakaoOAuth'
 /** 인가 화면에 머무를 수 있는 시간. 지나면 state 를 버린다 */
 const STATE_TTL_MS = 10 * 60 * 1000
 
-/** 목업 카카오 계정 회원번호. 같은 브라우저에서는 늘 같은 카카오 계정으로 본다 (처음엔 가입, 다음부턴 로그인) */
+/**
+ * 목업 카카오 계정 회원번호. 같은 브라우저에서는 늘 같은 카카오 계정으로 본다 (처음엔 가입, 다음부턴 로그인).
+ * 다른 경우를 보려면 개발자 도구에서 이 값을 바꾼다 (mock/handlers/auth.ts mockKakaoEmail):
+ *   localStorage.setItem('jjinmak.mockKakaoId', 'noemail1') → 이메일 없음 (직접 입력)
+ *   localStorage.setItem('jjinmak.mockKakaoId', 'dup1')     → 이미 이메일 회원 (AUTH113)
+ */
 const MOCK_KAKAO_ID_KEY = 'jjinmak.mockKakaoId'
 
 interface SavedState {
@@ -115,6 +120,8 @@ export function consumeKakaoState(state: string | null): { redirect: string } | 
  */
 export interface PendingKakaoSignup {
   signupToken: string
+  /** 카카오 인증 이메일. 있으면 가입 화면에서 이메일 칸을 채우고 잠근다 */
+  email: string | null
   redirect: string
 }
 

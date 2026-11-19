@@ -66,7 +66,7 @@ export const apiRegistry = {
     title: '카카오 로그인',
     owner: '차승환',
     status: 'done',
-    note: '인가 코드 → LOGIN(토큰) 또는 SIGNUP_REQUIRED(가입 토큰). auth.login 과 함께 실제/목업이 전환된다',
+    note: '인가 코드 → LOGIN(토큰) 또는 SIGNUP_REQUIRED(가입 토큰 + 카카오 인증 이메일). 인증 이메일이 이미 이메일 회원이면 AUTH113. auth.login 과 함께 실제/목업이 전환된다',
   },
   'auth.kakaoSignup': {
     method: 'POST',
@@ -74,7 +74,7 @@ export const apiRegistry = {
     title: '카카오 회원가입',
     owner: '차승환',
     status: 'done',
-    note: '가입 토큰 + 추가 정보 → 가입과 동시에 로그인',
+    note: '가입 토큰 + 추가 정보 → 가입과 동시에 로그인. 토큰에 인증 이메일이 있으면 요청 email 은 무시된다',
   },
   'member.registerSeller': {
     method: 'POST',

@@ -75,8 +75,13 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
   const toast = useToast()
   // 가입 토큰은 메모리에만 있다. 새로고침하면 없어지고 카카오 로그인부터 다시 한다
   const [kakaoPending] = useState(() => (isKakao ? getPendingKakaoSignup() : null))
+  /**
+   * 카카오 인증 이메일이 있으면 채우고 잠근다. BE 가 가입 토큰의 이메일로 가입시키고 요청 email 은 무시한다.
+   * 이메일 중복은 로그인 단계(AUTH113)에서 이미 걸렀으므로 중복 확인도 하지 않는다.
+   */
+  const kakaoEmail = kakaoPending?.email ?? null
   const [form, setForm] = useState<SignupForm>({
-    email: '',
+    email: kakaoEmail ?? '',
     password: '',
     passwordConfirm: '',
     nickname: '',
@@ -202,7 +207,8 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
       setSubmitting(false)
       switch (apiError.code) {
         case 'MEMBER001':
-          // 같은 이메일의 일반 계정과 자동 연동하지 않는다 (안내만)
+          // 같은 이메일의 일반 계정과 자동 연동하지 않는다 (안내만).
+          // 카카오 이메일이 잠긴 경우에도 로그인 응답 이후 같은 이메일로 먼저 가입한 사람이 있으면 올 수 있다
           setEmailCheck({ status: 'taken', value: form.email })
           return
         case 'MEMBER002':
@@ -333,7 +339,9 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
                 : null
             }
             hint={
-              emailCheck.status === 'checking'
+              kakaoEmail
+                ? '카카오에서 인증된 이메일이라 바꿀 수 없어요.'
+                : emailCheck.status === 'checking'
                 ? '확인 중…'
                 : isKakao
                   ? '거래 알림과 결제 안내를 받을 이메일이에요.'
@@ -347,9 +355,14 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
                 autoComplete="email"
                 aria-describedby={describedBy}
                 value={form.email}
+                readOnly={!!kakaoEmail}
                 invalid={!!visibleError('email', emailCheck.status !== 'idle')}
-                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value.trim() }))}
-                onBlur={() => void checkAvailability('email', form.email, setEmailCheck)}
+                onChange={(e) => {
+                  if (!kakaoEmail) setForm((prev) => ({ ...prev, email: e.target.value.trim() }))
+                }}
+                onBlur={() => {
+                  if (!kakaoEmail) void checkAvailability('email', form.email, setEmailCheck)
+                }}
               />
             )}
           </Field>

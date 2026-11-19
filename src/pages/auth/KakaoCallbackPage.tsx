@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { ApiError } from '@/api/client'
 import { useAuth, type AuthContextValue, type LoginResult } from '@/auth/AuthProvider'
-import { Button } from '@/components/Button'
+import { Button, LinkButton } from '@/components/Button'
 import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
 import { Spinner } from '@/components/Spinner'
@@ -12,8 +12,15 @@ import styles from './Auth.module.css'
 
 type CallbackResult =
   | { kind: 'login'; redirect: string; result: LoginResult }
-  | { kind: 'signup'; redirect: string; signupToken: string }
-  | { kind: 'error'; redirect: string; message: string; canRetry: boolean }
+  | { kind: 'signup'; redirect: string; signupToken: string; email: string | null }
+  | {
+      kind: 'error'
+      redirect: string
+      message: string
+      canRetry: boolean
+      /** AUTH113: 이미 이메일 회원 → 이메일 로그인으로 안내 */
+      emailMember?: boolean
+    }
 
 /**
  * 콜백 URL(search) → 처리 결과.
@@ -51,9 +58,13 @@ async function handleCallback(search: string, kakaoLogin: AuthContextValue['kaka
     const outcome = await kakaoLogin(code)
     return outcome.status === 'LOGIN'
       ? { kind: 'login', redirect, result: outcome.result }
-      : { kind: 'signup', redirect, signupToken: outcome.signupToken }
+      : { kind: 'signup', redirect, signupToken: outcome.signupToken, email: outcome.email }
   } catch (err) {
     const apiError = err as ApiError
+    // 카카오 인증 이메일이 이미 이메일 회원 → 가입 화면 없이 이메일 로그인으로 (자동 연동 없음)
+    if (apiError.code === 'AUTH113') {
+      return { kind: 'error', redirect, message: apiError.message, canRetry: false, emailMember: true }
+    }
     // COMMON102(차단 회원)는 다시 시도해도 같은 결과
     return { kind: 'error', redirect, message: apiError.message, canRetry: apiError.code !== 'COMMON102' }
   }
@@ -82,7 +93,7 @@ export function KakaoCallbackPage() {
         return
       }
       if (outcome.kind === 'signup') {
-        setPendingKakaoSignup({ signupToken: outcome.signupToken, redirect: outcome.redirect })
+        setPendingKakaoSignup({ signupToken: outcome.signupToken, email: outcome.email, redirect: outcome.redirect })
         navigate('/signup/kakao', { replace: true })
         return
       }
@@ -115,6 +126,8 @@ export function KakaoCallbackPage() {
     )
   }
 
+  const loginPath = `/login${failure.redirect !== '/' ? `?redirect=${encodeURIComponent(failure.redirect)}` : ''}`
+
   const retry = () => {
     try {
       startKakaoLogin(failure.redirect)
@@ -138,11 +151,14 @@ export function KakaoCallbackPage() {
             카카오로 다시 시도
           </Button>
         ) : null}
+        {failure.emailMember ? (
+          <LinkButton to={loginPath} size="lg" fullWidth>
+            이메일로 로그인
+          </LinkButton>
+        ) : null}
         <DevApiNote ids={['auth.kakaoLogin']} />
         <div className={styles.links}>
-          <Link to={`/login${failure.redirect !== '/' ? `?redirect=${encodeURIComponent(failure.redirect)}` : ''}`}>
-            로그인 화면으로
-          </Link>
+          {failure.emailMember ? null : <Link to={loginPath}>로그인 화면으로</Link>}
         </div>
       </div>
     </div>
