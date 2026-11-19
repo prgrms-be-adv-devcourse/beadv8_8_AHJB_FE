@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useToast } from '@/components/Toast'
 import { startKakaoLogin } from '@/lib/kakaoAuth'
 import styles from './Auth.module.css'
@@ -13,6 +13,16 @@ interface KakaoLoginButtonProps {
 export function KakaoLoginButton({ redirect = '/', label = '카카오로 시작하기' }: KakaoLoginButtonProps) {
   const toast = useToast()
   const [leaving, setLeaving] = useState(false)
+
+  // 카카오로 떠났다가 뒤로가기로 돌아오면(bfcache 복원) 이 컴포넌트는 "이동 중" 상태 그대로 살아난다.
+  // 복원된 경우(persisted)에만 버튼을 다시 누를 수 있게 되돌린다 (ChargeDialog 와 같은 방식)
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setLeaving(false)
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
 
   const handleClick = () => {
     try {
