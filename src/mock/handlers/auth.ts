@@ -63,6 +63,18 @@ function mockKakaoEmail(kakaoId: string): string | null {
   return `kakao${kakaoId}@kakao.mock`;
 }
 
+/**
+ * 목업 카카오 닉네임 (실제는 kakao_account.profile.nickname). 회원번호 접두어로 경우를 나눈다.
+ * - nonick…    → null (닉네임 미동의)
+ * - takennick… → 시드 회원 닉네임 (가입 화면에서 중복 안내)
+ * - 그 외      → 카카오<회원번호 끝 4자리>
+ */
+function mockKakaoNickname(kakaoId: string): string | null {
+  if (kakaoId.startsWith('nonick')) return null;
+  if (kakaoId.startsWith('takennick')) return '찐막러';
+  return `카카오${kakaoId.slice(-4)}`;
+}
+
 const mockTokens = (memberId: number) => ({
   accessToken: `mock.${memberId}.${Date.now().toString(36)}`,
   refreshToken: `mock-refresh.${memberId}`,
@@ -156,6 +168,7 @@ export function registerAuthRoutes(): void {
         suspended: null,
         signupToken: `mock-signup.${kakaoId}.${now() + SIGNUP_TOKEN_TTL_MS}`,
         email,
+        nickname: mockKakaoNickname(kakaoId),
       });
     }
     if (member.accountStatus === 'BANNED') fail('COMMON102');
@@ -165,6 +178,7 @@ export function registerAuthRoutes(): void {
       suspended: member.accountStatus === 'SUSPENDED',
       signupToken: null,
       email: null,
+      nickname: null,
     });
   });
 

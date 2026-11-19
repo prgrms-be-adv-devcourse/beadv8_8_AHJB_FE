@@ -44,6 +44,8 @@ export type KakaoLoginResponse =
       signupToken: null
       /** LOGIN 에서는 항상 null */
       email: null
+      /** LOGIN 에서는 항상 null */
+      nickname: null
       /** 목업만 준다 */
       refreshToken?: string
     }
@@ -58,6 +60,11 @@ export type KakaoLoginResponse =
        * 미인증·만료 등으로 없으면 null → 사용자가 직접 입력한다.
        */
       email: string | null
+      /**
+       * 카카오 닉네임(kakao_account.profile.nickname). 가입 화면 닉네임 칸을 미리 채우는 제안값이라 사용자가 고칠 수 있다.
+       * 가입 토큰에 담기지 않으며, 가입 API 는 요청 바디의 nickname 을 쓴다. 미동의·공백이면 null
+       */
+      nickname: string | null
     }
 
 /** POST /api/v1/auth/oauth/kakao/signup 요청. 비밀번호가 없는 것 말고는 일반 가입과 같다 */

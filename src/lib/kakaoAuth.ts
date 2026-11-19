@@ -25,6 +25,8 @@ const STATE_TTL_MS = 10 * 60 * 1000
  * 다른 경우를 보려면 개발자 도구에서 이 값을 바꾼다 (mock/handlers/auth.ts mockKakaoEmail):
  *   localStorage.setItem('jjinmak.mockKakaoId', 'noemail1') → 이메일 없음 (직접 입력)
  *   localStorage.setItem('jjinmak.mockKakaoId', 'dup1')     → 이미 이메일 회원 (AUTH113)
+ *   localStorage.setItem('jjinmak.mockKakaoId', 'nonick1')  → 닉네임 없음 (빈 칸)
+ *   localStorage.setItem('jjinmak.mockKakaoId', 'takennick1') → 이미 쓰는 닉네임 (중복 안내)
  */
 const MOCK_KAKAO_ID_KEY = 'jjinmak.mockKakaoId'
 
@@ -122,6 +124,8 @@ export interface PendingKakaoSignup {
   signupToken: string
   /** 카카오 인증 이메일. 있으면 가입 화면에서 이메일 칸을 채우고 잠근다 */
   email: string | null
+  /** 카카오 닉네임. 있으면 가입 화면 닉네임 칸을 채운다 (수정 가능) */
+  nickname: string | null
   redirect: string
 }
 

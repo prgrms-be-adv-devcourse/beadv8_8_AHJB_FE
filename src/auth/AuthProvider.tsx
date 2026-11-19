@@ -27,7 +27,7 @@ export type LoginResult = LoginResponse & { nickname: string }
 
 export type KakaoLoginOutcome =
   | { status: 'LOGIN'; result: LoginResult }
-  | { status: 'SIGNUP_REQUIRED'; signupToken: string; email: string | null }
+  | { status: 'SIGNUP_REQUIRED'; signupToken: string; email: string | null; nickname: string | null }
 
 /** 세션을 만드는 응답의 공통 부분 (이메일 로그인·카카오 로그인·카카오 가입) */
 type SessionTokens = Pick<LoginResponse, 'accessToken' | 'refreshToken' | 'suspended'>
@@ -150,7 +150,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (code: string): Promise<KakaoLoginOutcome> => {
       const response = await authApi.kakaoLogin({ code })
       if (response.status === 'SIGNUP_REQUIRED')
-        return { status: 'SIGNUP_REQUIRED', signupToken: response.signupToken, email: response.email ?? null }
+        return {
+          status: 'SIGNUP_REQUIRED',
+          signupToken: response.signupToken,
+          email: response.email ?? null,
+          nickname: response.nickname ?? null,
+        }
       const result = await establishSession(response, null)
       // 카카오 로그인 응답에는 이메일이 없어서 내 정보 상세에서 가져온다. 실패해도 로그인은 유지한다
       if (CAN_FETCH_EMAIL) {

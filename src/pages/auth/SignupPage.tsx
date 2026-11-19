@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ApiError } from '@/api/client'
 import { authApi } from '@/api/endpoints'
@@ -80,11 +80,13 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
    * 이메일 중복은 로그인 단계(AUTH113)에서 이미 걸렀으므로 중복 확인도 하지 않는다.
    */
   const kakaoEmail = kakaoPending?.email ?? null
+  /** 카카오 닉네임은 제안값. 채워 주되 사용자가 고칠 수 있고, 중복·길이는 일반 가입과 같이 검사한다 */
+  const kakaoNickname = kakaoPending?.nickname?.trim() || null
   const [form, setForm] = useState<SignupForm>({
     email: kakaoEmail ?? '',
     password: '',
     passwordConfirm: '',
-    nickname: '',
+    nickname: kakaoNickname ?? '',
     username: '',
     phone: '',
     birthDate: '',
@@ -119,6 +121,12 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
       setCheck({ status: 'idle', value })
     }
   }
+
+  // 카카오 닉네임으로 채웠으면 들어오자마자 중복 확인을 한 번 한다 (이미 쓰는 닉네임이면 바로 안내)
+  useEffect(() => {
+    if (kakaoNickname && kakaoNickname.length <= 50) void checkAvailability('nickname', kakaoNickname, setNicknameCheck)
+    // 화면에 들어올 때 한 번만
+  }, [])
 
   const recipient = sameRecipient ? form.username : form.recipient
   const recipientPhone = digitsOnly(sameRecipient ? form.phone : form.recipientPhone)
@@ -406,13 +414,17 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
 
           <Field
             label="닉네임"
-            error={visibleError('nickname', nicknameCheck.status !== 'idle')}
+            error={visibleError('nickname', nicknameCheck.status !== 'idle' || form.nickname.length > 50)}
             success={
               !errors.nickname && nicknameCheck.value === form.nickname && nicknameCheck.status === 'ok'
                 ? '멋진 닉네임이에요.'
                 : null
             }
-            hint="거래할 때 상대에게 보여요. 입찰 기록에는 첫 글자만 보여요."
+            hint={
+              kakaoNickname
+                ? '카카오 닉네임을 가져왔어요. 바꿔도 돼요. 거래할 때 상대에게 보여요.'
+                : '거래할 때 상대에게 보여요. 입찰 기록에는 첫 글자만 보여요.'
+            }
           >
             {(id, describedBy) => (
               <Input
@@ -420,7 +432,7 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
                 aria-describedby={describedBy}
                 value={form.nickname}
                 maxLength={50}
-                invalid={!!visibleError('nickname', nicknameCheck.status !== 'idle')}
+                invalid={!!visibleError('nickname', nicknameCheck.status !== 'idle' || form.nickname.length > 50)}
                 onChange={bind('nickname')}
                 onBlur={() => void checkAvailability('nickname', form.nickname.trim(), setNicknameCheck)}
               />

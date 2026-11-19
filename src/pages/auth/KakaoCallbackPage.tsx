@@ -12,7 +12,7 @@ import styles from './Auth.module.css'
 
 type CallbackResult =
   | { kind: 'login'; redirect: string; result: LoginResult }
-  | { kind: 'signup'; redirect: string; signupToken: string; email: string | null }
+  | { kind: 'signup'; redirect: string; signupToken: string; email: string | null; nickname: string | null }
   | {
       kind: 'error'
       redirect: string
@@ -58,7 +58,13 @@ async function handleCallback(search: string, kakaoLogin: AuthContextValue['kaka
     const outcome = await kakaoLogin(code)
     return outcome.status === 'LOGIN'
       ? { kind: 'login', redirect, result: outcome.result }
-      : { kind: 'signup', redirect, signupToken: outcome.signupToken, email: outcome.email }
+      : {
+          kind: 'signup',
+          redirect,
+          signupToken: outcome.signupToken,
+          email: outcome.email,
+          nickname: outcome.nickname,
+        }
   } catch (err) {
     const apiError = err as ApiError
     // 카카오 인증 이메일이 이미 이메일 회원 → 가입 화면 없이 이메일 로그인으로 (자동 연동 없음)
@@ -93,7 +99,12 @@ export function KakaoCallbackPage() {
         return
       }
       if (outcome.kind === 'signup') {
-        setPendingKakaoSignup({ signupToken: outcome.signupToken, email: outcome.email, redirect: outcome.redirect })
+        setPendingKakaoSignup({
+          signupToken: outcome.signupToken,
+          email: outcome.email,
+          nickname: outcome.nickname,
+          redirect: outcome.redirect,
+        })
         navigate('/signup/kakao', { replace: true })
         return
       }
