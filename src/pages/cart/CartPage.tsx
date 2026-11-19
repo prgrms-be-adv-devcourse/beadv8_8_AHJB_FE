@@ -87,7 +87,7 @@ export function CartPage() {
       if (!result.data) {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
       }
-      const { pgOrderId, chargeAmount, orderName, paymentId } = result.data
+      const { pgOrderId, chargeAmount, orderName, paymentId, pgMethod } = result.data
       if (!isRealApi('payment.confirm')) {
         // 목업: 토스 결제창을 거치지 않고 바로 승인
         await paymentApi.confirmPayment({ pgOrderId, paymentKey: `mock_${paymentId}`, amount: chargeAmount })
@@ -97,6 +97,7 @@ export function CartPage() {
       setConfirmOpen(false)
       await openTossPaymentWindow({
         pgOrderId,
+        method: pgMethod,
         amount: chargeAmount,
         orderName,
         customerEmail: tokenStore.getProfile()?.email,

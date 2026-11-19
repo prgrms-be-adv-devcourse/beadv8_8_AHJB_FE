@@ -282,11 +282,12 @@ function findChargeById(chargeId: number): MockCharge {
 }
 
 export function registerPaymentRoutes(): void {
-  /** 수동 충전 요청: pgOrderId 발급. 백엔드 검증은 양수뿐이고 1,000원 단위·상한은 프론트 ChargeDialog 가 맡는다 */
+  /** 수동 충전 요청: pgOrderId 발급. 금액이 최소·최대 충전 금액을 벗어나면 CHARGE010 (1,000원 단위는 프론트 ChargeDialog 만의 규칙) */
   route('POST', '/api/v1/payments/charges', (ctx) => {
     const me = requireMe(ctx);
     const amount = Number((ctx.body as { amount?: unknown } | null | undefined)?.amount);
     if (!Number.isInteger(amount) || amount <= 0) fail('CHARGE002');
+    if (amount < CHARGE_MIN_AMOUNT || amount > CHARGE_MAX_AMOUNT) fail('CHARGE010');
     const charge = newCharge(me.id, amount, 'MANUAL', now(), null);
     return ok(toChargeSummary(charge), 201);
   });
@@ -302,7 +303,7 @@ export function registerPaymentRoutes(): void {
     const at = now();
     addTransaction(charge.memberId, 'CHARGE', charge.amount, 'CHARGE', charge.chargeId, '예치금 충전 (토스페이먼츠)', at);
     charge.status = 'CHARGED';
-    charge.method = '카드';
+    charge.method = '계좌이체';
     charge.approvedAt = ldt(at);
     persist();
     return ok(toChargeSummary(charge));
@@ -324,7 +325,7 @@ export function registerPaymentRoutes(): void {
     const at = now();
     addTransaction(charge.memberId, 'CHARGE', charge.amount, 'CHARGE', charge.chargeId, '주문 결제 부족분 충전 (토스페이먼츠)', at);
     charge.status = 'CHARGED';
-    charge.method = '카드';
+    charge.method = '계좌이체';
     charge.approvedAt = ldt(at);
     // 장바구니 상품이 그새 사라졌으면(기한 만료 등) payCartItems 가 CART00x 로 실패한다. 충전은 들어온 채 남는다 (실제 백엔드는 토스 취소로 보상)
     payCartItems(charge.memberId, payment.productIds, at, false, payment.orderGroupId);

@@ -118,7 +118,7 @@ export function MyWalletPage() {
   const cancel = useMutation<ChargeSummary, ApiError, number>({
     mutationFn: (chargeId) => paymentApi.cancelCharge(chargeId),
     onSuccess: (charge) => {
-      toast(`${formatWon(charge.amount)} 충전을 취소했어요. 결제하신 카드로 환불돼요.`, { tone: 'success' })
+      toast(`${formatWon(charge.amount)} 충전을 취소했어요. 결제하신 계좌로 환불돼요.`, { tone: 'success' })
       setCancelTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
     },
@@ -359,7 +359,7 @@ export function MyWalletPage() {
           <>
             <br />
             <strong>취소할 수 있는 충전 {cancelableCount}건이 있어요.</strong> 출금하면 이전 충전은 더 이상 취소할 수 없으니,
-            카드 환불을 원하시면 먼저 충전 취소를 해 주세요.
+            결제하신 계좌로 환불받으려면 먼저 충전 취소를 해 주세요.
           </>
         ) : null}
       </ConfirmDialog>
@@ -372,7 +372,7 @@ export function MyWalletPage() {
         onConfirm={() => cancelTarget && cancel.mutate(cancelTarget.chargeId)}
         onClose={() => setCancelTarget(null)}
       >
-        예치금에서 {cancelTarget ? formatWon(cancelTarget.amount) : ''}이 빠지고, 결제하신 카드로 환불돼요.
+        예치금에서 {cancelTarget ? formatWon(cancelTarget.amount) : ''}이 빠지고, 결제하신 계좌로 환불돼요.
         <br />
         취소 후 잔액 {cancelTarget ? formatWon(balance - cancelTarget.amount) : ''}
       </ConfirmDialog>

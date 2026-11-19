@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ApiError } from '@/api/client'
 import { isRealApi } from '@/api/config'
 import { paymentApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
@@ -22,11 +23,13 @@ import { useToast } from './Toast'
 
 /** 빠른 금액 추가 칩 */
 const QUICK_AMOUNTS = [10000, 50000, 100000, 300000]
+/** 충전 금액 입력 단위. 화면에서만 지키는 규칙이고, 금액 범위는 결제 정책(GET /payments/policy)이 정한다 */
+const AMOUNT_UNIT = 1000
 
 interface ChargeDialogProps {
   open: boolean
   onClose: () => void
-  /** 모자란 금액. 있으면 1,000원 단위로 올려 미리 채운다 */
+  /** 모자란 금액. 있으면 1,000원 단위로 올리고, 최소 충전 금액보다 작으면 최소 충전 금액으로 미리 채운다 */
   suggested?: number
   onCharged?: () => void
   /** 토스 결제창을 거쳐 충전을 마친 뒤 돌아올 경로. 기본은 예치금 화면(/me/wallet). 장바구니에서 열면 /cart */
@@ -34,9 +37,9 @@ interface ChargeDialogProps {
 }
 
 /**
- * 예치금 충전 모달. 1,000원 이상·1,000원 단위·200만 원 이하.
+ * 예치금 충전 모달. 계좌이체로만 충전한다. 금액은 결제 정책의 최소·최대 충전 금액 안에서 1,000원 단위.
  *
- * 실제: 충전 요청(POST /payments/charges) → 토스 결제창 → successUrl(/me/wallet/charge/success)에서 승인.
+ * 실제: 충전 요청(POST /payments/charges) → 토스 계좌이체 결제창 → successUrl(/me/wallet/charge/success)에서 승인.
  *       결제창으로 페이지가 이동하므로 이 컴포넌트에서 끝나지 않는다.
  * 목업: 결제창 없이 충전 요청 → 바로 승인(POST /payments/charges/confirm)까지 끝낸다.
  */
@@ -48,23 +51,33 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
   // 결제창을 여는 동안은 닫아 두고, 사용자가 결제창을 닫으면 입력값을 그대로 둔 채 다시 연다.
   const [tossOpen, setTossOpen] = useState(false)
   const mock = !isRealApi('payment.chargeRequest')
+  // 충전 금액 범위. 모달을 열기 전에 받아 둔다. 못 받았으면 범위 검증 없이 보내고 백엔드가 CHARGE010 으로 거절한다
+  const policyQuery = useQuery({ queryKey: ['payment', 'policy'], queryFn: paymentApi.policy, staleTime: Infinity })
+  const minAmount = policyQuery.data?.chargeMinAmount
+  const maxAmount = policyQuery.data?.chargeMaxAmount
 
   useEffect(() => {
-    if (open) setAmountText(suggested ? (Math.ceil(suggested / 1000) * 1000).toLocaleString('ko-KR') : '')
+    if (!open) return
+    const prefill = suggested ? Math.max(Math.ceil(suggested / AMOUNT_UNIT) * AMOUNT_UNIT, minAmount ?? 0) : 0
+    setAmountText(prefill ? prefill.toLocaleString('ko-KR') : '')
   }, [open, suggested])
 
   const amount = parseDigits(amountText)
   const error = amount
-    ? amount < 1000
-      ? '1,000원 이상 충전할 수 있어요.'
-      : amount % 1000 !== 0
+    ? minAmount !== undefined && amount < minAmount
+      ? `${formatWon(minAmount)} 이상 충전할 수 있어요.`
+      : amount % AMOUNT_UNIT !== 0
         ? '1,000원 단위로 충전해 주세요.'
-        : amount > 2000000
-          ? '한 번에 200만 원까지 충전할 수 있어요.'
+        : maxAmount !== undefined && amount > maxAmount
+          ? `한 번에 ${formatWon(maxAmount)}까지 충전할 수 있어요.`
           : null
     : null
+  const rangeHint =
+    minAmount !== undefined && maxAmount !== undefined
+      ? `${formatWon(minAmount)}부터 ${formatWon(maxAmount)}까지 · 1,000원 단위`
+      : '1,000원 단위'
 
-  const charge = useMutation<ChargeSummary | null, Error>({
+  const charge = useMutation<ChargeSummary | null, ApiError>({
     mutationFn: async () => {
       const requested = await paymentApi.requestCharge(amount)
       if (mock) {
@@ -80,6 +93,7 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
       try {
         await openTossPaymentWindow({
           pgOrderId: requested.pgOrderId,
+          method: requested.pgMethod,
           amount: requested.amount,
           orderName: requested.orderName,
           customerEmail: tokenStore.getProfile()?.email,
@@ -102,6 +116,8 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
     onError: (err) => {
       // 사용자가 결제창을 닫은 건 에러가 아니다. 백엔드에 남은 REQUESTED 충전은 스케줄러가 정리한다
       if (tossErrorCode(err) === TOSS_USER_CANCEL) return
+      // 금액 범위가 화면이 알던 값과 달라졌다. 정책을 다시 받아 입력 검증을 맞춘다
+      if (err.code === 'CHARGE010') void queryClient.invalidateQueries({ queryKey: ['payment', 'policy'] })
       toast(err.message, { tone: 'error' })
     },
   })
@@ -126,7 +142,7 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
       open={open && !tossOpen}
       onClose={onClose}
       title="예치금 충전"
-      description="입찰·결제는 예치금으로만 해요. 카드·계좌이체로 충전하면 바로 쓸 수 있어요."
+      description="예치금은 계좌이체로만 충전할 수 있어요. 충전하면 바로 쓸 수 있어요."
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -146,7 +162,7 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
       <Field
         label="충전 금액"
         error={error}
-        hint={suggested ? `결제하려면 ${formatWon(suggested)}이 더 필요해요.` : '1,000원 단위'}
+        hint={suggested ? `결제하려면 ${formatWon(suggested)}이 더 필요해요. ${rangeHint}` : rangeHint}
       >
         {(id, describedBy) => (
           <Input
@@ -170,9 +186,9 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
         ))}
       </div>
       <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-        {mock ? '목업: 토스페이먼츠 결제창 대신 바로 충전돼요.' : '충전하기를 누르면 토스페이먼츠 결제창으로 이동해요.'}
+        {mock ? '목업: 토스페이먼츠 결제창 대신 바로 충전돼요.' : '충전하기를 누르면 토스페이먼츠 계좌이체 결제창으로 이동해요.'}
       </p>
-      <DevApiNote ids={['payment.chargeRequest', 'payment.chargeConfirm']} />
+      <DevApiNote ids={['payment.policy', 'payment.chargeRequest', 'payment.chargeConfirm']} />
     </Dialog>
   )
 }

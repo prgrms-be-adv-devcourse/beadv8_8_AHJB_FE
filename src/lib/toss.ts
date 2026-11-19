@@ -1,9 +1,10 @@
 import { ANONYMOUS, loadTossPayments, type TossPaymentsPayment, type TossPaymentsSDK } from '@tosspayments/tosspayments-sdk'
+import type { PgMethod } from '@/types/payment'
 
 /** 토스 결제창에서 돌아오는 프론트 경로. successUrl / failUrl 은 절대 URL 이어야 해서 origin 을 붙여 쓴다 */
 export const CHARGE_SUCCESS_PATH = '/me/wallet/charge/success'
 export const CHARGE_FAIL_PATH = '/me/wallet/charge/fail'
-/** 주문 결제(장바구니, 부족분 카드 결제)에서 돌아오는 경로 */
+/** 주문 결제(장바구니)의 결제창에서 돌아오는 경로 */
 export const ORDER_PAYMENT_SUCCESS_PATH = '/cart/payment/success'
 export const ORDER_PAYMENT_FAIL_PATH = '/cart/payment/fail'
 
@@ -43,6 +44,11 @@ function loadSdk(): Promise<TossPaymentsSDK> {
 export interface TossPaymentWindowParams {
   /** 백엔드가 발급한 pgOrderId. 토스의 orderId 로 넘긴다 */
   pgOrderId: string
+  /**
+   * 결제창 종류. 백엔드 응답의 pgMethod 를 그대로 넘긴다 (TRANSFER = 퀵계좌이체, CARD = 카드·간편결제 통합).
+   * 예치금 충전은 TRANSFER 만 가능하고, 다른 수단으로 결제하면 백엔드가 승인 단계에서 취소한다(CHARGE009)
+   */
+  method: PgMethod
   amount: number
   /** 백엔드가 정한 상품명 (예: "찐막 예치금 충전") */
   orderName: string
@@ -53,7 +59,7 @@ export interface TossPaymentWindowParams {
 }
 
 /**
- * 토스 결제창(카드·간편결제 통합)을 띄운다. 결제가 끝나면 successUrl 로 페이지가 이동하므로 이 함수는 돌아오지 않는 게 정상이고,
+ * 토스 결제창을 띄운다. 결제가 끝나면 successUrl 로 페이지가 이동하므로 이 함수는 돌아오지 않는 게 정상이고,
  * 사용자가 창을 닫으면 code === 'USER_CANCEL' 에러가 난다.
  */
 export async function openTossPaymentWindow(params: TossPaymentWindowParams): Promise<void> {
@@ -61,16 +67,18 @@ export async function openTossPaymentWindow(params: TossPaymentWindowParams): Pr
   await closeTossPaymentWindow()
   const payment = toss.payment({ customerKey: ANONYMOUS })
   currentPayment = payment
+  const request = {
+    amount: { currency: 'KRW', value: params.amount },
+    orderId: params.pgOrderId,
+    orderName: params.orderName,
+    successUrl: window.location.origin + (params.successPath ?? CHARGE_SUCCESS_PATH),
+    failUrl: window.location.origin + (params.failPath ?? CHARGE_FAIL_PATH),
+    customerEmail: params.customerEmail ?? undefined,
+  }
   try {
-    await payment.requestPayment({
-      method: 'CARD',
-      amount: { currency: 'KRW', value: params.amount },
-      orderId: params.pgOrderId,
-      orderName: params.orderName,
-      successUrl: window.location.origin + (params.successPath ?? CHARGE_SUCCESS_PATH),
-      failUrl: window.location.origin + (params.failPath ?? CHARGE_FAIL_PATH),
-      customerEmail: params.customerEmail ?? undefined,
-    })
+    // SDK 의 requestPayment 는 결제수단별 오버로드라 method 를 리터럴로 나눠 넘긴다
+    if (params.method === 'TRANSFER') await payment.requestPayment({ ...request, method: 'TRANSFER' })
+    else await payment.requestPayment({ ...request, method: 'CARD' })
   } finally {
     // 취소·오류로 결제창이 닫혔다. 성공 리다이렉트는 여기 오지 않으므로 currentPayment 가 남아 bfcache 복원 때 정리된다
     if (currentPayment === payment) currentPayment = null

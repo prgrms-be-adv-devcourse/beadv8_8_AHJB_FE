@@ -155,7 +155,7 @@ export function describeLedgerEntry(entry: LedgerEntry): string {
     case 'CHARGE':
       return '토스페이먼츠 충전'
     case 'CHARGE_CANCEL':
-      return '충전 취소 (카드 환불)'
+      return '충전 취소 (계좌 환불)'
     case 'WITHDRAWAL':
       return '예치금 출금 (등록 계좌)'
     case 'HOLD_PAY':

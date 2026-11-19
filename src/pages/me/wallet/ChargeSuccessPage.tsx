@@ -81,9 +81,11 @@ export function ChargeSuccessPage() {
               {confirm.error.message}
               {confirm.error.pgMessage ? ` (${confirm.error.pgMessage})` : null}
               <br />
-              {confirm.error.retryable
-                ? '다시 충전하면 해결할 수 있어요.'
-                : '결제된 금액이 있다면 카드사로 자동 취소돼요.'}
+              {confirm.error.code === 'CHARGE009'
+                ? '충전하기를 다시 눌러 계좌이체로 결제해 주세요.'
+                : confirm.error.retryable
+                  ? '다시 충전하면 해결할 수 있어요.'
+                  : '결제된 금액이 있다면 자동으로 취소돼요.'}
             </>
           }
           action={backButton}
