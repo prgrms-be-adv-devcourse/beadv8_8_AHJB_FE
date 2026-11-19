@@ -20,6 +20,34 @@ const PHONE_PATTERN = /^01[0-9]{8,9}$/
 /** 숫자만 남긴다 */
 const digitsOnly = (value: string) => value.replace(/\D/g, '')
 
+/** 생년월일로 받을 수 있는 가장 이른 날짜 */
+const BIRTH_DATE_MIN = '1900-01-01'
+
+/** 브라우저 기준 오늘 (YYYY-MM-DD). toISOString 은 UTC 라 한국 새벽에 날짜가 하루 밀려서 쓰지 않는다 */
+function todayLocal(): string {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${mm}-${dd}`
+}
+
+/** 생년월일 검증. 선택 항목이라 비어 있으면 통과 */
+function birthDateError(value: string): string | null {
+  if (!value) return null
+  // date 입력은 YYYY-MM-DD 로 오지만, 연도를 5자리 이상 입력하는 등 형식이 깨질 수 있다
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return '생년월일을 확인해 주세요.'
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])]
+  const date = new Date(year, month - 1, day)
+  // 2월 30일처럼 없는 날짜
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return '생년월일을 확인해 주세요.'
+  }
+  if (value < BIRTH_DATE_MIN) return '1900년 1월 1일 이후 날짜를 입력해 주세요.'
+  if (value > todayLocal()) return '오늘 이후 날짜는 입력할 수 없어요.'
+  return null
+}
+
 interface SignupForm {
   email: string
   password: string
@@ -50,6 +78,7 @@ type ErrorKey =
   | 'passwordConfirm'
   | 'nickname'
   | 'username'
+  | 'birthDate'
   | 'phone'
   | 'recipient'
   | 'recipientPhone'
@@ -158,6 +187,7 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
           : null
       : '닉네임을 입력해 주세요.',
     username: form.username.trim() ? null : '실명을 입력해 주세요.',
+    birthDate: birthDateError(form.birthDate),
     phone: PHONE_PATTERN.test(digitsOnly(form.phone)) ? null : '휴대폰 번호를 확인해 주세요. (01012345678)',
     recipient: recipient.trim()
       ? recipient.length > 50
@@ -453,8 +483,19 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
                 />
               )}
             </Field>
-            <Field label="생년월일" optional>
-              {(id) => <Input id={id} type="date" value={form.birthDate} onChange={bind('birthDate')} />}
+            <Field label="생년월일" optional error={visibleError('birthDate', !!form.birthDate)}>
+              {(id, describedBy) => (
+                <Input
+                  id={id}
+                  type="date"
+                  min={BIRTH_DATE_MIN}
+                  max={todayLocal()}
+                  aria-describedby={describedBy}
+                  value={form.birthDate}
+                  onChange={bind('birthDate')}
+                  invalid={!!visibleError('birthDate', !!form.birthDate)}
+                />
+              )}
             </Field>
           </div>
 
