@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
 import { isRealApi } from '@/api/config'
 import { cartApi, paymentApi, walletApi } from '@/api/endpoints'
@@ -10,14 +10,15 @@ import { ChargeDialog } from '@/components/ChargeDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
-import { Checkbox } from '@/components/form/Field'
+import { Checkbox, Field, Input, RadioCard } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
 import { productPath } from '@/components/ProductCard'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
 import { useNow } from '@/lib/clock'
-import { formatCountdown, formatDateTime, formatRelativeTime, formatWon } from '@/lib/format'
+import { formatCountdown, formatDateTime, formatPoint, formatRelativeTime, formatWon, parseDigits } from '@/lib/format'
+import { PAY_METHOD_LABELS } from '@/lib/labels'
 import { useWithProductSummaries } from '@/lib/productSummaries'
 import {
   ORDER_PAYMENT_FAIL_PATH,
@@ -27,12 +28,28 @@ import {
   openTossPaymentWindow,
   tossErrorCode,
 } from '@/lib/toss'
+import type { PayMethod } from '@/types/payment'
 import styles from './CartPage.module.css'
 
 /** 결제 기한이 이만큼 안 남으면 강조 (6시간) */
 const DUE_HOT_MS = 6 * 3600000
 
 const SHORTAGE_MESSAGE = '예치금이 부족해요. 충전한 뒤 다시 결제해 주세요.'
+
+const PAY_METHODS: PayMethod[] = ['DEPOSIT', 'TRANSFER', 'CARD']
+
+/** 포인트 입력이 멈춘 뒤 이만큼 지나면 견적을 다시 받는다 */
+const QUOTE_DEBOUNCE_MS = 300
+
+/** value 가 delayMs 동안 바뀌지 않으면 그 값을 돌려준다 */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs)
+    return () => window.clearTimeout(timer)
+  }, [value, delayMs])
+  return debounced
+}
 
 /** 결제 요청 결과. PAID = 끝남, REDIRECTED = 토스 결제창으로 이동 중(이 페이지를 떠난다) */
 type PayOutcome = 'PAID' | 'REDIRECTED'
@@ -49,6 +66,8 @@ export function CartPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [chargeOpen, setChargeOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
+  const [payMethod, setPayMethod] = useState<PayMethod>('DEPOSIT')
+  const [pointRequested, setPointRequested] = useState(0)
   const items = useWithProductSummaries(cartQuery.data ?? [])
 
   // 처음 불러왔을 때 전부 선택
@@ -64,25 +83,45 @@ export function CartPage() {
   const deliveryTotal = selected.reduce((sum, item) => sum + item.deliveryFee, 0)
   const payTotal = priceTotal + deliveryTotal
   const balance = walletQuery.data?.balance ?? 0
+  const pointBalance = walletQuery.data?.pointBalance ?? 0
+  // 포인트는 보유한 만큼, 결제 금액까지만 쓸 수 있다. 선택한 상품이 바뀌어 한도가 줄면 사용액도 따라 줄인다
+  const maxPoint = Math.min(pointBalance, payTotal)
+  const pointUse = Math.min(pointRequested, maxPoint)
+  const quotedPoint = useDebouncedValue(pointUse, QUOTE_DEBOUNCE_MS)
 
-  // 결제 전 견적: 예치금에서 얼마, 카드로 얼마 나가는지. 응답 전에는 잔액으로 직접 계산한 값을 쓴다
+  // 결제 전 견적: 이 결제수단 · 포인트 사용액이면 무엇으로 얼마씩 나가고 결제창에서 얼마를 결제하는지. 계산은 백엔드가 한다
   const quoteQuery = useQuery({
-    queryKey: ['payment', 'quote', payTotal],
-    queryFn: () => paymentApi.quote({ amount: payTotal }),
+    queryKey: ['payment', 'quote', payTotal, deliveryTotal, payMethod, quotedPoint],
+    queryFn: () =>
+      paymentApi.quote({ amount: payTotal, payMethod, pointUseAmount: quotedPoint, deliveryFee: deliveryTotal }),
     enabled: payTotal > 0,
+    placeholderData: keepPreviousData,
   })
-  const shortage = quoteQuery.data?.shortage ?? Math.max(0, payTotal - balance)
-  const walletUse = quoteQuery.data?.walletUseAmount ?? payTotal - shortage
+  const quote = payTotal > 0 ? quoteQuery.data : undefined
+  // 화면의 조건과 견적의 조건이 같을 때만 결제할 수 있다 (조건을 바꾼 직후에는 이전 견적이 잠깐 보인다)
+  const quoteReady = !!quote && !quoteQuery.isPlaceholderData && quotedPoint === pointUse
+  const pgAmount = quote?.pgAmount ?? 0
+  const shortage = quote?.shortage ?? 0
+  const limitExceeded = !!quote?.chargeLimitExceeded
+
+  // 견적이 거절되면(포인트가 그새 줄었을 때 등) 잔액을 다시 받아 입력 한도를 맞춘다
+  useEffect(() => {
+    if (quoteQuery.error) void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+  }, [quoteQuery.error, queryClient])
 
   /**
-   * 결제하기. 예치금이 충분하면 cart.pay 한 번으로 끝난다.
-   * 부족하면 cart.pay 가 isPaid:false + 결제창 파라미터(data)를 주고, 그걸로 토스 결제창을 띄운다.
+   * 결제하기. 포인트 · 예치금만으로 끝나면 cart.pay 한 번으로 끝난다.
+   * 결제창을 거쳐야 하면(예치금 부족분 충전 또는 직접 결제) cart.pay 가 isPaid:false + 결제창 파라미터(data)를 주고,
+   * 그 pgMethod · chargeAmount 로 토스 결제창을 띄운다.
    * 결제창에서 돌아오는 /cart/payment/success 가 POST /payments/confirm 으로 승인한다.
    * 목업이면 결제창 없이 바로 승인까지 끝낸다.
    */
   const payMutation = useMutation<PayOutcome, ApiError>({
     mutationFn: async () => {
-      const result = await cartApi.pay(selected.map((item) => item.productId))
+      const result = await cartApi.pay(
+        selected.map((item) => item.productId),
+        { paymentMethod: payMethod, pointUseAmount: pointUse },
+      )
       if (!result || result.isPaid) return 'PAID'
       if (!result.data) {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
@@ -118,7 +157,7 @@ export function CartPage() {
     },
     onError: (error) => {
       setConfirmOpen(false)
-      // 서버 쪽 잔액·장바구니가 바뀌었을 수 있으니(부분 처리) 화면 값을 서버 기준으로 다시 맞춘다
+      // 서버 쪽 잔액 · 포인트 · 장바구니가 바뀌었을 수 있으니(부분 처리) 화면 값을 서버 기준으로 다시 맞춘다
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
       void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })
@@ -242,46 +281,140 @@ export function CartPage() {
               <dt className={styles.total}>결제 금액</dt>
               <dd className={`${styles.total} num`}>{formatWon(payTotal)}</dd>
             </dl>
-            <dl className={styles.walletBox}>
-              <dt>
-                <Icon name="wallet" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> 예치금 잔액
-              </dt>
-              <dd className="num">{walletQuery.data ? formatWon(balance) : '–'}</dd>
-              {shortage ? (
-                <>
-                  <dt>예치금으로</dt>
-                  <dd className="num">{formatWon(walletUse)}</dd>
-                  <dt>
-                    <Icon name="card" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> 카드로
-                  </dt>
-                  <dd className={`num ${styles.short}`}>{formatWon(shortage)}</dd>
-                </>
-              ) : (
-                <>
-                  <dt>결제 후 잔액</dt>
-                  <dd className="num">{formatWon(balance - payTotal)}</dd>
-                </>
+            <Field
+              label="포인트 사용"
+              hint={
+                !walletQuery.data
+                  ? undefined
+                  : pointBalance > 0
+                    ? `보유 ${formatPoint(pointBalance)} · 결제 금액까지 쓸 수 있어요.`
+                    : '보유한 포인트가 없어요.'
+              }
+            >
+              {(id, describedBy) => (
+                <div className={styles.pointRow}>
+                  <Input
+                    id={id}
+                    aria-describedby={describedBy}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="0"
+                    suffix="P"
+                    disabled={!maxPoint}
+                    value={pointUse ? pointUse.toLocaleString('ko-KR') : ''}
+                    onChange={(e) => setPointRequested(Math.min(parseDigits(e.target.value), maxPoint))}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={!maxPoint || pointUse === maxPoint}
+                    onClick={() => setPointRequested(maxPoint)}
+                  >
+                    전액 사용
+                  </Button>
+                </div>
               )}
-            </dl>
+            </Field>
+            <fieldset className={styles.methods}>
+              <legend className={styles.legend}>결제수단</legend>
+              {PAY_METHODS.map((method) => (
+                <RadioCard
+                  key={method}
+                  name="payMethod"
+                  value={method}
+                  checked={payMethod === method}
+                  onChange={setPayMethod}
+                  title={PAY_METHOD_LABELS[method]}
+                  description={
+                    method === 'DEPOSIT'
+                      ? `잔액 ${walletQuery.data ? formatWon(balance) : '–'} · 모자라면 계좌이체로 충전`
+                      : method === 'TRANSFER'
+                        ? '토스페이먼츠 결제창에서 바로 결제'
+                        : '토스페이먼츠 결제창에서 바로 결제 · 포인트 적립 제외'
+                  }
+                />
+              ))}
+            </fieldset>
+            {quoteQuery.isError ? (
+              <p className={styles.notice} role="alert">
+                <Icon name="alert" size={14} />
+                {quoteQuery.error.message}
+              </p>
+            ) : (
+              <dl className={`${styles.walletBox} ${quote && !quoteReady ? styles.stale : ''}`} aria-busy={!quoteReady}>
+                {quote?.pointUseAmount ? (
+                  <>
+                    <dt>포인트로</dt>
+                    <dd className="num">{formatPoint(quote.pointUseAmount)}</dd>
+                  </>
+                ) : null}
+                {payMethod === 'DEPOSIT' ? (
+                  <>
+                    {quote && (quote.walletUseAmount > 0 || shortage > 0) ? (
+                      <>
+                        <dt>
+                          <Icon name="wallet" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> 예치금으로
+                        </dt>
+                        <dd className="num">{formatWon(quote.walletUseAmount)}</dd>
+                      </>
+                    ) : null}
+                    {shortage > 0 ? (
+                      <>
+                        <dt>계좌이체로 충전</dt>
+                        <dd className={`num ${styles.short}`}>{formatWon(pgAmount)}</dd>
+                      </>
+                    ) : null}
+                    <dt>결제 후 예치금</dt>
+                    <dd className="num">{quote ? formatWon(quote.balanceAfterPayment) : '–'}</dd>
+                  </>
+                ) : quote && pgAmount === 0 ? null : (
+                  // 포인트로 전액을 내면 결제창을 거치지 않으므로 이 줄을 숨긴다
+                  <>
+                    <dt>
+                      <Icon name="card" size={14} style={{ display: 'inline', verticalAlign: '-2px' }} />{' '}
+                      {PAY_METHOD_LABELS[payMethod]}로
+                    </dt>
+                    <dd className="num">{quote ? formatWon(pgAmount) : '–'}</dd>
+                  </>
+                )}
+                <dt>구매확정 시 적립</dt>
+                <dd className={`num ${styles.earn}`}>{quote ? `+${formatPoint(quote.expectedEarnPoint)}` : '–'}</dd>
+              </dl>
+            )}
+            {limitExceeded ? (
+              <p className={styles.notice} role="alert">
+                <Icon name="alert" size={14} />
+                {payMethod === 'DEPOSIT'
+                  ? '부족한 금액이 계좌이체로 한 번에 충전할 수 있는 한도를 넘어요. 예치금을 먼저 충전하거나 카드·간편결제를 골라 주세요.'
+                  : '계좌이체로 한 번에 결제할 수 있는 한도를 넘어요. 카드·간편결제를 골라 주세요.'}
+              </p>
+            ) : null}
             <Button
               variant="highlight"
               size="lg"
               fullWidth
-              disabled={!selected.length}
+              disabled={!selected.length || !quoteReady || limitExceeded}
               onClick={() => setConfirmOpen(true)}
             >
               {formatWon(payTotal)} 결제하기
             </Button>
-            {shortage ? (
+            {payMethod === 'DEPOSIT' && shortage > 0 ? (
               <Button variant="outline" size="sm" fullWidth onClick={() => setChargeOpen(true)}>
                 예치금을 먼저 충전할래요
               </Button>
             ) : null}
             <p className={styles.rule}>
-              {shortage
-                ? '부족한 금액은 토스페이먼츠 결제창에서 카드로 결제돼요. 예치금과 카드 결제분을 합쳐 결제가 완료돼요. '
+              {limitExceeded ? null : payMethod === 'DEPOSIT' && shortage > 0 ? (
+                <>
+                  부족한 {formatWon(shortage)}은 토스페이먼츠 결제창에서 계좌이체로 충전한 뒤 결제돼요.{' '}
+                  {pgAmount > shortage
+                    ? `한 번에 충전할 수 있는 최소 금액이 ${formatWon(pgAmount)}이라, 남는 ${formatWon(pgAmount - shortage)}은 예치금에 남아요. `
+                    : ''}
+                </>
+              ) : null}
+              {!limitExceeded && payMethod !== 'DEPOSIT' && pgAmount > 0
+                ? `토스페이먼츠 결제창에서 ${formatWon(pgAmount)}을 결제해요. 예치금은 쓰지 않아요. `
                 : ''}
-              결제한 금액은 구매확정 전까지 찐막이 보관해요(에스크로). 구매확정하면 판매자에게, 환불되면 내 지갑으로
+              결제한 금액은 구매확정 전까지 찐막이 보관해요(에스크로). 구매확정하면 판매자에게, 환불되면 결제한 수단으로
               돌아와요.
             </p>
           </aside>
@@ -290,29 +423,41 @@ export function CartPage() {
 
       <ConfirmDialog
         open={confirmOpen}
-        title={shortage ? `${formatWon(payTotal)}을 결제할까요?` : `${formatWon(payTotal)}을 예치금으로 결제할까요?`}
-        confirmLabel={shortage ? '결제창 열기' : '결제하기'}
+        title={`${formatWon(payTotal)}을 결제할까요?`}
+        confirmLabel={pgAmount > 0 ? '결제창 열기' : '결제하기'}
         loading={payMutation.isPending}
         onConfirm={() => payMutation.mutate()}
         onClose={() => setConfirmOpen(false)}
       >
-        {shortage ? (
-          <>
-            {selected.length}개 상품 · 예치금 {formatWon(walletUse)} + 카드 {formatWon(shortage)}
-            <br />
-            토스페이먼츠 결제창에서 부족한 {formatWon(shortage)}만 카드로 결제하면 주문이 완료돼요.
-          </>
-        ) : (
-          <>
-            {selected.length}개 상품 · 결제 후 잔액 {formatWon(balance - payTotal)}
-          </>
-        )}
+        {selected.length}개 상품
+        {quote
+          ? ` · ${[
+              quote.pointUseAmount > 0 ? `포인트 ${formatPoint(quote.pointUseAmount)}` : null,
+              quote.walletUseAmount > 0 ? `예치금 ${formatWon(quote.walletUseAmount)}` : null,
+              pgAmount > 0
+                ? `${payMethod === 'DEPOSIT' ? '계좌이체 충전' : PAY_METHOD_LABELS[payMethod]} ${formatWon(pgAmount)}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' + ')}`
+          : null}
         <br />
+        {pgAmount > 0 ? (
+          <>
+            토스페이먼츠 결제창에서{' '}
+            {payMethod === 'DEPOSIT'
+              ? `계좌이체로 ${formatWon(pgAmount)}을 충전하면`
+              : `${formatWon(pgAmount)}을 결제하면`}{' '}
+            주문이 완료돼요.
+            <br />
+          </>
+        ) : null}
         상품마다 주문이 하나씩 만들어지고, 판매자가 송장을 등록하면 배송이 시작돼요.
       </ConfirmDialog>
       <ChargeDialog
         open={chargeOpen}
         onClose={() => setChargeOpen(false)}
+        onCharged={() => void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })}
         suggested={shortage || undefined}
         returnTo="/cart"
       />

@@ -17,7 +17,7 @@ export {
 
 const STORAGE_KEY = 'jjinmak.mockdb.v2';
 const LEGACY_STORAGE_KEY = 'jjinmak.mockdb';
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 /** 저장된 지 12시간이 지나면 시드를 새로 만든다 (시드 시각이 현재 기준이라서) */
 const DB_TTL_MS = 720 * 60 * 1000;
 

@@ -181,6 +181,8 @@ export interface DeliveryRecord {
 export interface WalletRecord {
   memberId: number;
   balance: number;
+  /** 포인트 잔액. 주문 결제에 쓰면 줄어든다 (적립 · 포인트 원장은 아직 없음) */
+  pointBalance: number;
 }
 
 export interface TransactionRecord {
@@ -195,11 +197,20 @@ export interface TransactionRecord {
   createdAt: string;
 }
 
+/** 주문 결제에서 포인트로 내고 남은 금액을 낸 결제수단 (백엔드 PayMethod) */
+export type PayMethod = 'DEPOSIT' | 'TRANSFER' | 'CARD';
+
 export interface HoldingRecord {
   orderId: number;
   winnerId: number;
   amount: number;
   status: HoldingStatus;
+  /** 결제수단. 없으면 DEPOSIT (시드 · 예전 레코드) */
+  payMethod?: PayMethod;
+  /** amount 중 포인트로 낸 금액. 없으면 0 */
+  pointAmount?: number;
+  /** amount 중 결제창에서 직접 결제한 금액. 없으면 0. 나머지(amount - pointAmount - pgAmount)가 예치금으로 낸 금액 */
+  pgAmount?: number;
 }
 
 export interface RefundRecord {

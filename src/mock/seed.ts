@@ -28,6 +28,8 @@ import {
 
 const SEED_PASSWORD = 'jjinmak1234!';
 const RANDOM_SEED = 20261016;
+/** 데모 회원(1번)이 처음에 들고 있는 포인트 */
+const DEMO_POINT_BALANCE = 5000;
 
 /** mulberry32 */
 function createRandom(seed: number): () => number {
@@ -184,6 +186,8 @@ export function buildSeed(version: number): MockDb {
       db.wallets.push({
         memberId: id,
         balance: id <= 2 ? 0 : Math.round((200 + random() * 800) * 1000),
+        // 데모 회원 1번만 포인트를 들고 시작한다 (장바구니에서 포인트 사용을 해 볼 수 있게)
+        pointBalance: id === 1 ? DEMO_POINT_BALANCE : 0,
       });
     },
   );

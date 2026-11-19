@@ -3,6 +3,11 @@ export function formatWon(amount: number | null | undefined): string {
   return amount == null ? '-' : `${amount.toLocaleString('ko-KR')}원`
 }
 
+/** 포인트. null·undefined 면 '-'. 예: 1,200P */
+export function formatPoint(amount: number | null | undefined): string {
+  return amount == null ? '-' : `${amount.toLocaleString('ko-KR')}P`
+}
+
 /** 문자열에서 숫자만 뽑아 number 로. 숫자가 없으면 0 */
 export function parseDigits(value: string): number {
   const digits = value.replace(/[^0-9]/g, '')

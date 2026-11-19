@@ -1,6 +1,6 @@
 import { db, persist } from '../db';
 import { ok, route } from '../router';
-import { addTransaction, requireMe, walletOf } from '../services';
+import { addTransaction, requireMe, shareOf, walletOf } from '../services';
 import { feeOf, formatLocalDateTime as ldt, getPageParams, now, paginate } from '../utils';
 import { toWalletView } from '../views';
 import type { HoldingRecord, TransactionRecord } from '../types';
@@ -74,6 +74,7 @@ function toHoldingView(holding: HoldingRecord, role: HoldingRole) {
   const winningPrice = order?.winningPrice ?? holding.amount;
   const deliveryFee = order?.deliveryFee ?? 0;
   const feeAmount = settlement?.feeAmount ?? feeOf(winningPrice);
+  const share = shareOf(holding);
   return {
     holdingId: holding.orderId,
     orderId: holding.orderId,
@@ -82,10 +83,10 @@ function toHoldingView(holding: HoldingRecord, role: HoldingRole) {
     winningPrice,
     deliveryFee,
     amount: holding.amount,
-    // 결제 구성은 구매자에게만. 목업은 전액 예치금이고 포인트 적립이 아직 없다
-    pointAmount: 0,
-    depositAmount: role === 'BUYER' ? holding.amount : 0,
-    pgAmount: 0,
+    // 결제 구성은 구매자에게만. 포인트 적립은 목업에 아직 없다
+    pointAmount: role === 'BUYER' ? share.pointAmount : 0,
+    depositAmount: role === 'BUYER' ? share.depositAmount : 0,
+    pgAmount: role === 'BUYER' ? share.pgAmount : 0,
     earnedPoint: 0,
     feeAmount,
     settlementAmount: holding.amount - feeAmount,
@@ -98,7 +99,7 @@ function toHoldingView(holding: HoldingRecord, role: HoldingRole) {
 }
 
 export function registerWalletRoutes(): void {
-  /** 잔액. balance = 예치금, settlementBalance = 정산금(목업은 0), pointBalance = 포인트(목업은 0) */
+  /** 잔액. balance = 예치금, settlementBalance = 정산금(목업은 0), pointBalance = 포인트 */
   route('GET', '/api/v1/wallet/me', (ctx) => ok(toWalletView(requireMe(ctx).id)));
 
   /** 원장. account / type 필터, 최신순, size 최대 50 */
@@ -107,7 +108,7 @@ export function registerWalletRoutes(): void {
     const { page, size } = getPageParams(ctx.params, 20);
     const account = ctx.params.get('account');
     const type = ctx.params.get('type');
-    // 목업은 예치금 주머니만 있어서 SETTLEMENT · POINT 를 요청하면 빈 목록
+    // 목업은 예치금 원장만 있어서 SETTLEMENT · POINT 를 요청하면 빈 목록
     if (account === 'SETTLEMENT' || account === 'POINT') return ok({ ...toWalletView(me.id), ...paginate([], page, size) });
     const entries = db.transactions
       .filter((tx) => tx.memberId === me.id && (!type || tx.type === type))

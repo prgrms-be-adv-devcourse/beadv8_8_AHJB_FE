@@ -169,3 +169,45 @@
   color: var(--text-muted);
   word-break: keep-all;
 }
+
+/* 포인트 사용 · 결제수단 선택 */
+.pointRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-8);
+  align-items: center;
+}
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-8);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.stale {
+  opacity: 0.55;
+}
+.earn {
+  color: #1f7a5a;
+}
+.notice {
+  display: flex;
+  gap: var(--space-6);
+  font-size: 12px;
+  line-height: 17px;
+  color: #c2410c;
+  word-break: keep-all;
+}
+.notice svg {
+  flex: none;
+  margin-top: 1px;
+}
