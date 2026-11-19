@@ -122,7 +122,7 @@ export function PaymentSuccessPage() {
         <EmptyState
           icon="cart"
           title="결제를 확인하고 있어요"
-          description={`결제 ${formatWon(params.amount)}을 승인하고 주문을 완료하는 중이에요. 잠시만 기다려 주세요.`}
+          description={`결제한 ${formatWon(params.amount)}을 승인하고 주문을 완료하는 중이에요. 잠시만 기다려 주세요.`}
           action={<Spinner label="승인 중" />}
         />
       )}

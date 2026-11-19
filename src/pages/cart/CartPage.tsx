@@ -115,6 +115,7 @@ export function CartPage() {
    * 결제창을 거쳐야 하면(예치금 부족분 충전 또는 직접 결제) cart.pay 가 isPaid:false + 결제창 파라미터(data)를 주고,
    * 그 pgMethod · chargeAmount 로 토스 결제창을 띄운다.
    * 결제창에서 돌아오는 /cart/payment/success 가 POST /payments/confirm 으로 승인한다.
+   * 결제창이 닫히거나 오류로 끝나면 POST /api/v1/cart 로 주문 그룹을 놓아준다.
    * 목업이면 결제창 없이 바로 승인까지 끝낸다.
    */
   const payMutation = useMutation<PayOutcome, ApiError>({
@@ -135,15 +136,22 @@ export function CartPage() {
       }
       // 확인 모달(<dialog>)이 결제창을 가리므로 먼저 닫는다
       setConfirmOpen(false)
-      await openTossPaymentWindow({
-        pgOrderId,
-        method: pgMethod,
-        amount: chargeAmount,
-        orderName,
-        customerEmail: tokenStore.getProfile()?.email,
-        successPath: ORDER_PAYMENT_SUCCESS_PATH,
-        failPath: ORDER_PAYMENT_FAIL_PATH,
-      })
+      try {
+        await openTossPaymentWindow({
+          pgOrderId,
+          method: pgMethod,
+          amount: chargeAmount,
+          orderName,
+          customerEmail: tokenStore.getProfile()?.email,
+          successPath: ORDER_PAYMENT_SUCCESS_PATH,
+          // 결제창에서 실패해 돌아오는 화면이 주문 그룹을 놓아줄 수 있게 id 를 실어 보낸다
+          failPath: `${ORDER_PAYMENT_FAIL_PATH}?orderGroupId=${result.orderGroupId}`,
+        })
+      } catch (error) {
+        // 결제창을 닫았거나 결제창이 열리지 못했다. 만들어진 주문 그룹을 바로 놓아준다 (실패해도 백엔드가 나중에 정리한다)
+        await cartApi.cancelPayment(result.orderGroupId).catch(() => undefined)
+        throw error
+      }
       return { status: 'REDIRECTED' }
     },
     onSuccess: (outcome) => {
@@ -163,7 +171,7 @@ export function CartPage() {
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
       void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })
-      // 결제창을 닫은 건 에러가 아니다. 만들어진 주문은 다시 결제하기로 이어가거나 1시간 뒤 정리된다
+      // 결제창을 닫은 건 에러가 아니다
       if (tossErrorCode(error) === TOSS_USER_CANCEL) {
         toast('결제창을 닫았어요. 다시 결제하기를 누르면 이어서 결제할 수 있어요.')
         return
@@ -202,7 +210,7 @@ export function CartPage() {
         <p className={styles.sub}>
           낙찰받은 상품이 담겨요. 낙찰 후 24시간 안에 결제하지 않으면 낙찰이 무효되고 경고(결제 미이행)를 받아요.
         </p>
-        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'wallet.me', 'payment.quote', 'payment.confirm']} />
+        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'cart.cancel', 'wallet.me', 'payment.quote', 'payment.confirm']} />
       </div>
 
       {cartQuery.isLoading ? (

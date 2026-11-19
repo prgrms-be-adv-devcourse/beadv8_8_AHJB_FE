@@ -218,7 +218,8 @@ export const cartApi = {
    * 결제창을 거쳐야 하면 isPaid:false + data(결제창 파라미터)가 온다
    */
   pay: (productIds: number[], options: Omit<CartPaymentRequest, 'productIds'> = {}) =>
-    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds, ...options }),
+    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds, pointUseAmount: 0, ...options }),
+  cancelPayment: (orderGroupId: number) => http.post<null>('cart.cancel', '/api/v1/cart', { orderGroupId }),
 }
 
 /** 주문 */
