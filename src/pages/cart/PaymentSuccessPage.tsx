@@ -86,7 +86,7 @@ export function PaymentSuccessPage() {
               <br />
               {confirm.error.retryable
                 ? '장바구니에서 다시 결제하기를 누르면 이어서 결제할 수 있어요.'
-                : '카드로 결제된 금액이 있다면 자동으로 취소돼요. 장바구니에서 다시 결제해 주세요.'}
+                : '결제된 금액이 있다면 자동으로 취소돼요. 장바구니에서 다시 결제해 주세요.'}
             </>
           }
           action={toCart}
@@ -95,7 +95,7 @@ export function PaymentSuccessPage() {
         <EmptyState
           icon="cart"
           title="결제를 확인하고 있어요"
-          description={`카드 결제 ${formatWon(params.amount)}을 승인하고 주문을 완료하는 중이에요. 잠시만 기다려 주세요.`}
+          description={`결제한 ${formatWon(params.amount)}을 승인하고 주문을 완료하는 중이에요. 잠시만 기다려 주세요.`}
           action={<Spinner label="승인 중" />}
         />
       )}

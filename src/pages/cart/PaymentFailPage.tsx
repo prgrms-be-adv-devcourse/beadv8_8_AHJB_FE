@@ -1,22 +1,33 @@
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { cartApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
+import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState } from '@/components/EmptyState'
 import { readTossFailParams } from '@/lib/toss'
 import styles from './CartPage.module.css'
 
 /**
  * /cart/payment/fail — 장바구니 결제의 토스 결제창에서 결제가 실패하거나 사용자가 취소했을 때 돌아오는 곳.
- * 주문은 결제 대기(WAITING)로 남아 있어 장바구니에서 다시 결제하면 이어진다. 결제 대기 주문·충전 건은 백엔드 스케줄러가 정리한다.
  */
 export function PaymentFailPage() {
   const [search] = useSearchParams()
   const { code, message } = readTossFailParams(search)
   const canceledByUser = code === 'PAY_PROCESS_CANCELED'
+  const orderGroupId = Number(search.get('orderGroupId'))
+  const cancelStarted = useRef(false)
+
+  useEffect(() => {
+    if (cancelStarted.current || !orderGroupId) return
+    cancelStarted.current = true
+    void cartApi.cancelPayment(orderGroupId).catch(() => undefined)
+  }, [orderGroupId])
 
   return (
     <div className={`container ${styles.page}`}>
       <div className={styles.head}>
         <h1 className={styles.title}>주문 결제</h1>
+        <DevApiNote ids={['cart.cancel']} />
       </div>
 
       <EmptyState
