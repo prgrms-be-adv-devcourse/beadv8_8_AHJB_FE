@@ -96,15 +96,6 @@ export function OrderAmountCard({ order, role, now }: OrderAmountCardProps) {
         </dl>
       ) : null}
 
-      <p className={styles.muted} style={{ marginTop: 12 }}>
-        {role === 'seller'
-          ? '구매자가 낸 돈은 구매확정 전까지 찐막 에스크로 지갑에 보관돼요.'
-          : payment?.status === 'REFUNDED'
-            ? '환불된 주문이에요. 결제한 수단 그대로 돌려드렸어요.'
-            : payment && payment.status !== 'HELD'
-              ? '구매확정한 주문이에요. 결제한 돈은 판매자에게 정산돼요.'
-              : '결제한 돈은 구매확정 전까지 찐막이 보관해요. 확정하면 판매자에게 정산되고, 환불되면 결제한 수단 그대로 돌아와요.'}
-      </p>
     </section>
   )
 }
