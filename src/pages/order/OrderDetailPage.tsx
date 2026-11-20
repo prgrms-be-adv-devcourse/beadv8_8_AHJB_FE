@@ -14,7 +14,7 @@ import { Stepper } from '@/components/Stepper'
 import { OrderActionDialogs, type OrderActionKind } from '@/components/order/OrderActionDialogs'
 import { SendProductDialog } from '@/components/order/SendProductDialog'
 import { useNow } from '@/lib/clock'
-import { formatCountdown, formatDateTime } from '@/lib/format'
+import { formatCountdown, formatDateTime, formatDotDate } from '@/lib/format'
 import { useWithProductSummaries } from '@/lib/productSummaries'
 import { ORDER_STATE_META, ORDER_STEPS, orderStepIndex } from '@/lib/status'
 import productStyles from '@/pages/product/ProductDetailPage.module.css'
@@ -104,7 +104,7 @@ export function OrderDetailPage() {
           {role === 'seller' ? '판매 내역' : '주문 내역'}
         </Link>
         <Icon name="chevronRight" size={12} />
-        <span className="num">주문 {order.id}</span>
+        <span>주문 상세정보</span>
       </nav>
 
       <div className={styles.layout}>
@@ -114,8 +114,8 @@ export function OrderDetailPage() {
               <Badge tone={meta.tone} size="lg">
                 {meta.label}
               </Badge>
-              <span className={styles.muted}>
-                {role === 'seller' ? '판매' : '구매'} · 주문 {order.id}
+              <span className={`${styles.muted} num`}>
+                {formatDotDate(order.createdAt)} · 주문번호 {order.id}
               </span>
             </div>
 
