@@ -2,21 +2,19 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { auctionApi, cartApi, recommendApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
-import { LinkButton } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import { ErrorState } from '@/components/EmptyState'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
 import { RecommendSection } from '@/components/RecommendSection'
 import { useNow } from '@/lib/clock'
 import { formatCountdown } from '@/lib/format'
-import { FeaturedAuction } from './FeaturedAuction'
-import { HeroFallback } from './HeroFallback'
+import { HeroBanner } from './HeroBanner'
 import styles from './HomePage.module.css'
 
 /** 마감 임박 섹션 기준 (1시간) */
 const ENDING_SOON_MS = 60 * 60 * 1000
 
-/** 홈 / : 히어로 · 결제 대기 배너 · 추천(로그인) · 인기 · 마감 임박 · 신규 */
+/** 홈 / : 배너 · 결제 대기 배너 · 추천(로그인) · 인기 · 마감 임박 · 신규 */
 export function HomePage() {
   const now = useNow()
   const { isLoggedIn } = useAuth()
@@ -29,7 +27,7 @@ export function HomePage() {
   })
   const newestQuery = useQuery({
     queryKey: ['auctions', 'home', 'newest'],
-    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'NEWEST', size: 5 }),
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'NEWEST', size: 6 }),
   })
   const hotQuery = useQuery({
     queryKey: ['auctions', 'home', 'hot'],
@@ -40,11 +38,11 @@ export function HomePage() {
   const popularQuery = useQuery({ queryKey: ['recommend', 'popular'], queryFn: recommendApi.popular })
   const forMeQuery = useQuery({ queryKey: ['recommend', 'me'], queryFn: recommendApi.me, enabled: isLoggedIn })
 
-  // 입찰 1위는 히어로에 (히어로 내용은 다음에 정한다)
+  // 입찰 1위는 배너 첫 장에
   const featured = hotQuery.data?.content[0]
   const endingSoon = (endingQuery.data?.content ?? [])
     .filter((item) => item.endAt && Date.parse(item.endAt) - now > 0 && Date.parse(item.endAt) - now <= ENDING_SOON_MS)
-    .slice(0, 5)
+    .slice(0, 6)
   const cartItems = cartQuery.data ?? []
   const earliestDueAt = cartItems.length
     ? Math.min(...cartItems.map((item) => Date.parse(item.paymentDueAt)))
@@ -52,33 +50,7 @@ export function HomePage() {
 
   return (
     <div className={`container ${styles.page}`}>
-      <section className={styles.heroWrap}>
-        <div className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>고전 게임기 · 게임팩 · 한정판 경매</p>
-            <h1 className={styles.heroTitle}>진짜 마지막으로 산다, 찐막.</h1>
-            <p className={styles.heroDesc}>
-              시세가 애매한 물건일수록 입찰로 값을 정해요. 미개봉 한정판부터 서랍 속 게임보이까지.
-            </p>
-            <div className={styles.heroActions}>
-              <LinkButton to="/auctions" variant="highlight" size="lg">
-                경매 둘러보기
-              </LinkButton>
-              <LinkButton to="/sell" variant="outline" size="lg" className={styles.heroGhost}>
-                판매하기
-              </LinkButton>
-            </div>
-          </div>
-          {hotQuery.isLoading ? (
-            <div className={styles.featuredSkeleton} />
-          ) : featured ? (
-            <FeaturedAuction item={featured} now={now} />
-          ) : (
-            // 진행 중 경매 0건이거나 목록 조회 실패
-            <HeroFallback />
-          )}
-        </div>
-      </section>
+      <HeroBanner featured={featured} now={now} />
 
       {cartItems.length && earliestDueAt ? (
         <Link to="/cart" className={styles.cartBanner}>
@@ -121,9 +93,9 @@ export function HomePage() {
             </Link>
           </div>
           <p className={styles.sectionDesc}>1시간 안에 끝나는 경매예요.</p>
-          <div className="grid-products">
+          <div className="grid-products grid-products--row">
             {endingQuery.isLoading
-              ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
+              ? Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={index} />)
               : endingSoon.map((item) => <ProductCard key={item.productId} item={item} />)}
           </div>
         </section>
@@ -139,9 +111,9 @@ export function HomePage() {
         {newestQuery.isError ? (
           <ErrorState message={newestQuery.error.message} onRetry={() => newestQuery.refetch()} />
         ) : (
-          <div className="grid-products">
+          <div className="grid-products grid-products--row">
             {newestQuery.isLoading
-              ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
+              ? Array.from({ length: 6 }, (_, index) => <ProductCardSkeleton key={index} />)
               : newestQuery.data?.content.map((item) => <ProductCard key={item.productId} item={item} />)}
           </div>
         )}

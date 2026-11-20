@@ -15,7 +15,7 @@ interface RecommendSectionProps {
 }
 
 /** 추천 경매 카드 줄. 추천 API 에는 상품명·사진이 없어서 상품 정보와 합친다. 비어 있으면 그리지 않는다 */
-export function RecommendSection({ title, description, items, loading, limit = 5 }: RecommendSectionProps) {
+export function RecommendSection({ title, description, items, loading, limit = 6 }: RecommendSectionProps) {
   const shown = (items ?? []).slice(0, limit)
   const products = useProductSummaries(shown.map((item) => item.productId))
 
@@ -43,7 +43,7 @@ export function RecommendSection({ title, description, items, loading, limit = 5
         <h2 className={styles.title}>{title}</h2>
       </div>
       {description ? <p className={styles.desc}>{description}</p> : null}
-      <div className="grid-products">
+      <div className="grid-products grid-products--row">
         {loading
           ? Array.from({ length: limit }, (_, index) => <ProductCardSkeleton key={index} />)
           : cards.map((item) => <ProductCard key={item.auctionId} item={item} priceLabel="현재가" />)}
