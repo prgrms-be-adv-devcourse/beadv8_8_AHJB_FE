@@ -79,7 +79,7 @@
   padding: 0 5px;
   border-radius: 9px;
   background: var(--coral);
-  color: var(--text);
+  color: var(--white);
   font-size: 11px;
   line-height: 18px;
   font-weight: 700;
@@ -170,5 +170,5 @@
   position: sticky;
   bottom: 0;
   padding: var(--space-12) 0;
-  background: var(--bg, #f8f8f8);
+  background: var(--bg, #f5f6fa);
 }

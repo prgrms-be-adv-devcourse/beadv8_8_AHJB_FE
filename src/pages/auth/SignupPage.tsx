@@ -621,7 +621,7 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
             />
           </fieldset>
           {submitted && errors.terms ? (
-            <p className={styles.sub} role="alert" style={{ color: '#c2410c', marginTop: -8 }}>
+            <p className={styles.sub} role="alert" style={{ color: '#e5263b', marginTop: -8 }}>
               {errors.terms}
             </p>
           ) : null}

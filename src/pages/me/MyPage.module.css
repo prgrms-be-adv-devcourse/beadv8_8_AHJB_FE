@@ -158,7 +158,7 @@
   letter-spacing: -0.02em;
 }
 .statHot {
-  color: #c2410c;
+  color: #e5263b;
 }
 .head {
   display: flex;
@@ -265,7 +265,7 @@ a.row:hover,
 .due {
   font-size: 12px;
   font-weight: 600;
-  color: #c2410c;
+  color: #e5263b;
 }
 .progress {
   display: grid;
@@ -344,7 +344,7 @@ a.row:hover,
   word-break: keep-all;
 }
 .hintHot {
-  color: #c2410c;
+  color: #e5263b;
   font-weight: 600;
 }
 .cards {
@@ -419,7 +419,7 @@ a.row:hover,
   font-size: 16px !important;
 }
 .minus {
-  color: #c2410c;
+  color: #e5263b;
 }
 .plus {
   color: #1f7a5a;

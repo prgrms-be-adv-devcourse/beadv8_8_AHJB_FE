@@ -110,7 +110,7 @@
 }
 .dueHot {
   background: var(--coral);
-  color: var(--text);
+  color: var(--white);
 }
 .summary {
   display: flex;
@@ -165,7 +165,7 @@
   font-weight: 600;
 }
 .short {
-  color: #c2410c;
+  color: #e5263b;
 }
 .rule {
   font-size: 12px;
@@ -208,7 +208,7 @@
   gap: var(--space-6);
   font-size: 12px;
   line-height: 17px;
-  color: #c2410c;
+  color: #e5263b;
   word-break: keep-all;
 }
 .notice svg {

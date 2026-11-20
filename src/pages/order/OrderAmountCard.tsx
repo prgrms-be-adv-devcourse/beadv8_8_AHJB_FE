@@ -78,7 +78,7 @@ export function OrderAmountCard({ order, role, now }: OrderAmountCardProps) {
       {role === 'seller' && order.state !== 'REFUNDED' ? (
         <dl className={styles.rows} style={{ marginTop: 12 }}>
           <dt>플랫폼 수수료{policy ? ` ${policy.feeRatePercent}%` : ''}</dt>
-          <dd className="num" style={{ color: '#c2410c' }}>
+          <dd className="num" style={{ color: '#e5263b' }}>
             {fee === null ? '–' : `−${formatWon(fee)}`}
           </dd>
           <dt className={styles.total}>정산 예정 금액</dt>
