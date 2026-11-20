@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Dialog } from '@/components/Dialog'
 import { Field, Input, Select } from '@/components/form/Field'
 import { CARRIERS, CARRIER_LABELS } from '@/lib/labels'
@@ -86,7 +85,6 @@ export function SendProductDialog({ order, onClose }: SendProductDialogProps) {
           />
         )}
       </Field>
-      <DevApiNote ids={['order.send']} />
     </Dialog>
   )
 }

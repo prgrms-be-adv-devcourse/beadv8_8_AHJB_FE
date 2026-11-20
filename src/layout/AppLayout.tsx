@@ -1,10 +1,10 @@
 import { Outlet, ScrollRestoration } from 'react-router-dom'
-import { DevModeToggle } from '@/components/DevApiNote'
 import { ToastProvider } from '@/components/Toast'
+import { BottomTabBar } from './BottomTabBar'
 import { Footer } from './Footer'
 import { Header } from './Header'
 
-/** 공통 레이아웃: 헤더 · 본문 · 푸터 · API 표시 토글 · 스크롤 복원 */
+/** 공통 레이아웃: 헤더 · 본문 · 푸터 · 모바일 하단 탭바 · 스크롤 복원 */
 export function AppLayout() {
   return (
     <ToastProvider>
@@ -13,7 +13,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <Footer />
-      <DevModeToggle />
+      <BottomTabBar />
       <ScrollRestoration />
     </ToastProvider>
   )

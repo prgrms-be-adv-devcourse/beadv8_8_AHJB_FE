@@ -1,5 +1,4 @@
 import { Badge } from '@/components/Badge'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Stepper } from '@/components/Stepper'
 import { formatDateTime, formatWon } from '@/lib/format'
 import { REFUND_STATUS_META } from '@/lib/status'
@@ -22,7 +21,6 @@ export function OrderRefundCard({ refund, order, role }: OrderRefundCardProps) {
       <h2 className={styles.cardTitle}>
         환불 <Badge tone={meta.tone}>{meta.label}</Badge>
       </h2>
-      <DevApiNote ids={['refund.byOrder']} />
       <Stepper
         steps={['환불 요청', '판매자 확인', refund.status === 'REJECTED' ? '거절 → 구매확정' : '환불 완료']}
         current={refund.status === 'REQUESTED' ? 1 : refund.status === 'ACCEPTED' ? 2 : 3}

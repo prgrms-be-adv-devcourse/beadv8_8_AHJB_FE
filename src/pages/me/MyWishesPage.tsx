@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { wishApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Img } from '@/components/Img'
 import { productPath } from '@/components/ProductCard'
@@ -25,7 +24,6 @@ export function MyWishesPage() {
       <div className={styles.head}>
         <h1 className={styles.title}>찜</h1>
       </div>
-      <DevApiNote ids={['wish.list', 'wish.remove']} />
       {wishesQuery.isLoading ? (
         <Spinner block />
       ) : wishesQuery.isError ? (

@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { isRealApi } from '@/api/config'
 import { authApi, memberApi } from '@/api/endpoints'
 import { tokenStore, type SessionProfile } from '@/api/tokenStore'
 import { decodeAccessToken } from '@/lib/jwt'
@@ -34,19 +33,10 @@ type SessionTokens = Pick<LoginResponse, 'accessToken' | 'refreshToken' | 'suspe
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-/**
- * 내 정보를 어디서 가져올지.
- * - 로그인이 목업이면: 목업 GET /member/me
- * - 로그인이 실제면: 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지) + 로그인 때 저장한 이메일로 만든다.
- *   실제 GET /member/me 는 회원 정보 화면용 상세(MemberDetail)라 여기서는 쓰지 않는다.
+/*
+ * 내 정보 = 토큰(회원 id) + GET /member/me/summary(닉네임·판매자·정지) + 로그인 때 저장한 이메일.
+ * GET /member/me 는 회원 정보 화면용 상세(MemberDetail)라 여기서는 쓰지 않는다.
  */
-const USE_TOKEN_PROFILE = isRealApi('auth.login')
-
-/**
- * 카카오 로그인 직후 GET /member/me 로 이메일을 가져와도 되는지.
- * 세션(토큰)과 member.me 가 같은 쪽(둘 다 실제 / 둘 다 목업)일 때만 맞는 회원의 이메일이 온다.
- */
-const CAN_FETCH_EMAIL = isRealApi('member.me') === isRealApi('auth.login')
 
 /** 내 정보 요약 쿼리 키. 재발급으로 토큰이 바뀌어도 같은 회원이면 캐시를 그대로 쓰도록 회원 id 로 잡는다 */
 const summaryQueryKey = (memberId: number | null) => ['me', 'summary', memberId]
@@ -90,51 +80,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const meQuery = useQuery({
-    queryKey: ['me', token],
-    queryFn: memberApi.me,
-    enabled: !!token && !USE_TOKEN_PROFILE,
-    staleTime: 60 * 1000,
-    retry: false,
-  })
-
   const memberId = useMemo(() => decodeAccessToken(token)?.memberId ?? null, [token])
 
   const summaryQuery = useQuery({
     queryKey: summaryQueryKey(memberId),
     queryFn: memberApi.summary,
-    enabled: USE_TOKEN_PROFILE && memberId !== null,
+    enabled: memberId !== null,
     staleTime: 60 * 1000,
     retry: false,
   })
 
-  const summaryMe = useMemo(
-    () => (USE_TOKEN_PROFILE && token ? meFromSummary(memberId, profile, summaryQuery.data) : null),
+  const me = useMemo(
+    () => (token ? meFromSummary(memberId, profile, summaryQuery.data) : null),
     [token, memberId, profile, summaryQuery.data],
   )
-  const me = USE_TOKEN_PROFILE ? summaryMe : token ? (meQuery.data ?? null) : null
 
   /** 받은 토큰으로 세션을 만들고 닉네임·정지 여부를 채운다 */
   const establishSession = useCallback(
     async (result: SessionTokens, email: string | null): Promise<LoginResult> => {
       tokenStore.set(result.accessToken, result.refreshToken)
       tokenStore.setProfile({ email })
-      // 실제 로그인 응답에는 닉네임이 없어서 닉네임·정지 여부는 방금 불러온 내 정보에서 채운다
-      let nickname: string
-      let suspended: boolean
-      if (USE_TOKEN_PROFILE) {
-        const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
-        const summary = await queryClient.fetchQuery({
-          queryKey: summaryQueryKey(loggedInId),
-          queryFn: memberApi.summary,
-        })
-        nickname = summary.nickname
-        suspended = summary.suspended
-      } else {
-        const mockMe = await queryClient.fetchQuery({ queryKey: ['me', result.accessToken], queryFn: memberApi.me })
-        nickname = mockMe.nickname
-        suspended = mockMe.accountStatus === 'SUSPENDED'
-      }
+      // 로그인 응답에는 닉네임이 없어서 닉네임·정지 여부는 방금 불러온 내 정보에서 채운다
+      const loggedInId = decodeAccessToken(result.accessToken)?.memberId ?? null
+      const summary = await queryClient.fetchQuery({
+        queryKey: summaryQueryKey(loggedInId),
+        queryFn: memberApi.summary,
+      })
+      const { nickname, suspended } = summary
       await queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'me' })
       return { accessToken: result.accessToken, refreshToken: result.refreshToken, nickname, suspended }
     },
@@ -158,13 +130,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       const result = await establishSession(response, null)
       // 카카오 로그인 응답에는 이메일이 없어서 내 정보 상세에서 가져온다. 실패해도 로그인은 유지한다
-      if (CAN_FETCH_EMAIL) {
-        try {
-          const detail = await queryClient.fetchQuery({ queryKey: ['me', 'detail'], queryFn: memberApi.detail })
-          tokenStore.setProfile({ email: detail.email })
-        } catch {
-          /* 이메일 없이 진행 (결제창 이메일 자동 입력·마이페이지 이메일 표시만 빠진다) */
-        }
+      try {
+        const detail = await queryClient.fetchQuery({ queryKey: ['me', 'detail'], queryFn: memberApi.detail })
+        tokenStore.setProfile({ email: detail.email })
+      } catch {
+        /* 이메일 없이 진행 (결제창 이메일 자동 입력·마이페이지 이메일 표시만 빠진다) */
       }
       return { status: 'LOGIN', result }
     },
@@ -195,13 +165,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       me,
       isLoggedIn: !!token && !!me,
-      isLoading: !!token && (USE_TOKEN_PROFILE ? summaryQuery.isLoading : meQuery.isLoading),
+      isLoading: !!token && summaryQuery.isLoading,
       login,
       kakaoLogin,
       kakaoSignup,
       logout,
     }),
-    [token, me, summaryQuery.isLoading, meQuery.isLoading, login, kakaoLogin, kakaoSignup, logout],
+    [token, me, summaryQuery.isLoading, login, kakaoLogin, kakaoSignup, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

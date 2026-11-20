@@ -6,7 +6,6 @@ import { ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button, LinkButton } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { useNow } from '@/lib/clock'
@@ -71,7 +70,7 @@ export function DutchBoard({ data, product }: DutchBoardProps) {
       <>
         <div className={styles.board}>
           <div className={`${styles.timer} ${styles.timerDone}`}>
-            <span className={styles.boardLabel}>드롭 타임</span>
+            <span className={styles.boardLabel}>스페셜 경매</span>
             <span className={`${styles.timerValue} num`}>{auction.status === 'FAILED' ? '유찰' : '판매 완료'}</span>
             <span className={`${styles.boardSub} num`}>{formatDateTime(auction.startAt)} 시작</span>
           </div>
@@ -97,7 +96,6 @@ export function DutchBoard({ data, product }: DutchBoardProps) {
             </span>
           </div>
         )}
-        <DevApiNote ids={['auction.detail']} />
       </>
     )
   }
@@ -149,13 +147,12 @@ export function DutchBoard({ data, product }: DutchBoardProps) {
         </div>
       ) : (
         <Button variant="highlight" size="lg" fullWidth onClick={askBuy} disabled={price === null}>
-          {formatWon(price)}에 지금 구매
+          {formatWon(price)}에 바로 구매
         </Button>
       )}
       <p className={styles.bidHelp}>
         가장 먼저 구매한 한 명만 가져가요. 구매하면 장바구니에 담기고 24시간 안에 결제해야 해요.
       </p>
-      <DevApiNote ids={['auction.detail', 'auction.dutchBuy']} />
 
       <ConfirmDialog
         open={confirmPrice !== null}

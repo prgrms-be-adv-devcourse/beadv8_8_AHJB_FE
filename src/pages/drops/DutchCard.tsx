@@ -32,6 +32,7 @@ export function DutchCard({ item }: { item: DutchAuctionSummary }) {
         </div>
         <div className={cardStyles.body}>
           <div className={cardStyles.badges}>
+            <Badge variant="outline">드롭</Badge>
             <Badge tone={badge.tone}>{badge.label}</Badge>
             {percent > 0 ? <Badge variant="outline">-{percent}%</Badge> : null}
           </div>

@@ -520,3 +520,11 @@ a.row:hover,
   font-weight: 600;
   margin-bottom: calc(-1 * var(--space-12));
 }
+
+.menuButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}

@@ -209,3 +209,18 @@
 .similar {
   margin-top: 56px;
 }
+
+.guide summary {
+  cursor: pointer;
+  list-style: none;
+}
+.guide summary::-webkit-details-marker {
+  display: none;
+}
+.guide summary::after {
+  content: " ›";
+  color: var(--text-muted);
+}
+.guide[open] summary::after {
+  content: " ⌄";
+}

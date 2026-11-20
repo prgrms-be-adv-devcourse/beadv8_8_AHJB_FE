@@ -3,53 +3,48 @@ import { useQuery } from '@tanstack/react-query'
 import { auctionApi, cartApi, recommendApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
-import { Img } from '@/components/Img'
+import { ErrorState } from '@/components/EmptyState'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
 import { RecommendSection } from '@/components/RecommendSection'
-import { DutchCard } from '@/pages/drops/DutchCard'
 import { useNow } from '@/lib/clock'
 import { formatCountdown } from '@/lib/format'
-import { CATEGORIES, CATEGORY_DESCRIPTIONS, CATEGORY_LABELS } from '@/lib/labels'
 import { FeaturedAuction } from './FeaturedAuction'
 import { HeroFallback } from './HeroFallback'
-import { CATEGORY_ART, TRADE_STEPS } from './homeContent'
 import styles from './HomePage.module.css'
 
-/** 홈 / */
+/** 마감 임박 섹션 기준 (1시간) */
+const ENDING_SOON_MS = 60 * 60 * 1000
+
+/** 홈 / : 히어로 · 결제 대기 배너 · 추천(로그인) · 인기 · 마감 임박 · 신규 */
 export function HomePage() {
   const now = useNow()
   const { isLoggedIn } = useAuth()
 
+  // 마감 임박: 마감 순 20개를 받아 1시간 안에 끝나는 것만 (백엔드에 시간 조건이 생기면 옮긴다)
   const endingQuery = useQuery({
     queryKey: ['auctions', 'home', 'ending'],
-    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'ENDING_SOON', size: 5 }),
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'ENDING_SOON', size: 20 }),
     refetchInterval: 10_000,
+  })
+  const newestQuery = useQuery({
+    queryKey: ['auctions', 'home', 'newest'],
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'NEWEST', size: 5 }),
   })
   const hotQuery = useQuery({
     queryKey: ['auctions', 'home', 'hot'],
-    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'MOST_BIDS', size: 10 }),
+    queryFn: () => auctionApi.list({ status: 'IN_PROGRESS', sort: 'MOST_BIDS', size: 1 }),
     refetchInterval: 15_000,
   })
-  const soonQuery = useQuery({
-    queryKey: ['auctions', 'home', 'soon'],
-    // 곧 시작은 경매 생성 전이라 상품 API (시작 임박순)
-    queryFn: () => auctionApi.listByTab({ status: 'SCHEDULED', size: 5 }),
-  })
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, enabled: isLoggedIn })
-  const dropsQuery = useQuery({
-    queryKey: ['auctions', 'dutch', 'home'],
-    queryFn: () => auctionApi.dutchList({ status: 'IN_PROGRESS', size: 4 }),
-    refetchInterval: 10_000,
-  })
-  const drops = dropsQuery.data?.content ?? []
   const popularQuery = useQuery({ queryKey: ['recommend', 'popular'], queryFn: recommendApi.popular })
   const forMeQuery = useQuery({ queryKey: ['recommend', 'me'], queryFn: recommendApi.me, enabled: isLoggedIn })
 
-  // 입찰 1위는 히어로에, 2~6위는 '입찰이 몰리는 경매' 섹션에
+  // 입찰 1위는 히어로에 (히어로 내용은 다음에 정한다)
   const featured = hotQuery.data?.content[0]
-  const hotItems = hotQuery.data?.content.slice(1, 6) ?? []
+  const endingSoon = (endingQuery.data?.content ?? [])
+    .filter((item) => item.endAt && Date.parse(item.endAt) - now > 0 && Date.parse(item.endAt) - now <= ENDING_SOON_MS)
+    .slice(0, 5)
   const cartItems = cartQuery.data ?? []
   const earliestDueAt = cartItems.length
     ? Math.min(...cartItems.map((item) => Date.parse(item.paymentDueAt)))
@@ -67,10 +62,10 @@ export function HomePage() {
             </p>
             <div className={styles.heroActions}>
               <LinkButton to="/auctions" variant="highlight" size="lg">
-                진행 중 경매 보기
+                경매 둘러보기
               </LinkButton>
               <LinkButton to="/sell" variant="outline" size="lg" className={styles.heroGhost}>
-                경매 올리기
+                판매하기
               </LinkButton>
             </div>
           </div>
@@ -99,130 +94,57 @@ export function HomePage() {
         </Link>
       ) : null}
 
-      {drops.length ? (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>
-              <Icon name="bolt" size={18} />
-              드롭 타임
-            </h2>
-            <Link to="/drops" className={styles.more}>
-              전체 보기 <Icon name="chevronRight" size={14} />
-            </Link>
-          </div>
-          <p className={styles.sectionDesc}>기다릴수록 가격이 내려가요. 먼저 구매한 한 명만 가져가요.</p>
-          <DevApiNote ids={['auction.dutchList']} className={styles.note} />
-          <div className="grid-products">
-            {drops.map((item) => (
-              <DutchCard key={item.auctionId} item={item} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {isLoggedIn ? (
         <div className={styles.section}>
           <RecommendSection
-            title="회원님을 위한 경매"
+            title="추천 경매"
             description="찜하고 입찰한 상품과 비슷한 경매예요."
             items={forMeQuery.data}
             loading={forMeQuery.isLoading}
-            apiKey="recommend.me"
           />
         </div>
       ) : null}
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>
-            <span className={styles.liveDot} aria-hidden="true" />
-            마감 임박
-          </h2>
-          <Link to="/auctions?sort=ENDING_SOON" className={styles.more}>
-            전체 보기 <Icon name="chevronRight" size={14} />
-          </Link>
-        </div>
-        <DevApiNote ids={['auction.list']} className={styles.note} />
-        <div className="grid-products">
-          {endingQuery.isLoading
-            ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
-            : endingQuery.data?.content.map((item) => <ProductCard key={item.productId} item={item} />)}
-        </div>
-      </section>
+      <div className={styles.section}>
+        <RecommendSection title="인기 경매" items={popularQuery.data} loading={popularQuery.isLoading} />
+      </div>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>카테고리</h2>
-        </div>
-        <div className={styles.categories}>
-          {CATEGORIES.map((category) => (
-            <Link key={category} to={`/auctions?category=${category}`} className={styles.category}>
-              <Img src={CATEGORY_ART[category]} alt="" className={styles.categoryArt} />
-              <span className={styles.categoryName}>{CATEGORY_LABELS[category]}</span>
-              <span className={styles.categoryDesc}>{CATEGORY_DESCRIPTIONS[category]}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {soonQuery.data?.content.length ? (
+      {endingQuery.isLoading || endingSoon.length ? (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>곧 시작해요</h2>
-            <Link to="/auctions?status=SCHEDULED" className={styles.more}>
+            <h2 className={styles.sectionTitle}>
+              <span className={styles.liveDot} aria-hidden="true" />
+              마감 임박
+            </h2>
+            <Link to="/auctions?sort=ENDING_SOON" className={styles.more}>
               전체 보기 <Icon name="chevronRight" size={14} />
             </Link>
           </div>
-          <p className={styles.sectionDesc}>
-            등록 후 1시간 동안은 판매자가 내용을 고칠 수 있어요. 그 시간이 지나면 경매가 자동으로 열려요.
-          </p>
+          <p className={styles.sectionDesc}>1시간 안에 끝나는 경매예요.</p>
           <div className="grid-products">
-            {soonQuery.data.content.map((item) => (
-              <ProductCard key={item.productId} item={item} />
-            ))}
+            {endingQuery.isLoading
+              ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
+              : endingSoon.map((item) => <ProductCard key={item.productId} item={item} />)}
           </div>
         </section>
       ) : null}
 
       <section className={styles.section}>
         <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>입찰이 몰리는 경매</h2>
-          <Link to="/auctions?sort=MOST_BIDS" className={styles.more}>
+          <h2 className={styles.sectionTitle}>신규 경매</h2>
+          <Link to="/auctions?sort=NEWEST" className={styles.more}>
             전체 보기 <Icon name="chevronRight" size={14} />
           </Link>
         </div>
-        <div className="grid-products">
-          {hotQuery.isLoading
-            ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
-            : hotItems.map((item) => <ProductCard key={item.productId} item={item} />)}
-        </div>
-      </section>
-
-      <div className={styles.section}>
-        <RecommendSection
-          title="지금 인기 있는 경매"
-          items={popularQuery.data}
-          loading={popularQuery.isLoading}
-          apiKey="recommend.popular"
-        />
-      </div>
-
-      <section className={styles.section}>
-        <div className={styles.steps}>
-          <h2 className={styles.stepsTitle}>찐막에서 거래는 이렇게 흘러가요</h2>
-          <ol className={styles.stepList}>
-            {TRADE_STEPS.map((step, index) => (
-              <li key={step.title} className={styles.step}>
-                <span className={styles.stepIcon}>
-                  <Icon name={step.icon} size={20} />
-                </span>
-                <span className={styles.stepNo}>0{index + 1}</span>
-                <span className={styles.stepTitle}>{step.title}</span>
-                <span className={styles.stepDesc}>{step.desc}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        {newestQuery.isError ? (
+          <ErrorState message={newestQuery.error.message} onRetry={() => newestQuery.refetch()} />
+        ) : (
+          <div className="grid-products">
+            {newestQuery.isLoading
+              ? Array.from({ length: 5 }, (_, index) => <ProductCardSkeleton key={index} />)
+              : newestQuery.data?.content.map((item) => <ProductCard key={item.productId} item={item} />)}
+          </div>
+        )}
       </section>
     </div>
   )

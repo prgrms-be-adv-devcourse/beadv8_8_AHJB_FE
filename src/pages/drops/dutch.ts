@@ -7,7 +7,7 @@ type DutchLike = Pick<DutchAuctionSummary, 'status' | 'isLastPrice' | 'failureRe
 export function dutchStatusBadge(auction: DutchLike): StatusMeta {
   switch (auction.status) {
     case 'IN_PROGRESS':
-      return auction.isLastPrice ? { tone: 'closing', label: '마지막 가격' } : { tone: 'live', label: '가격 하락 중' }
+      return auction.isLastPrice ? { tone: 'closing', label: '마지막 가격' } : { tone: 'live', label: '가격 내려가는 중' }
     case 'SCHEDULED':
       return { tone: 'scheduled', label: '시작 전' }
     case 'FAILED':

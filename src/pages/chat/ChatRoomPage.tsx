@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { chatApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { ErrorState } from '@/components/EmptyState'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
@@ -226,7 +225,6 @@ export function ChatRoomPage() {
 
   return (
     <div className={`container ${styles.page}`}>
-      <DevApiNote ids={['chat.room', 'chat.messages']} />
       <div className={styles.room}>
         <header className={styles.head}>
           <Img src={room.productThumbnailUrl} alt="" fit="cover" />

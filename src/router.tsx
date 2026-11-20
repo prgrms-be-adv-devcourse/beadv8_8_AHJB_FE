@@ -29,7 +29,6 @@ import { MyWalletPage } from '@/pages/me/MyWalletPage'
 import { ChargeSuccessPage } from '@/pages/me/wallet/ChargeSuccessPage'
 import { ChargeFailPage } from '@/pages/me/wallet/ChargeFailPage'
 import { MyProfilePage } from '@/pages/me/MyProfilePage'
-import { DevApisPage } from '@/pages/dev/DevApisPage'
 import { AuctionRedirectPage } from '@/pages/auctions/AuctionRedirectPage'
 import { DropsPage } from '@/pages/drops/DropsPage'
 import { SearchPage } from '@/pages/search/SearchPage'
@@ -114,7 +113,6 @@ export const routes: RouteObject[] = [
           { path: 'notifications', element: <MyNotificationSettingsPage /> },
         ],
       },
-      { path: '/dev/apis', element: <DevApisPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

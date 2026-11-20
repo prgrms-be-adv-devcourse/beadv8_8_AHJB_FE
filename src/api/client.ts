@@ -1,6 +1,5 @@
 import type { ApiBody, ApiErrorBody, HttpMethod } from '@/types/common'
 import type { LoginResponse } from '@/types/auth'
-import { isRealApi, type ApiKey } from './config'
 import { tokenStore } from './tokenStore'
 import { toUserMessage } from './errorMessages'
 
@@ -68,39 +67,7 @@ interface RawResponse {
 
 const DEFAULT_ERROR_MESSAGE = '요청을 처리하지 못했어요.'
 
-/** 목업 서버로 보낸다 (동적 import) */
-async function sendToMock(
-  method: HttpMethod,
-  path: string,
-  params: URLSearchParams,
-  body: unknown,
-  token: string | null,
-): Promise<RawResponse> {
-  const { handleMockRequest } = await import('@/mock/server')
-  const mockBody = body instanceof FormData ? await formDataToMockBody(body) : body
-  const response = await handleMockRequest({ method, path, params, body: mockBody, token })
-  return { status: response.status, body: response.body as RawResponse['body'] }
-}
-
-/** 목업 핸들러는 동기라서 FormData 의 파일을 미리 data URL 로 바꿔 평범한 객체로 넘긴다 */
-async function formDataToMockBody(formData: FormData): Promise<Record<string, string>> {
-  const result: Record<string, string> = {}
-  for (const [key, value] of formData.entries()) {
-    result[key] = typeof value === 'string' ? value : await blobToDataUrl(value)
-  }
-  return result
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('파일을 읽지 못했어요.'))
-    reader.onload = () => resolve(String(reader.result))
-    reader.readAsDataURL(blob)
-  })
-}
-
-/** 실제 서버로 보낸다 */
+/** 서버로 보낸다 */
 async function sendToServer(
   method: HttpMethod,
   path: string,
@@ -149,25 +116,21 @@ function isEnvelope(body: object): body is ApiBody {
 
 /**
  * 공통 요청 함수.
- * `apiKey` 가 VITE_REAL_APIS 에 있으면 실제 서버, 아니면 목업 서버로 보낸다.
  * 성공하면 `data` 를, 바디 없는 성공 응답이면 null 을 돌려준다.
- * 실제 서버가 401 을 주면 토큰을 한 번 재발급하고 같은 요청을 다시 보낸다.
+ * 401 이면 토큰을 한 번 재발급하고 같은 요청을 다시 보낸다.
  */
 export async function request<T>(
-  apiKey: ApiKey,
   method: HttpMethod,
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
   const params = buildQuery(options.query)
-  const real = isRealApi(apiKey)
-  const send = real ? sendToServer : sendToMock
-  let response = await send(method, path, params, options.body, tokenStore.get())
+  let response = await sendToServer(method, path, params, options.body, tokenStore.get())
 
-  // 액세스 토큰 만료(15분) → 재발급 후 한 번만 재시도. auth.* 요청은 재시도하지 않는다.
-  if (response.status === 401 && real && !apiKey.startsWith('auth.') && tokenStore.get()) {
+  // 액세스 토큰 만료(15분) → 재발급 후 한 번만 재시도. 인증 API(/api/v1/auth/**)는 재시도하지 않는다.
+  if (response.status === 401 && !path.startsWith('/api/v1/auth/') && tokenStore.get()) {
     const refreshed = await refreshSession()
-    if (refreshed) response = await send(method, path, params, options.body, tokenStore.get())
+    if (refreshed) response = await sendToServer(method, path, params, options.body, tokenStore.get())
   }
 
   return parseResponse<T>(response)
@@ -196,20 +159,15 @@ let refreshing: Promise<boolean> | null = null
 
 /**
  * 리프레시 토큰으로 새 토큰을 받는다 (POST /api/v1/auth/reissue).
- * 실제 서버는 HttpOnly 쿠키의 리프레시 토큰을 읽으므로 바디 없이 보내고, 목업만 저장해 둔 토큰을 바디로 보낸다.
+ * 서버가 HttpOnly 쿠키의 리프레시 토큰을 읽으므로 바디 없이 보낸다.
  * 여러 요청이 동시에 401 을 받아도 재발급은 한 번만 한다 (백엔드 리프레시 토큰은 1회용).
  * 판매자 등록처럼 권한이 바뀐 직후에도 호출해서 새 권한을 토큰에 반영한다.
  */
 export function refreshSession(): Promise<boolean> {
   if (refreshing) return refreshing
   refreshing = (async () => {
-    const real = isRealApi('auth.reissue')
-    const refreshToken = tokenStore.getRefresh()
-    if (!real && !refreshToken) return false
     try {
-      const send = real ? sendToServer : sendToMock
-      const body = real ? undefined : { refreshToken }
-      const response = await send('POST', '/api/v1/auth/reissue', new URLSearchParams(), body, null)
+      const response = await sendToServer('POST', '/api/v1/auth/reissue', new URLSearchParams(), undefined, null)
       const result = parseResponse<LoginResponse>(response)
       tokenStore.set(result.accessToken, result.refreshToken)
       return true
@@ -234,11 +192,11 @@ function toApiError(body: ApiErrorBody, status: number): ApiError {
   return new ApiError(code, toUserMessage(code, status, body.message ?? DEFAULT_ERROR_MESSAGE), status, payment)
 }
 
-/** HTTP 메서드별 단축 함수. 첫 인자는 registry 키 */
+/** HTTP 메서드별 단축 함수 */
 export const http = {
-  get: <T>(apiKey: ApiKey, path: string, query?: object) => request<T>(apiKey, 'GET', path, { query }),
-  post: <T>(apiKey: ApiKey, path: string, body?: unknown) => request<T>(apiKey, 'POST', path, { body }),
-  patch: <T>(apiKey: ApiKey, path: string, body?: unknown) => request<T>(apiKey, 'PATCH', path, { body }),
-  put: <T>(apiKey: ApiKey, path: string, body?: unknown) => request<T>(apiKey, 'PUT', path, { body }),
-  delete: <T>(apiKey: ApiKey, path: string) => request<T>(apiKey, 'DELETE', path),
+  get: <T>(path: string, query?: object) => request<T>('GET', path, { query }),
+  post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body }),
+  patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, { body }),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, { body }),
+  delete: <T>(path: string) => request<T>('DELETE', path),
 }

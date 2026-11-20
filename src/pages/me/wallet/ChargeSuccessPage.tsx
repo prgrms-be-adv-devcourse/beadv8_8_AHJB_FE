@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
 import { paymentApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState } from '@/components/EmptyState'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
@@ -63,7 +62,6 @@ export function ChargeSuccessPage() {
       <div className={styles.head}>
         <h1 className={styles.title}>예치금 충전</h1>
       </div>
-      <DevApiNote ids={['payment.chargeConfirm']} />
 
       {!params ? (
         <EmptyState

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { isRealApi } from '@/api/config'
 import { productApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Checkbox, Field, Input, RadioCard, Select, Textarea } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { Spinner } from '@/components/Spinner'
@@ -28,7 +26,6 @@ import type {
 } from '@/types/product'
 import { ImagePicker } from './ImagePicker'
 import { resizeImage } from './resizeImage'
-import { SamplePhotoDialog } from './SamplePhotoDialog'
 import {
   DEFAULT_CUSTOM_END_OFFSET_MS,
   DURATIONS,
@@ -45,7 +42,7 @@ import { SellSidebar } from './SellSidebar'
 import { validateSellForm, type SellFieldKey } from './validateSellForm'
 import styles from './SellPage.module.css'
 
-/** 경매 올리기 /sell · 경매 수정 /sell/:productId/edit 공용 */
+/** 판매하기 /sell · 경매 수정 /sell/:productId/edit 공용 */
 export function SellPage() {
   const productId = Number(useParams().productId) || null
   const isEdit = !!productId
@@ -65,7 +62,6 @@ export function SellPage() {
   /** 업로드한 사진 URL → 서버가 준 imageId */
   const [imageIdByUrl, setImageIdByUrl] = useState<Record<string, number>>({})
   const [uploading, setUploading] = useState(false)
-  const [samplesOpen, setSamplesOpen] = useState(false)
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category | ''>('')
   const [manufacturer, setManufacturer] = useState<Manufacturer | ''>('')
@@ -196,10 +192,8 @@ export function SellPage() {
       return
     }
 
-    // 실제 서버에는 업로드로 받은 imageId 를 보낸다. 목업은 id 가 없는 사진(목업 사진)도 순번으로 대신한다.
-    const imageIds = images.map((src, index) =>
-      imageIdByUrl[src] ?? (isRealApi('product.images') ? null : index + 1),
-    )
+    // 업로드로 받은 imageId 를 보낸다
+    const imageIds = images.map((src) => imageIdByUrl[src] ?? null)
     const hasImageWithoutId = imageIds.some((id) => id === null)
     // 수정: 상품 상세 응답에는 imageId 가 없어서, 사진을 바꿨을 때만 새로 올린 사진들의 id 로 교체한다
     const imagesChanged = !productQuery.data || images.join('\n') !== productQuery.data.imageUrls.join('\n')
@@ -207,7 +201,7 @@ export function SellPage() {
       toast(
         isEdit
           ? '사진을 바꾸려면 기존 사진을 모두 지우고 새로 올려 주세요.'
-          : '목업 사진은 실제 서버에 올릴 수 없어요. 직접 사진을 올려 주세요.',
+          : '사진을 다시 올려 주세요.',
         { tone: 'error' },
       )
       return
@@ -266,13 +260,12 @@ export function SellPage() {
   return (
     <div className={`container ${styles.page}`}>
       <div className={styles.head}>
-        <h1 className={styles.title}>{isEdit ? '경매 수정' : '경매 올리기'}</h1>
+        <h1 className={styles.title}>{isEdit ? '경매 수정' : '판매하기'}</h1>
         <p className={styles.sub}>
           {isEdit
             ? '경매가 시작되기 전(등록 후 1시간)까지만 고칠 수 있어요.'
             : '상품 정보와 경매 조건을 한 번에 등록해요. 등록 후 1시간 동안 고칠 수 있고, 그 뒤 경매가 자동으로 시작돼요.'}
         </p>
-        <DevApiNote ids={isEdit ? ['product.detail', 'product.update'] : ['product.create', 'product.images']} />
       </div>
 
       {locked ? (
@@ -293,7 +286,6 @@ export function SellPage() {
             uploading={uploading}
             fileInputRef={fileInputRef}
             onFiles={handleFiles}
-            onOpenSamples={isRealApi('product.images') ? undefined : () => setSamplesOpen(true)}
             error={errorOf('images')}
           />
 
@@ -456,7 +448,7 @@ export function SellPage() {
                 label="시작가"
                 error={errorOf('startingPrice')}
                 hint={
-                  startingPrice ? `첫 호가 단위 ${formatWon(bidIncrementOf(startingPrice))}` : '첫 입찰은 시작가부터 해요.'
+                  startingPrice ? `첫 입찰 단위 ${formatWon(bidIncrementOf(startingPrice))}` : '첫 입찰은 시작가부터 해요.'
                 }
               >
                 {(id, describedBy) => (
@@ -473,7 +465,7 @@ export function SellPage() {
               </Field>
               <Field
                 id="sell-instantWinPrice"
-                label="즉시낙찰가"
+                label="즉시 구매가"
                 optional
                 error={errorOf('instantWinPrice')}
                 hint="이 가격 이상 입찰이 들어오면 바로 낙찰돼요."
@@ -577,13 +569,6 @@ export function SellPage() {
           locked={locked}
         />
       </form>
-
-      <SamplePhotoDialog
-        open={samplesOpen}
-        onClose={() => setSamplesOpen(false)}
-        images={images}
-        setImages={setImages}
-      />
     </div>
   )
 }

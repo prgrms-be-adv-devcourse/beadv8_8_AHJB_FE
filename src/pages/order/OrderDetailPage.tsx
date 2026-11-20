@@ -5,7 +5,6 @@ import { orderApi, refundApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { ErrorState } from '@/components/EmptyState'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
@@ -102,7 +101,7 @@ export function OrderDetailPage() {
         <Link to="/me">마이페이지</Link>
         <Icon name="chevronRight" size={12} />
         <Link to={role === 'seller' ? '/me/sales' : '/me/orders'}>
-          {role === 'seller' ? '판매 주문' : '구매 주문'}
+          {role === 'seller' ? '판매 내역' : '주문 내역'}
         </Link>
         <Icon name="chevronRight" size={12} />
         <span className="num">주문 {order.id}</span>
@@ -147,7 +146,6 @@ export function OrderDetailPage() {
                   : ''}
               </span>
             </div>
-            <DevApiNote ids={['order.detail', 'product.detail']} />
 
             {role === 'buyer' && order.state === 'SHIPPED' ? (
               <div className={styles.actions}>
@@ -157,7 +155,6 @@ export function OrderDetailPage() {
                 <Button variant="highlight" size="lg" onClick={() => setActionKind('confirm')}>
                   <Icon name="check" size={16} /> 구매확정
                 </Button>
-                <DevApiNote ids={['order.confirm', 'order.refund']} />
               </div>
             ) : null}
 
@@ -182,7 +179,6 @@ export function OrderDetailPage() {
                 <Button variant="highlight" size="lg" onClick={() => setActionKind('accept')}>
                   환불 수락
                 </Button>
-                <DevApiNote ids={['refund.accept', 'refund.reject']} />
               </div>
             ) : null}
 

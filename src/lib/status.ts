@@ -18,7 +18,7 @@ export const CLOSING_SOON_MS = 3600 * 1000
 
 /**
  * 경매 상태 배지.
- * 진행 중이면 남은 시간으로 '마감 처리 중'(0 이하) / '마감 임박'(1시간 미만) / '진행 중'.
+ * 진행 중이면 남은 시간으로 '마감됨'(0 이하) / '마감 임박'(1시간 미만) / '진행 중'.
  * FAILED 는 실패 사유 라벨(없으면 '종료').
  */
 export function auctionStatusBadge(
@@ -32,10 +32,10 @@ export function auctionStatusBadge(
       return { tone: 'scheduled', label: '시작 전' }
     case 'IN_PROGRESS':
       return endAt && Date.parse(endAt) - now <= 0
-        ? { tone: 'ended', label: '마감 처리 중' }
+        ? { tone: 'ended', label: '마감됨' }
         : endAt && Date.parse(endAt) - now < CLOSING_SOON_MS
           ? { tone: 'closing', label: '마감 임박' }
-          : { tone: 'live', label: '진행 중' }
+          : { tone: 'live', label: '경매 중' }
     case 'WON':
       return { tone: 'won', label: '낙찰' }
     case 'PAID':

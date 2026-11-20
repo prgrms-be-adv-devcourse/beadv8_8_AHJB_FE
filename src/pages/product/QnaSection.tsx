@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qnaApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Textarea } from '@/components/form/Field'
 import { useToast } from '@/components/Toast'
 import { formatRelativeTime } from '@/lib/format'
@@ -76,7 +75,6 @@ export function QnaSection({ productId, isMine }: QnaSectionProps) {
       <h2 id="qna-title" className={pageStyles.sectionTitle}>
         실시간 Q&A <span className={`${pageStyles.sectionCount} num`}>{qnas.length}</span>
       </h2>
-      <DevApiNote ids={['qna.list', 'qna.create', 'qna.delete']} />
 
       {isLoggedIn ? (
         isMine ? (

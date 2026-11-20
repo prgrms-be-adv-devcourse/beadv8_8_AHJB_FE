@@ -5,7 +5,6 @@ import { reviewApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Dialog } from '@/components/Dialog'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip, Field, Textarea } from '@/components/form/Field'
@@ -164,7 +163,6 @@ function ReviewDialog({ target, editing, onClose }: ReviewDialogProps) {
           />
         )}
       </Field>
-      <DevApiNote ids={editing ? ['review.update'] : ['review.create']} />
     </Dialog>
   )
 }
@@ -224,15 +222,6 @@ export function MyReviewsPage() {
       <div className={styles.head}>
         <h1 className={styles.title}>후기</h1>
       </div>
-      <DevApiNote
-        ids={
-          tab === 'reviewable'
-            ? ['review.reviewable', 'review.create']
-            : tab === 'written'
-              ? ['review.written', 'review.update', 'review.delete']
-              : ['review.received']
-        }
-      />
       <div className={styles.tabs}>
         <Chip selected={tab === 'reviewable'} onClick={() => setTab('reviewable')}>
           작성 가능 <span className="num">{reviewableQuery.data?.length ?? ''}</span>

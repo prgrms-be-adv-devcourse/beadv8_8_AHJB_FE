@@ -4,7 +4,6 @@ import { memberApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/Badge'
 import { Button, LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { useToast } from '@/components/Toast'
 import { formatDotDate, formatPhone } from '@/lib/format'
 import { ACCOUNT_STATUS_LABELS, WARNING_REASON_LABELS } from '@/lib/labels'
@@ -35,7 +34,7 @@ export function MyProfilePage() {
   return (
     <>
       <div className={styles.head}>
-        <h1 className={styles.title}>회원 정보</h1>
+        <h1 className={styles.title}>내 정보</h1>
         <Button
           variant="outline"
           size="sm"
@@ -48,7 +47,6 @@ export function MyProfilePage() {
           로그아웃
         </Button>
       </div>
-      <DevApiNote ids={['member.me', 'member.seller', 'member.warnings', 'auth.logout']} />
       {detailQuery.isError ? <p className={styles.hint}>회원 정보를 불러오지 못했어요.</p> : null}
       <dl className={styles.infoGrid}>
         <dt>닉네임</dt>

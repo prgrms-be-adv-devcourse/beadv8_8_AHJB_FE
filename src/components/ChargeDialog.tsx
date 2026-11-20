@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
-import { isRealApi } from '@/api/config'
 import { paymentApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
 import { formatAmountInput, formatWon, parseDigits } from '@/lib/format'
@@ -16,7 +15,6 @@ import {
 } from '@/lib/toss'
 import type { ChargeSummary } from '@/types/payment'
 import { Button } from './Button'
-import { DevApiNote } from './DevApiNote'
 import { Dialog } from './Dialog'
 import { Chip, Field, Input } from './form/Field'
 import { useToast } from './Toast'
@@ -50,7 +48,6 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
   // 토스 결제창이 떠 있는 동안 true. 이 모달은 <dialog>.showModal() 로 최상위 레이어에 떠서 결제창을 가리기 때문에
   // 결제창을 여는 동안은 닫아 두고, 사용자가 결제창을 닫으면 입력값을 그대로 둔 채 다시 연다.
   const [tossOpen, setTossOpen] = useState(false)
-  const mock = !isRealApi('payment.chargeRequest')
   // 충전 금액 범위. 모달을 열기 전에 받아 둔다. 못 받았으면 범위 검증 없이 보내고 백엔드가 CHARGE010 으로 거절한다
   const policyQuery = useQuery({ queryKey: ['payment', 'policy'], queryFn: paymentApi.policy, staleTime: Infinity })
   const minAmount = policyQuery.data?.chargeMinAmount
@@ -80,15 +77,7 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
   const charge = useMutation<ChargeSummary | null, ApiError>({
     mutationFn: async () => {
       const requested = await paymentApi.requestCharge(amount)
-      if (mock) {
-        // 목업: 토스 결제창을 거치지 않고 바로 승인
-        return paymentApi.confirmCharge({
-          pgOrderId: requested.pgOrderId,
-          paymentKey: `mock_${requested.chargeId}`,
-          amount: requested.amount,
-        })
-      }
-      // 실제: 결제창으로 이동. 성공하면 successUrl 로 페이지가 바뀌어 여기로 돌아오지 않는다
+      // 결제창으로 이동. 성공하면 successUrl 로 페이지가 바뀌어 여기로 돌아오지 않는다
       setTossOpen(true)
       try {
         await openTossPaymentWindow({
@@ -185,7 +174,6 @@ export function ChargeDialog({ open, onClose, suggested, onCharged, returnTo }: 
           </Chip>
         ))}
       </div>
-      <DevApiNote ids={['payment.policy', 'payment.chargeRequest', 'payment.chargeConfirm']} />
     </Dialog>
   )
 }

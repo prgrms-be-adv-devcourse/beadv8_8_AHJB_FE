@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { chatApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Img } from '@/components/Img'
 import { Spinner } from '@/components/Spinner'
@@ -22,7 +21,6 @@ export function ChatListPage() {
   return (
     <div className={`container ${styles.page}`}>
       <h1 className={styles.title}>채팅</h1>
-      <DevApiNote ids={['chat.rooms']} />
       {roomsQuery.isLoading ? (
         <Spinner block />
       ) : roomsQuery.isError ? (

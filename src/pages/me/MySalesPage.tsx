@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { orderApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
 import { OrderCard } from '@/components/order/OrderCard'
@@ -14,7 +13,7 @@ import styles from './MyPage.module.css'
 
 type SalesFilterId = 'all' | 'send' | 'shipping' | 'refund' | 'done'
 
-/** 판매 주문 탭. states 가 없으면 전체 */
+/** 판매 내역 탭. states 가 없으면 전체 */
 const SALES_FILTERS: Array<{ id: SalesFilterId; label: string; states?: OrderState[] }> = [
   { id: 'all', label: '전체' },
   { id: 'send', label: '발송 대기', states: ['PAID'] },
@@ -23,7 +22,7 @@ const SALES_FILTERS: Array<{ id: SalesFilterId; label: string; states?: OrderSta
   { id: 'done', label: '구매확정 · 환불', states: ['CONFIRMED', 'REFUNDED'] },
 ]
 
-/** /me/sales 판매 주문 */
+/** /me/sales 판매 내역 */
 export function MySalesPage() {
   const [filterId, setFilterId] = useState<SalesFilterId>('all')
   const [sendTarget, setSendTarget] = useState<Order | null>(null)
@@ -42,12 +41,11 @@ export function MySalesPage() {
   return (
     <>
       <div className={styles.head}>
-        <h1 className={styles.title}>판매 주문</h1>
+        <h1 className={styles.title}>판매 내역</h1>
         <LinkButton to="/me/settlements" variant="outline" size="sm">
           정산 보기
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.seller', 'product.detail', 'order.send', 'refund.byOrder']} />
       <div className={styles.tabs}>
         {SALES_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>
@@ -63,7 +61,7 @@ export function MySalesPage() {
         <EmptyState
           icon="box"
           title="이 목록엔 주문이 없어요"
-          description="낙찰자가 결제하면 판매 주문이 생겨요. 결제 후 송장을 등록해 주세요."
+          description="낙찰자가 결제하면 판매 내역이 생겨요. 결제 후 송장을 등록해 주세요."
         />
       ) : (
         <div className={styles.list}>

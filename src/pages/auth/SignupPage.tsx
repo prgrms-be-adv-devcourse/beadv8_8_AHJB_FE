@@ -4,7 +4,6 @@ import type { ApiError } from '@/api/client'
 import { authApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Checkbox, Field, Input } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
@@ -635,9 +634,6 @@ export function SignupPage({ mode = 'email' }: SignupPageProps) {
           <Button type="submit" size="lg" fullWidth loading={submitting}>
             가입하기
           </Button>
-          <DevApiNote
-            ids={['auth.emailAvailable', 'auth.nicknameAvailable', isKakao ? 'auth.kakaoSignup' : 'auth.signup']}
-          />
         </form>
 
         <div className={styles.links}>

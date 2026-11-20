@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { cartApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState } from '@/components/EmptyState'
 import { readTossFailParams } from '@/lib/toss'
 import styles from './CartPage.module.css'
@@ -30,7 +29,6 @@ export function PaymentFailPage() {
     <div className={`container ${styles.page}`}>
       <div className={styles.head}>
         <h1 className={styles.title}>주문 결제</h1>
-        <DevApiNote ids={['cart.cancel']} />
       </div>
 
       <EmptyState

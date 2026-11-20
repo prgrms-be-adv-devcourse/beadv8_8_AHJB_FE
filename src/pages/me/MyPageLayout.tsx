@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { auctionApi, cartApi, memberApi, orderApi, walletApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/Badge'
 import { Icon, type IconName } from '@/components/Icon'
 import { Avatar } from '@/components/SellerCard'
+import { useToast } from '@/components/Toast'
 import { useWishedProductIds } from '@/components/WishButton'
 import { formatWon } from '@/lib/format'
 import styles from './MyPage.module.css'
@@ -19,15 +20,15 @@ interface MenuItem {
 
 /** 마이페이지 왼쪽 메뉴 */
 const MENU_ITEMS: MenuItem[] = [
-  { to: '/me/bids', label: '입찰 중인 경매', icon: 'gavel', group: '구매' },
-  { to: '/me/orders', label: '구매 주문', icon: 'truck', group: '구매' },
+  { to: '/me/bids', label: '입찰 내역', icon: 'gavel', group: '구매' },
+  { to: '/me/orders', label: '주문 내역', icon: 'truck', group: '구매' },
   { to: '/me/reviews', label: '후기', icon: 'star', group: '구매' },
   { to: '/me/wishes', label: '찜', icon: 'heart', group: '구매' },
-  { to: '/me/products', label: '내 상품', icon: 'tag', group: '판매', sellerOnly: true },
-  { to: '/me/sales', label: '판매 주문', icon: 'box', group: '판매', sellerOnly: true },
+  { to: '/me/products', label: '판매 상품 관리', icon: 'tag', group: '판매', sellerOnly: true },
+  { to: '/me/sales', label: '판매 내역', icon: 'box', group: '판매', sellerOnly: true },
   { to: '/me/settlements', label: '정산', icon: 'receipt', group: '판매', sellerOnly: true },
-  { to: '/me/wallet', label: '예치금', icon: 'wallet', group: '지갑' },
-  { to: '/me/profile', label: '회원 정보', icon: 'user', group: '계정' },
+  { to: '/me/wallet', label: '내 지갑', icon: 'wallet', group: '지갑' },
+  { to: '/me/profile', label: '내 정보', icon: 'user', group: '계정' },
   { to: '/me/notifications', label: '알림 설정', icon: 'bell', group: '계정' },
 ]
 
@@ -40,7 +41,9 @@ interface StatItem {
 
 /** 마이페이지 레이아웃 /me. 왼쪽 메뉴 + 요약 수치 + 하위 페이지 Outlet */
 export function MyPageLayout() {
-  const { me } = useAuth()
+  const { me, logout } = useAuth()
+  const navigate = useNavigate()
+  const toast = useToast()
   const isSeller = !!me?.isSeller
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list })
   const bidsQuery = useQuery({ queryKey: ['my', 'bids'], queryFn: auctionApi.myBids })
@@ -68,7 +71,7 @@ export function MyPageLayout() {
       to: '/me/bids',
     },
     isSeller
-      ? { label: '판매 할 일', value: salesTodoCount, to: '/me/sales', hot: true }
+      ? { label: '처리할 판매', value: salesTodoCount, to: '/me/sales', hot: true }
       : { label: '찜', value: wishedIds.size, to: '/me/wishes' },
     {
       label: '예치금',
@@ -121,6 +124,20 @@ export function MyPageLayout() {
               </NavLink>
             </div>
           )}
+          <div className={styles.menuItemWrap}>
+            <button
+              type="button"
+              className={`${styles.menuItem} ${styles.menuButton}`}
+              onClick={async () => {
+                await logout()
+                toast('로그아웃했어요.')
+                navigate('/')
+              }}
+            >
+              <Icon name="logout" size={16} />
+              로그아웃
+            </button>
+          </div>
         </nav>
       </aside>
       <div className={styles.content}>
