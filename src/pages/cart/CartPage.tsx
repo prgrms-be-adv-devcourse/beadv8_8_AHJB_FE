@@ -157,11 +157,8 @@ export function CartPage() {
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
       void queryClient.invalidateQueries({ queryKey: ['payment', 'quote'] })
-      // 결제창을 닫은 건 에러가 아니다
-      if (tossErrorCode(error) === TOSS_USER_CANCEL) {
-        toast('결제창을 닫았어요. 다시 결제하기를 누르면 이어서 결제할 수 있어요.')
-        return
-      }
+      // 결제창을 닫은 건 에러가 아니다. 알림 없이 장바구니로 돌아온다
+      if (tossErrorCode(error) === TOSS_USER_CANCEL) return
       if (error.code === 'WALLET201') setChargeOpen(true)
       toast(error.code === 'WALLET201' ? SHORTAGE_MESSAGE : error.message, { tone: 'error' })
     },
@@ -391,14 +388,13 @@ export function CartPage() {
                 예치금을 먼저 충전할래요
               </Button>
             ) : null}
-            <p className={styles.rule}>
-              {/* 최소 충전 금액 때문에 부족분보다 많이 충전될 때만 차액이 어디로 가는지 알린다 */}
-              {!limitExceeded && payMethod === 'DEPOSIT' && pgAmount > shortage && shortage > 0
-                ? `부족한 금액은 ${formatWon(shortage)}이지만 최소 충전 금액인 ${formatWon(pgAmount)}이 충전되고, 남는 ${formatWon(pgAmount - shortage)}은 예치금에 남아요. `
-                : ''}
-              결제한 금액은 구매확정 전까지 찐막이 보관해요(에스크로). 구매확정하면 판매자에게, 환불되면 결제한 수단으로
-              돌아와요.
-            </p>
+            {/* 최소 충전 금액 때문에 부족분보다 많이 충전될 때만 차액이 어디로 가는지 알린다 */}
+            {!limitExceeded && payMethod === 'DEPOSIT' && pgAmount > shortage && shortage > 0 ? (
+              <p className={styles.rule}>
+                부족한 금액은 {formatWon(shortage)}이지만 최소 충전 금액인 {formatWon(pgAmount)}이 충전되고, 남는{' '}
+                {formatWon(pgAmount - shortage)}은 예치금에 남아요.
+              </p>
+            ) : null}
           </aside>
         </div>
       )}
