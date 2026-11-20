@@ -6,7 +6,6 @@ import { cartApi, paymentApi, walletApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
 import { Button, LinkButton } from '@/components/Button'
 import { ChargeDialog } from '@/components/ChargeDialog'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Checkbox, Field, Input, RadioCard } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
@@ -62,7 +61,6 @@ export function CartPage() {
   const cartQuery = useQuery({ queryKey: ['cart'], queryFn: cartApi.list, refetchInterval: 15000 })
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const [chargeOpen, setChargeOpen] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const [payMethod, setPayMethod] = useState<PayMethod>('DEPOSIT')
@@ -81,13 +79,10 @@ export function CartPage() {
   const priceTotal = selected.reduce((sum, item) => sum + item.winningPrice, 0)
   const deliveryTotal = selected.reduce((sum, item) => sum + item.deliveryFee, 0)
   const payTotal = priceTotal + deliveryTotal
-  const balance = walletQuery.data?.balance ?? 0
   const pointBalance = walletQuery.data?.pointBalance ?? 0
   // 포인트는 보유한 만큼, 결제 금액까지만 쓸 수 있다. 선택한 상품이 바뀌어 한도가 줄면 사용액도 따라 줄인다
   const maxPoint = Math.min(pointBalance, payTotal)
   const pointUse = Math.min(pointRequested, maxPoint)
-  // 예치금으로 결제하면 모자라는 금액. 결제수단 설명에 쓰려고 어떤 수단을 골랐든 계산한다 (견적은 고른 수단 것만 온다)
-  const depositShortage = walletQuery.data ? Math.max(0, payTotal - pointUse - balance) : 0
   const quotedPoint = useDebouncedValue(pointUse, QUOTE_DEBOUNCE_MS)
 
   // 결제 전 견적: 이 결제수단 · 포인트 사용액이면 무엇으로 얼마씩 나가고 결제창에서 얼마를 결제하는지. 계산은 백엔드가 한다
@@ -111,12 +106,12 @@ export function CartPage() {
   }, [quoteQuery.error, queryClient])
 
   /**
-   * 결제하기. 포인트 · 예치금만으로 끝나면 cart.pay 한 번으로 끝난다.
+   * 결제하기. 확인 팝업 없이 버튼을 누르면 바로 요청한다 (무엇으로 얼마가 나가는지는 버튼 위 견적에 있다).
+   * 포인트 · 예치금만으로 끝나면 cart.pay 한 번으로 끝난다.
    * 결제창을 거쳐야 하면(예치금 부족분 충전 또는 직접 결제) cart.pay 가 isPaid:false + 결제창 파라미터(data)를 주고,
    * 그 pgMethod · chargeAmount 로 토스 결제창을 띄운다.
    * 결제창에서 돌아오는 /cart/payment/success 가 POST /payments/confirm 으로 승인한다.
    * 결제창이 닫히거나 오류로 끝나면 POST /api/v1/cart 로 주문 그룹을 놓아준다.
-   * 목업이면 결제창 없이 바로 승인까지 끝낸다.
    */
   const payMutation = useMutation<PayOutcome, ApiError>({
     mutationFn: async () => {
@@ -129,8 +124,6 @@ export function CartPage() {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
       }
       const { pgOrderId, chargeAmount, orderName, pgMethod } = result.data
-      // 확인 모달(<dialog>)이 결제창을 가리므로 먼저 닫는다
-      setConfirmOpen(false)
       try {
         await openTossPaymentWindow({
           pgOrderId,
@@ -150,7 +143,6 @@ export function CartPage() {
       return { status: 'REDIRECTED' }
     },
     onSuccess: (outcome) => {
-      setConfirmOpen(false)
       if (outcome.status !== 'PAID') return
       toast(`${selected.length}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',
@@ -161,7 +153,6 @@ export function CartPage() {
       navigate(outcome.orderGroupId !== null ? orderPaymentCompletePath(outcome.orderGroupId) : '/me/orders')
     },
     onError: (error) => {
-      setConfirmOpen(false)
       // 서버 쪽 잔액 · 포인트 · 장바구니가 바뀌었을 수 있으니(부분 처리) 화면 값을 서버 기준으로 다시 맞춘다
       void queryClient.invalidateQueries({ queryKey: ['cart'] })
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
@@ -328,13 +319,6 @@ export function CartPage() {
                   checked={payMethod === method}
                   onChange={setPayMethod}
                   title={PAY_METHOD_LABELS[method]}
-                  description={
-                    method === 'DEPOSIT'
-                      ? `잔액 ${walletQuery.data ? formatWon(balance) : '–'}${depositShortage > 0 ? ` · ${formatWon(depositShortage)} 부족` : ''}`
-                      : method === 'TRANSFER'
-                        ? '계좌 간편결제'
-                        : '포인트 적립 제외'
-                  }
                 />
               ))}
             </fieldset>
@@ -397,7 +381,8 @@ export function CartPage() {
               size="lg"
               fullWidth
               disabled={!selected.length || !quoteReady || limitExceeded}
-              onClick={() => setConfirmOpen(true)}
+              loading={payMutation.isPending}
+              onClick={() => payMutation.mutate()}
             >
               {formatWon(payTotal)} 결제하기
             </Button>
@@ -418,50 +403,6 @@ export function CartPage() {
         </div>
       )}
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title={`${formatWon(payTotal)}을 결제할까요?`}
-        confirmLabel="결제"
-        loading={payMutation.isPending}
-        onConfirm={() => payMutation.mutate()}
-        onClose={() => setConfirmOpen(false)}
-      >
-        {/* 무엇으로 얼마가 나가는지만 알린다 */}
-        {quote ? (
-          <dl className={`${styles.rows} ${styles.confirmRows}`}>
-            {quote.pointUseAmount > 0 ? (
-              <>
-                <dt>포인트</dt>
-                <dd className="num">{formatPoint(quote.pointUseAmount)}</dd>
-              </>
-            ) : null}
-            {payMethod === 'DEPOSIT' ? (
-              // 예치금: 현재 잔액 (+ 충전) − 결제 금액 = 결제 후 잔액. 포인트로 전액을 내면 예치금은 그대로라 숨긴다
-              quote.amount > quote.pointUseAmount ? (
-                <>
-                  <dt>현재 잔액</dt>
-                  <dd className="num">{formatWon(quote.balance)}</dd>
-                  {pgAmount > 0 ? (
-                    <>
-                      <dt>계좌이체 충전</dt>
-                      <dd className="num">{formatWon(pgAmount)}</dd>
-                    </>
-                  ) : null}
-                  <dt>결제 금액</dt>
-                  <dd className="num">{formatWon(quote.amount - quote.pointUseAmount)}</dd>
-                  <dt>결제 후 잔액</dt>
-                  <dd className="num">{formatWon(quote.balanceAfterPayment)}</dd>
-                </>
-              ) : null
-            ) : pgAmount > 0 ? (
-              <>
-                <dt>{PAY_METHOD_LABELS[payMethod]}</dt>
-                <dd className="num">{formatWon(pgAmount)}</dd>
-              </>
-            ) : null}
-          </dl>
-        ) : null}
-      </ConfirmDialog>
       <ChargeDialog
         open={chargeOpen}
         onClose={() => setChargeOpen(false)}
