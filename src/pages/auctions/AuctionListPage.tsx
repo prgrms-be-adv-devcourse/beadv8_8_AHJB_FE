@@ -19,7 +19,7 @@ import styles from './AuctionListPage.module.css'
 
 /**
  * 경매 목록 /auctions
- * - 상태: 페이지 상단 탭 (?status=IN_PROGRESS|SCHEDULED|ENDED, 기본 경매 중)
+ * - 상태: 헤더 하위 탭 (?status=IN_PROGRESS|SCHEDULED|ENDED, 기본 경매 중)
  * - 카테고리: 칩 한 줄
  * - 정렬: 탭별 선택지 (오픈 예정은 오픈 임박순 고정)
  * - 더 보기로 다음 페이지를 이어 붙인다
@@ -38,7 +38,14 @@ export function AuctionListPage() {
     getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
   })
-  const items = listQuery.data?.pages.flatMap((page) => page.content) ?? []
+  // offset 페이지를 이어 붙이므로, 그사이 새 경매가 들어와 밀리면 같은 상품이 다음 페이지에 또 온다 → productId 로 거른다
+  // (백엔드 커서 페이지네이션으로 바꾸면 필요 없어진다)
+  const items = useMemo(() => {
+    const seen = new Set<number>()
+    return (listQuery.data?.pages.flatMap((page) => page.content) ?? []).filter((item) =>
+      seen.has(item.productId) ? false : (seen.add(item.productId), true),
+    )
+  }, [listQuery.data])
   const serverTime = listQuery.data?.pages[listQuery.data.pages.length - 1]?.serverTime
 
   // 남은 시간을 서버 시각 기준으로 (상세와 동일)
@@ -61,21 +68,6 @@ export function AuctionListPage() {
 
   return (
     <div className={`container ${styles.page}`}>
-      <div className={styles.statusTabs} role="tablist" aria-label="경매 상태">
-        {STATUS_TABS.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            role="tab"
-            aria-selected={params.status === item.value}
-            className={`${styles.statusTab} ${params.status === item.value ? styles.statusTabOn : ''}`}
-            onClick={() => updateParams({ status: item.value === 'IN_PROGRESS' ? null : item.value, sort: null })}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
       <div className={styles.head}>
         <h1 className={styles.title}>
           {tab.title}{' '}

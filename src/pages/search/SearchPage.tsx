@@ -1,8 +1,9 @@
+import { useEffect, useState, type FormEvent } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { searchApi } from '@/api/endpoints'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
-import { Chip, Select } from '@/components/form/Field'
+import { Chip, Input, Select } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
 import { CATEGORIES, CATEGORY_LABELS, MANUFACTURERS, MANUFACTURER_LABELS } from '@/lib/labels'
@@ -15,7 +16,7 @@ const PAGE_SIZE = 20
 
 const STATUS_OPTIONS: Array<{ value: ProductSearchStatus | ''; label: string }> = [
   { value: '', label: '전체 상태' },
-  { value: 'IN_PROGRESS', label: '진행 중' },
+  { value: 'IN_PROGRESS', label: '경매 중' },
   { value: 'SCHEDULED', label: '오픈 예정' },
   { value: 'SOLD', label: '낙찰' },
   { value: 'FAILED', label: '유찰' },
@@ -72,6 +73,14 @@ export function SearchPage() {
     setSearchParams(next)
   }
 
+  // 헤더의 검색 아이콘으로 들어온다. 입력칸은 주소의 검색어와 맞춘다
+  const [input, setInput] = useState(keyword)
+  useEffect(() => setInput(keyword), [keyword])
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    update({ keyword: input.trim() || null })
+  }
+
   const searchQuery = useQuery({
     queryKey: ['search', keyword, category, manufacturer, status, sort, page],
     queryFn: () =>
@@ -83,6 +92,21 @@ export function SearchPage() {
 
   return (
     <div className={`container ${styles.page}`}>
+      <form className={styles.searchBar} role="search" onSubmit={handleSearch}>
+        <label htmlFor="search-keyword" className="sr-only">
+          경매 검색
+        </label>
+        <Input
+          id="search-keyword"
+          type="search"
+          icon="search"
+          placeholder="슈퍼패미컴, 게임보이, 한정판…"
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          autoComplete="off"
+          autoFocus={!keyword}
+        />
+      </form>
       <div className={styles.head}>
         <h1 className={styles.title}>
           {keyword ? `‘${keyword}’ 검색 결과` : '전체 상품'}{' '}
