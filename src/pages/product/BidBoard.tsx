@@ -5,7 +5,6 @@ import { auctionApi, productApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button, LinkButton } from '@/components/Button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
 import { Input } from '@/components/form/Field'
 import { useToast } from '@/components/Toast'
@@ -21,7 +20,7 @@ import styles from './BidBoard.module.css'
 /** 마감 5분 전 연장 구간 */
 const EXTENSION_WINDOW_MS = 300 * 1000
 
-/** 입력칸에 넣을 최소 입찰가 문자열. 종료된 경매는 minBidPrice 가 null 일 수 있음 */
+/** 입력칸에 넣을 다음 입찰가 문자열. 종료된 경매는 minBidPrice 가 null 일 수 있음 */
 function minBidText(minBidPrice: number | null): string {
   return minBidPrice?.toLocaleString('ko-KR') ?? ''
 }
@@ -58,7 +57,7 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
       <div className={styles.board}>
         <div className={`${styles.timer} ${styles.timerSoon}`}>
           <span className={styles.boardLabel}>경매 시작까지</span>
-          <span className={`${styles.timerValue} num`}>{untilStart > 0 ? formatCountdown(untilStart) : '곧 시작'}</span>
+          <span className={`${styles.timerValue} num`}>{untilStart > 0 ? formatCountdown(untilStart) : '곧 오픈'}</span>
           <span className={`${styles.boardSub} num`}>{formatDateTime(product.auctionScheduledAt)} 자동 시작</span>
         </div>
         <div className={styles.current}>
@@ -70,11 +69,11 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
 
       <dl className={styles.facts}>
         <div>
-          <dt>즉시낙찰가</dt>
+          <dt>즉시 구매가</dt>
           <dd className="num">{terms.instantWinPrice ? formatWon(terms.instantWinPrice) : '없음'}</dd>
         </div>
         <div>
-          <dt>첫 호가 단위</dt>
+          <dt>첫 입찰 단위</dt>
           <dd className="num">{formatWon(bidIncrementOf(terms.startingPrice))}</dd>
         </div>
         <div>
@@ -111,7 +110,6 @@ export function ScheduledAuctionBoard({ product }: { product: ProductDetail }) {
               <Icon name="edit" size={16} /> 수정하기
             </LinkButton>
           </div>
-          <DevApiNote ids={['product.update', 'product.delete']} />
         </>
       ) : (
         <div className={`${pageStyles.notice} ${pageStyles.noticeMuted}`}>
@@ -169,7 +167,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
 
-  // 최소 입찰가가 바뀌면(다른 사람 입찰) 손대지 않았거나 최소 미만인 입력을 새 최소값으로
+  // 다음 입찰가가 바뀌면(다른 사람 입찰) 손대지 않았거나 최소 미만인 입력을 새 최소값으로
   useEffect(() => {
     if (!touched || parseDigits(bidInput) < (minBidPrice ?? 0)) setBidInput(minBidText(minBidPrice))
   }, [minBidPrice])
@@ -203,7 +201,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
       setTouched(false)
       invalidateAfterBid()
       if (result.isInstantWin) {
-        toast('즉시낙찰가 이상이라 바로 낙찰됐어요! 24시간 안에 결제해 주세요.', {
+        toast('즉시 구매가 이상이라 바로 낙찰됐어요! 24시간 안에 결제해 주세요.', {
           tone: 'success',
           action: { label: '장바구니', to: '/cart' },
         })
@@ -228,7 +226,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
     onSuccess: () => {
       setPendingConfirm(null)
       invalidateAfterBid()
-      toast('즉시낙찰했어요! 장바구니에서 24시간 안에 결제해 주세요.', {
+      toast('즉시 구매했어요! 장바구니에서 24시간 안에 결제해 주세요.', {
         tone: 'success',
         action: { label: '장바구니', to: '/cart' },
       })
@@ -316,7 +314,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
           <div className={`${pageStyles.notice} ${pageStyles.noticeGood}`}>
             <Icon name="check" size={16} />
             <span>
-              낙찰받아 결제까지 끝난 상품이에요. <Link to="/me/orders">구매 주문</Link>에서 배송을 확인하세요.
+              낙찰받아 결제까지 끝난 상품이에요. <Link to="/me/orders">주문 내역</Link>에서 배송을 확인하세요.
             </span>
           </div>
         ) : me.isSeller ? (
@@ -348,7 +346,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
       <div className={styles.board} aria-live="polite">
         <div className={`${styles.timer} ${isHot ? styles.timerHot : ''}`}>
           <span className={styles.boardLabel}>{inExtensionWindow ? '연장 구간 · 남은 시간' : '남은 시간'}</span>
-          <span className={`${styles.timerValue} num`}>{remaining > 0 ? formatCountdown(remaining) : '마감 처리 중'}</span>
+          <span className={`${styles.timerValue} num`}>{remaining > 0 ? formatCountdown(remaining) : '마감됨'}</span>
           <span className={`${styles.boardSub} num`}>{formatDateTime(auction.endAt)} 종료</span>
         </div>
         <div className={`${styles.current} ${flash ? styles.flash : ''}`}>
@@ -360,11 +358,11 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
 
       <dl className={styles.facts}>
         <div>
-          <dt>최소 입찰가</dt>
+          <dt>다음 입찰가</dt>
           <dd className="num">{formatWon(minBidPrice)}</dd>
         </div>
         <div>
-          <dt>호가 단위</dt>
+          <dt>입찰 단위</dt>
           <dd className="num">{formatWon(increment)}</dd>
         </div>
         <div>
@@ -437,7 +435,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
               </button>
             ))}
           </div>
-          <div className={styles.tiers} aria-label="호가 단위표">
+          <div className={styles.tiers} aria-label="입찰 단위표">
             {BID_INCREMENT_TIERS.map((tier, i) => (
               <span key={tier.from} className={i === activeTierIndex ? styles.tierOn : ''}>
                 <span>{tier.from ? `${(tier.from / 10000).toLocaleString('ko-KR')}만~` : '1만 미만'}</span>
@@ -453,8 +451,8 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             <p id="bid-help" className={styles.bidHelp}>
               {reachesInstantWin ? (
                 <>
-                  즉시낙찰가(<strong className="num">{formatWon(auction.instantWinPrice)}</strong>) 이상이에요. 입찰하면{' '}
-                  <strong>즉시낙찰가로 바로 낙찰</strong>돼요.
+                  즉시 구매가(<strong className="num">{formatWon(auction.instantWinPrice)}</strong>) 이상이에요. 입찰하면{' '}
+                  <strong>즉시 구매가로 바로 낙찰</strong>돼요.
                 </>
               ) : (
                 <>
@@ -469,7 +467,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             variant="highlight"
             size="lg"
             fullWidth
-            // 최소 입찰가 미만·단위 불일치도 비활성 (즉시낙찰가 이상이면 허용). 비로그인은 눌러서 로그인으로
+            // 다음 입찰가 미만·단위 불일치도 비활성 (즉시 구매가 이상이면 허용). 비로그인은 눌러서 로그인으로
             disabled={
               isLive &&
               (me.isHighestBidder || remaining <= 0 || (isLoggedIn && !!validationError && !reachesInstantWin))
@@ -482,7 +480,6 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
                 : `${formatWon(bidPrice || minBidPrice)} 입찰하기`
               : '로그인하고 입찰하기'}
           </Button>
-          <DevApiNote ids={['auction.bid']} />
         </form>
       )}
 
@@ -490,7 +487,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
         <div className={styles.instant}>
           <span className={styles.instantText}>
             <span>기다리지 않고 바로 사기</span>
-            <strong className="num">즉시낙찰 {formatWon(auction.instantWinPrice)}</strong>
+            <strong className="num">즉시 구매 {formatWon(auction.instantWinPrice)}</strong>
           </span>
           <Button
             variant="solid"
@@ -498,7 +495,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             disabled={remaining <= 0}
             loading={instantWinMutation.isPending}
           >
-            <Icon name="bolt" size={14} /> 즉시낙찰
+            <Icon name="bolt" size={14} /> 즉시 구매
           </Button>
         </div>
       ) : null}
@@ -507,10 +504,10 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
         open={pendingConfirm === 'bid'}
         title={
           reachesInstantWin
-            ? `${formatWon(auction.instantWinPrice)}에 즉시낙찰할까요?`
+            ? `${formatWon(auction.instantWinPrice)}에 즉시 구매할까요?`
             : `${formatWon(bidPrice)}에 입찰할까요?`
         }
-        confirmLabel={reachesInstantWin ? '즉시낙찰' : '입찰하기'}
+        confirmLabel={reachesInstantWin ? '즉시 구매' : '입찰하기'}
         loading={bidMutation.isPending}
         onConfirm={() => bidMutation.mutate(bidPrice)}
         onClose={() => setPendingConfirm(null)}
@@ -530,15 +527,14 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
 
       <ConfirmDialog
         open={pendingConfirm === 'instant'}
-        title={`${formatWon(auction.instantWinPrice)}에 즉시낙찰할까요?`}
-        confirmLabel="즉시낙찰"
+        title={`${formatWon(auction.instantWinPrice)}에 즉시 구매할까요?`}
+        confirmLabel="즉시 구매"
         loading={instantWinMutation.isPending}
         onConfirm={() => instantWinMutation.mutate()}
         onClose={() => setPendingConfirm(null)}
       >
         경매가 바로 끝나고 장바구니에 담겨요. 배송비 {shippingText} 포함{' '}
         <strong style={{ color: 'var(--text)' }}>{formatWon(instantWinTotal)}</strong>을 24시간 안에 결제해 주세요.
-        <DevApiNote ids={['auction.instantWin']} />
       </ConfirmDialog>
     </>
   )
@@ -569,9 +565,9 @@ function SellerEndedPanel({ data }: { data: AuctionDetail }) {
       <Icon name="check" size={16} />
       <span>
         {auction.status === 'WON'
-          ? '낙찰됐어요. 구매자가 24시간 안에 결제하면 판매 주문이 생겨요.'
+          ? '낙찰됐어요. 구매자가 24시간 안에 결제하면 판매 내역이 생겨요.'
           : '판매된 경매예요.'}{' '}
-        <Link to="/me/sales">판매 주문</Link>에서 진행 상황을 볼 수 있어요.
+        <Link to="/me/sales">판매 내역</Link>에서 진행 상황을 볼 수 있어요.
       </span>
     </div>
   )

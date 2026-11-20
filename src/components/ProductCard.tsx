@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import type { AuctionSummary } from '@/types/auction'
 import { useNow } from '@/lib/clock'
 import { formatCountdown, formatWon } from '@/lib/format'
-import { CATEGORY_LABELS, MANUFACTURER_LABELS } from '@/lib/labels'
+import { MANUFACTURER_LABELS } from '@/lib/labels'
 import { auctionStatusBadge } from '@/lib/status'
 import { Badge } from './Badge'
 import { Icon } from './Icon'
@@ -36,6 +36,8 @@ export function ProductCard({ item, showWish = true, priceLabel }: ProductCardPr
       ? Date.parse(item.startAt) - now
       : 0
   const ended = item.status !== 'IN_PROGRESS' && item.status !== 'SCHEDULED'
+  const showStatusBadge = badge.tone !== 'live' && item.status !== 'SCHEDULED'
+  const canBuyNow = !!item.instantWinPrice && !ended
 
   return (
     <article className={`${styles.card} ${ended ? styles.ended : ''}`}>
@@ -50,39 +52,34 @@ export function ProductCard({ item, showWish = true, priceLabel }: ProductCardPr
               {item.status === 'SCHEDULED'
                 ? remaining > 0
                   ? `${formatCountdown(remaining)} 후 시작`
-                  : '곧 시작'
+                  : '곧 오픈'
                 : formatCountdown(remaining)}
             </span>
           ) : null}
         </div>
         <div className={styles.body}>
-          <div className={styles.badges}>
-            <Badge tone={badge.tone}>{badge.label}</Badge>
-            {item.category === 'LIMITED_EDITION' ? <Badge variant="outline">한정판</Badge> : null}
-            {item.instantWinPrice && !ended ? <Badge variant="outline">즉시낙찰</Badge> : null}
-          </div>
-          <h3 className={styles.title}>{item.productName ?? '상품 정보 없음'}</h3>
-          <p className={styles.meta}>
-            {/* 경매 API 는 카테고리만 준다. 제조사·배송비는 상품 API(곧 시작·내 상품)에서만 */}
-            {[
-              item.manufacturer ? MANUFACTURER_LABELS[item.manufacturer] : null,
-              CATEGORY_LABELS[item.category],
-              item.shippingFee === undefined ? null : item.shippingFee ? `배송비 ${formatWon(item.shippingFee)}` : '무료배송',
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
+          {/* 경매 중이면 배지 없음. 마감 임박·종료 상태와 즉시 구매만 표시 */}
+          {showStatusBadge || canBuyNow ? (
+            <div className={styles.badges}>
+              {showStatusBadge ? <Badge tone={badge.tone}>{badge.label}</Badge> : null}
+              {canBuyNow ? <Badge variant="outline">즉시 구매</Badge> : null}
+            </div>
+          ) : null}
+          <h3 className={styles.title}>{item.productName || '상품 정보 없음'}</h3>
+          {item.manufacturer ? <p className={styles.meta}>{MANUFACTURER_LABELS[item.manufacturer]}</p> : null}
           <div className={styles.priceRow}>
             <span className={styles.priceLabel}>
-              {priceLabel ?? (noBidFailed ? '시작가' : ended ? '낙찰가' : item.bidCount ? '현재가' : '시작가')}
+              {priceLabel ?? (noBidFailed ? '유찰 · 시작가' : ended ? '낙찰' : item.bidCount ? '현재가' : '시작가')}
             </span>
             <span className={`${styles.price} num`}>{formatWon(item.currentPrice)}</span>
-            <span className={`${styles.bids} num`}>
-              {item.bidCount ? `입찰 ${item.bidCount}` : ''}
-              {item.bidCount && item.wishCount ? ' · ' : ''}
-              {item.wishCount ? `찜 ${item.wishCount}` : ''}
-            </span>
           </div>
+          {item.bidCount || item.wishCount ? (
+            <p className={`${styles.stats} num`}>
+              {[item.bidCount ? `입찰 ${item.bidCount}` : null, item.wishCount ? `찜 ${item.wishCount}` : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          ) : null}
         </div>
       </Link>
       {showWish ? (

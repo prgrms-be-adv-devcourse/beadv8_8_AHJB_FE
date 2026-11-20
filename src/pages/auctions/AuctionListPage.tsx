@@ -1,12 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { ApiKey } from '@/api/config'
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query'
 import { auctionApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
+import { Button } from '@/components/Button'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip, Select } from '@/components/form/Field'
-import { Pagination } from '@/components/Pagination'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
 import { syncServerTime } from '@/lib/clock'
 import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels'
@@ -21,9 +19,10 @@ import styles from './AuctionListPage.module.css'
 
 /**
  * 경매 목록 /auctions
- * - 상태: 헤더의 상단 탭 (?status=IN_PROGRESS|SCHEDULED|ENDED, 기본 진행 중)
- * - 카테고리: 이 페이지의 칩 한 줄
- * - 정렬: 탭별 선택지 (곧 시작은 시작 임박순 고정)
+ * - 상태: 페이지 상단 탭 (?status=IN_PROGRESS|SCHEDULED|ENDED, 기본 경매 중)
+ * - 카테고리: 칩 한 줄
+ * - 정렬: 탭별 선택지 (오픈 예정은 오픈 임박순 고정)
+ * - 더 보기로 다음 페이지를 이어 붙인다
  */
 export function AuctionListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -31,17 +30,21 @@ export function AuctionListPage() {
   const sortOptions = SORT_OPTIONS[params.status]
   const tab = STATUS_TABS.find((item) => item.value === params.status)!
 
-  const listQuery = useQuery({
-    queryKey: ['auctions', 'list', params],
-    queryFn: () => auctionApi.listByTab(params),
+  const { page: _page, ...filters } = params
+  const listQuery = useInfiniteQuery({
+    queryKey: ['auctions', 'list', filters],
+    queryFn: ({ pageParam }) => auctionApi.listByTab({ ...filters, page: pageParam, size: AUCTION_PAGE_SIZE }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => (last.hasNext ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
-    refetchInterval: 15_000,
   })
+  const items = listQuery.data?.pages.flatMap((page) => page.content) ?? []
+  const serverTime = listQuery.data?.pages[listQuery.data.pages.length - 1]?.serverTime
 
   // 남은 시간을 서버 시각 기준으로 (상세와 동일)
   useEffect(() => {
-    if (listQuery.data?.serverTime) syncServerTime(listQuery.data.serverTime)
-  }, [listQuery.data?.serverTime])
+    if (serverTime) syncServerTime(serverTime)
+  }, [serverTime])
 
   /** 쿼리 갱신. keepPage 가 아니면 page 를 지워 첫 페이지로 */
   const updateParams = (updates: ParamUpdates, keepPage = false) => {
@@ -54,12 +57,25 @@ export function AuctionListPage() {
     setSearchParams(next)
   }
 
-  const totalCount = listQuery.data?.totalElements ?? 0
-  const totalPages = Math.ceil(totalCount / AUCTION_PAGE_SIZE)
-  const apiIds: ApiKey[] = params.status === 'SCHEDULED' ? ['product.upcoming'] : ['auction.list']
+  const totalCount = listQuery.data?.pages[0]?.totalElements ?? 0
 
   return (
     <div className={`container ${styles.page}`}>
+      <div className={styles.statusTabs} role="tablist" aria-label="경매 상태">
+        {STATUS_TABS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={params.status === item.value}
+            className={`${styles.statusTab} ${params.status === item.value ? styles.statusTabOn : ''}`}
+            onClick={() => updateParams({ status: item.value === 'IN_PROGRESS' ? null : item.value, sort: null })}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.head}>
         <h1 className={styles.title}>
           {tab.title}{' '}
@@ -103,11 +119,9 @@ export function AuctionListPage() {
             </Select>
           </>
         ) : (
-          <span className={styles.sortFixed}>시작 임박순</span>
+          <span className={styles.sortFixed}>오픈 임박순</span>
         )}
       </div>
-
-      <DevApiNote ids={[...apiIds, 'wish.add']} className={styles.note} />
 
       {listQuery.isError ? (
         <ErrorState message={listQuery.error.message} onRetry={() => listQuery.refetch()} />
@@ -123,26 +137,25 @@ export function AuctionListPage() {
           title={params.category ? `${CATEGORY_LABELS[params.category]} ${tab.title}가 없어요` : `${tab.title}가 없어요`}
           description={
             params.status === 'IN_PROGRESS'
-              ? '곧 시작하는 경매를 먼저 둘러보세요.'
+              ? '오픈 예정 경매를 먼저 둘러보세요.'
               : '다른 카테고리나 탭을 둘러보세요.'
           }
         />
       ) : (
         <div className={`grid-products ${listQuery.isPlaceholderData ? styles.stale : ''}`}>
-          {listQuery.data?.content.map((item) => (
+          {items.map((item) => (
             <ProductCard key={item.auctionId ?? `p${item.productId}`} item={item} />
           ))}
         </div>
       )}
 
-      <Pagination
-        page={params.page ?? 0}
-        totalPages={totalPages}
-        onChange={(page) => {
-          updateParams({ page: page ? String(page) : null }, true)
-          window.scrollTo({ top: 0 })
-        }}
-      />
+      {listQuery.hasNextPage ? (
+        <div className={styles.more}>
+          <Button variant="outline" loading={listQuery.isFetchingNextPage} onClick={() => listQuery.fetchNextPage()}>
+            더 보기
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

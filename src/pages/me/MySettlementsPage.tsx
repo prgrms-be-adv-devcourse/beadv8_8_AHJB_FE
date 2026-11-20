@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { settlementApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Dialog } from '@/components/Dialog'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
@@ -61,7 +60,6 @@ export function MySettlementsPage() {
         구매확정된 판매 대금은 확정한 달의 다음 달 15일에 지갑으로 들어와요. 수수료는 낙찰가의 10%, 배송비는 전액
         정산돼요.
       </p>
-      <DevApiNote ids={['settlement.list', 'settlement.detail']} />
 
       <div className={styles.summaryCards}>
         <div className={`${styles.sumCard} ${styles.sumCardDark}`}>

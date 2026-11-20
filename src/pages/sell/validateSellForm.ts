@@ -30,7 +30,7 @@ export interface SellFormValues {
   customFeeText: string
   startingPrice: number
   instantWinPrice: number
-  /** 즉시낙찰가 입력값. 비었으면 검사하지 않음 */
+  /** 즉시 구매가 입력값. 비었으면 검사하지 않음 */
   instantWinPriceText: string
   duration: AuctionDuration
   /** datetime-local 값 'YYYY-MM-DDTHH:mm' */
@@ -58,7 +58,7 @@ export function validateSellForm(v: SellFormValues): SellErrors {
     startingPrice: v.startingPrice < 1000 ? '시작가는 1,000원 이상이에요.' : null,
     instantWinPrice:
       v.instantWinPriceText && v.instantWinPrice <= v.startingPrice
-        ? '즉시낙찰가는 시작가보다 커야 해요.'
+        ? '즉시 구매가는 시작가보다 커야 해요.'
         : null,
     // NaN(빈 값/잘못된 값) 은 비교가 false 라 통과하지만, 빈 값은 !customEndAtText 로 걸린다
     customEndAt:

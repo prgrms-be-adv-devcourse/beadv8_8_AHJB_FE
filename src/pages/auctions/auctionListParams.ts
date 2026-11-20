@@ -7,9 +7,9 @@ export const AUCTION_PAGE_SIZE = 20
 
 /** 상단 탭 (헤더 내비와 같은 순서). 진행 중이 기본 */
 export const STATUS_TABS: Array<{ value: AuctionListStatus; label: string; title: string }> = [
-  { value: 'IN_PROGRESS', label: '진행 중 경매', title: '진행 중 경매' },
-  { value: 'SCHEDULED', label: '곧 시작', title: '곧 시작하는 경매' },
-  { value: 'ENDED', label: '종료된 경매', title: '종료된 경매' },
+  { value: 'IN_PROGRESS', label: '경매 중', title: '경매 중' },
+  { value: 'SCHEDULED', label: '오픈 예정', title: '오픈 예정' },
+  { value: 'ENDED', label: '경매 종료', title: '종료된 경매' },
 ]
 
 /**
@@ -19,15 +19,15 @@ export const STATUS_TABS: Array<{ value: AuctionListStatus; label: string; title
 export const SORT_OPTIONS: Record<AuctionListStatus, Array<{ value: AuctionSort; label: string }>> = {
   IN_PROGRESS: [
     { value: 'ENDING_SOON', label: '마감 임박순' },
-    { value: 'NEWEST', label: '최신 등록순' },
-    { value: 'MOST_BIDS', label: '입찰 많은순' },
+    { value: 'NEWEST', label: '신규순' },
+    { value: 'MOST_BIDS', label: '인기순' },
     { value: 'PRICE_ASC', label: '낮은 가격순' },
     { value: 'PRICE_DESC', label: '높은 가격순' },
   ],
   ENDED: [
     { value: 'RECENTLY_ENDED', label: '최근 종료순' },
     { value: 'PRICE_DESC', label: '높은 낙찰가순' },
-    { value: 'MOST_BIDS', label: '입찰 많은순' },
+    { value: 'MOST_BIDS', label: '인기순' },
   ],
   SCHEDULED: [],
 }

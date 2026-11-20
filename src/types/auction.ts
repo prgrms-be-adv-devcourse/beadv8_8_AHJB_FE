@@ -104,7 +104,7 @@ export interface BidResponse {
   bidId: number
   bidPrice: number
   currentPrice: number
-  /** 즉시낙찰로 끝났으면 null */
+  /** 즉시 구매로 끝났으면 null */
   minBidPrice: number | null
   endAt: string
   isExtended: boolean

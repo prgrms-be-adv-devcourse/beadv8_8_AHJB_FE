@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { auctionApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Img } from '@/components/Img'
 import { productPath } from '@/components/ProductCard'
@@ -31,7 +30,7 @@ export function MyBidsPage() {
   return (
     <>
       <div className={styles.head}>
-        <h1 className={styles.title}>입찰 중인 경매</h1>
+        <h1 className={styles.title}>입찰 내역</h1>
       </div>
       {bids.length ? (
         <p className={styles.headSub}>
@@ -44,7 +43,6 @@ export function MyBidsPage() {
           )}
         </p>
       ) : null}
-      <DevApiNote ids={['auction.myBids']} />
       {bidsQuery.isLoading ? (
         <Spinner block />
       ) : bidsQuery.isError ? (
@@ -52,7 +50,7 @@ export function MyBidsPage() {
       ) : bids.length ? (
         <div className={styles.list}>
           {bids.map((bid) => {
-            // 진행 중 경매만 오므로 '마감 임박' / '마감 처리 중' 일 때만 상태 뱃지를 붙인다
+            // 진행 중 경매만 오므로 '마감 임박' / '마감됨' 일 때만 상태 뱃지를 붙인다
             const timeBadge = auctionStatusBadge('IN_PROGRESS', bid.endAt, now)
             const remaining = Date.parse(bid.endAt) - now
             const closed = remaining <= 0
@@ -74,7 +72,7 @@ export function MyBidsPage() {
                     <Link to={productPath(bid.productId)}>{bid.productName ?? '상품 정보 없음'}</Link>
                   </p>
                   <p className={`${styles.rowMeta} num`}>
-                    {closed ? '마감 처리 중' : `${formatCountdown(remaining)} 남음`}
+                    {closed ? '마감됨' : `${formatCountdown(remaining)} 남음`}
                   </p>
                 </div>
                 <div className={styles.rowSide}>
@@ -93,8 +91,8 @@ export function MyBidsPage() {
       ) : (
         <EmptyState
           icon="gavel"
-          title="입찰 중인 경매가 없어요"
-          description="낙찰된 경매는 장바구니와 구매 주문에서 확인할 수 있어요."
+          title="참여 중인 경매가 없어요"
+          description="낙찰된 경매는 장바구니와 주문 내역에서 확인할 수 있어요."
           action={
             <LinkButton to="/auctions" variant="outline" size="sm">
               경매 둘러보기

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { orderApi } from '@/api/endpoints'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
 import { OrderCard } from '@/components/order/OrderCard'
@@ -13,7 +12,7 @@ import styles from './MyPage.module.css'
 
 type OrderFilter = (typeof ORDER_FILTERS)[number]
 
-/** 구매 주문 /me/orders */
+/** 주문 내역 /me/orders */
 export function MyOrdersPage() {
   const [filterId, setFilterId] = useState<OrderFilterId>('all')
   const ordersQuery = useQuery({
@@ -31,12 +30,11 @@ export function MyOrdersPage() {
   return (
     <>
       <div className={styles.head}>
-        <h1 className={styles.title}>구매 주문</h1>
+        <h1 className={styles.title}>주문 내역</h1>
         <LinkButton to="/cart" variant="outline" size="sm">
           장바구니
         </LinkButton>
       </div>
-      <DevApiNote ids={['order.winner', 'product.detail']} />
       <div className={styles.tabs}>
         {ORDER_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>

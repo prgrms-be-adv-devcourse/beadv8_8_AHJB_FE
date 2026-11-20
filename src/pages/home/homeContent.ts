@@ -15,7 +15,7 @@ export const TRADE_STEPS: Array<{ icon: IconName; title: string; desc: string }>
   {
     icon: 'gavel',
     title: '입찰',
-    desc: '호가 단위로 올려요. 마감 5분 전 입찰이 들어오면 5분 연장돼요.',
+    desc: '입찰 단위로 올려요. 마감 5분 전 입찰이 들어오면 5분 연장돼요.',
   },
   {
     icon: 'trophy',

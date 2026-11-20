@@ -1,14 +1,13 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { searchApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip, Select } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
-import { CATEGORIES, CATEGORY_LABELS } from '@/lib/labels'
+import { CATEGORIES, CATEGORY_LABELS, MANUFACTURERS, MANUFACTURER_LABELS } from '@/lib/labels'
 import type { AuctionStatus, AuctionSummary } from '@/types/auction'
-import type { Category } from '@/types/product'
+import type { Category, Manufacturer } from '@/types/product'
 import type { ProductSearchItem, ProductSearchSort, ProductSearchStatus } from '@/types/search'
 import styles from '@/pages/auctions/AuctionListPage.module.css'
 
@@ -17,14 +16,14 @@ const PAGE_SIZE = 20
 const STATUS_OPTIONS: Array<{ value: ProductSearchStatus | ''; label: string }> = [
   { value: '', label: '전체 상태' },
   { value: 'IN_PROGRESS', label: '진행 중' },
-  { value: 'SCHEDULED', label: '곧 시작' },
+  { value: 'SCHEDULED', label: '오픈 예정' },
   { value: 'SOLD', label: '낙찰' },
   { value: 'FAILED', label: '유찰' },
 ]
 
 const SORT_OPTIONS: Array<{ value: ProductSearchSort; label: string }> = [
   { value: 'RELEVANCE', label: '정확도순' },
-  { value: 'LATEST', label: '최신 등록순' },
+  { value: 'LATEST', label: '신규순' },
   { value: 'ENDING_SOON', label: '마감 임박순' },
   { value: 'PRICE_ASC', label: '시작가 낮은순' },
   { value: 'PRICE_DESC', label: '시작가 높은순' },
@@ -62,6 +61,7 @@ export function SearchPage() {
   const keyword = searchParams.get('keyword')?.trim() ?? ''
   const category = (searchParams.get('category') as Category | null) ?? undefined
   const status = (searchParams.get('status') as ProductSearchStatus | null) ?? undefined
+  const manufacturer = (searchParams.get('manufacturer') as Manufacturer | null) ?? undefined
   const sort = (searchParams.get('sort') as ProductSearchSort | null) ?? undefined
   const page = Number(searchParams.get('page') ?? 0) || 0
 
@@ -73,9 +73,9 @@ export function SearchPage() {
   }
 
   const searchQuery = useQuery({
-    queryKey: ['search', keyword, category, status, sort, page],
+    queryKey: ['search', keyword, category, manufacturer, status, sort, page],
     queryFn: () =>
-      searchApi.products({ keyword: keyword || undefined, category, status, sort, page, size: PAGE_SIZE }),
+      searchApi.products({ keyword: keyword || undefined, category, manufacturer, status, sort, page, size: PAGE_SIZE }),
     placeholderData: keepPreviousData,
   })
   const total = searchQuery.data?.totalElements ?? 0
@@ -103,6 +103,22 @@ export function SearchPage() {
             </Chip>
           ))}
         </div>
+        <label htmlFor="s-platform" className="sr-only">
+          플랫폼
+        </label>
+        <Select
+          id="s-platform"
+          className={styles.sort}
+          value={manufacturer ?? ''}
+          onChange={(event) => update({ manufacturer: event.target.value || null })}
+        >
+          <option value="">전체 플랫폼</option>
+          {MANUFACTURERS.map((value) => (
+            <option key={value} value={value}>
+              {MANUFACTURER_LABELS[value]}
+            </option>
+          ))}
+        </Select>
         <label htmlFor="s-status" className="sr-only">
           상태
         </label>
@@ -135,7 +151,6 @@ export function SearchPage() {
         </Select>
       </div>
 
-      <DevApiNote ids={['search.products', 'wish.add']} className={styles.note} />
 
       {searchQuery.isError ? (
         <ErrorState message={searchQuery.error.message} onRetry={() => searchQuery.refetch()} />

@@ -14,7 +14,7 @@ interface SellSidebarProps {
   category: Category | ''
   manufacturer: Manufacturer | ''
   manufacturerEtc: string
-  /** 즉시낙찰가 입력값(문자열). 있으면 '즉시낙찰' 배지 */
+  /** 즉시 구매가 입력값(문자열). 있으면 '즉시 구매' 배지 */
   instantWinPriceText: string
   startingPrice: number
   shippingFee: number
@@ -69,7 +69,7 @@ export function SellSidebar({
           <div className={styles.previewBadges}>
             <Badge tone="scheduled">시작 전</Badge>
             {category === 'LIMITED_EDITION' ? <Badge variant="outline">한정판</Badge> : null}
-            {instantWinPriceText ? <Badge variant="outline">즉시낙찰</Badge> : null}
+            {instantWinPriceText ? <Badge variant="outline">즉시 구매</Badge> : null}
           </div>
           <p className={styles.previewTitle}>{name || '상품명'}</p>
           <p className={styles.previewMeta}>{meta}</p>
@@ -131,7 +131,7 @@ export function SellSidebar({
 
       <div className={styles.submit}>
         <Button type="submit" variant="highlight" size="lg" fullWidth loading={submitting} disabled={locked}>
-          {isEdit ? '수정 저장' : '경매 올리기'}
+          {isEdit ? '수정 저장' : '판매하기'}
         </Button>
       </div>
     </aside>

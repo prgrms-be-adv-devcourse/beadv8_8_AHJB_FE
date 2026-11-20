@@ -22,7 +22,7 @@ export const BID_INCREMENT_TIERS: Array<{ from: number; unit: number }> = [
  * 입찰가 검사. 문제가 없으면 null, 있으면 안내 문구.
  * @param bidPrice 입력한 입찰가 (0 이면 미입력)
  * @param currentPrice 현재가 (단위 계산 기준)
- * @param minBidPrice 최소 입찰가
+ * @param minBidPrice 다음 입찰가
  * @param _instantWinPrice 쓰지 않는 인자
  */
 export function validateBid(
@@ -32,7 +32,7 @@ export function validateBid(
   _instantWinPrice?: number | null,
 ): string | null {
   if (!bidPrice) return '입찰가를 입력해 주세요.'
-  if (bidPrice < minBidPrice) return `최소 입찰가는 ${minBidPrice.toLocaleString('ko-KR')}원이에요.`
+  if (bidPrice < minBidPrice) return `다음 입찰가는 ${minBidPrice.toLocaleString('ko-KR')}원이에요.`
   const unit = bidIncrementOf(currentPrice)
   return (bidPrice - currentPrice) % unit !== 0 ? `${unit.toLocaleString('ko-KR')}원 단위로 올려 주세요.` : null
 }

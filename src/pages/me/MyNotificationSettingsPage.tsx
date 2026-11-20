@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { notificationApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { ErrorState } from '@/components/EmptyState'
 import { Checkbox } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
@@ -46,7 +45,6 @@ export function MyNotificationSettingsPage() {
       <p className={styles.headSub}>
         끈 묶음은 휴대폰·브라우저 알림이 오지 않고 알림함에만 남아요. 계정 알림(경고·제재)은 끌 수 없어요.
       </p>
-      <DevApiNote ids={['notification.settings', 'notification.updateSettings']} />
       {settingsQuery.isLoading ? (
         <Spinner block />
       ) : settingsQuery.isError ? (

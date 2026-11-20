@@ -3,7 +3,6 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Field, Input } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
@@ -108,7 +107,6 @@ export function LoginPage() {
           <Button type="submit" size="lg" fullWidth loading={submitting}>
             로그인
           </Button>
-          <DevApiNote ids={['auth.login', 'member.me']} />
         </form>
 
         <div className={styles.links}>

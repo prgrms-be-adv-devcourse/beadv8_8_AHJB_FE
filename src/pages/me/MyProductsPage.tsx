@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { productApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
@@ -40,10 +39,10 @@ function describe(product: MyProduct, now: number): string {
     case 'IN_PROGRESS': {
       if (!product.auctionEndAt) return '경매 진행 중'
       const left = Date.parse(product.auctionEndAt) - now
-      return left > 0 ? `${formatCountdown(left)} 남음 · 현재가는 상품 페이지에서 확인해요` : '마감 처리 중'
+      return left > 0 ? `${formatCountdown(left)} 남음 · 현재가는 상품 페이지에서 확인해요` : '마감됨'
     }
     case 'SOLD':
-      return '낙찰됐어요 · 결제와 배송은 판매 주문에서 관리해요'
+      return '낙찰됐어요 · 결제와 배송은 판매 내역에서 관리해요'
     case 'FAILED':
       return product.failureReason
         ? `${FAILURE_REASON_LABELS[product.failureReason]}로 경매가 끝났어요`
@@ -72,13 +71,12 @@ export function MyProductsPage() {
   return (
     <>
       <div className={styles.head}>
-        <h1 className={styles.title}>내 상품</h1>
+        <h1 className={styles.title}>판매 상품 관리</h1>
         <LinkButton to="/sell" variant="solid" size="sm">
           <Icon name="plus" size={14} />
-          경매 올리기
+          판매하기
         </LinkButton>
       </div>
-      <DevApiNote ids={['product.mine', 'product.update']} />
       <div className={styles.tabs}>
         {PRODUCT_FILTERS.map((filter) => (
           <Chip key={filter.id} selected={filterId === filter.id} onClick={() => setFilterId(filter.id)}>
@@ -126,7 +124,7 @@ export function MyProductsPage() {
                     ) : null}
                     {product.status === 'SOLD' ? (
                       <LinkButton to="/me/sales" size="sm" variant="outline">
-                        판매 주문 보기
+                        판매 내역 보기
                       </LinkButton>
                     ) : null}
                   </div>

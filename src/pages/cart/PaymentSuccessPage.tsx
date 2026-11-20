@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
 import { paymentApi } from '@/api/endpoints'
 import { Button, LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState } from '@/components/EmptyState'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
@@ -56,7 +55,7 @@ export function PaymentSuccessPage() {
     onSuccess: (payment) => {
       toast(`${payment.orderCount}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',
-        action: { label: '구매 주문', to: '/me/orders' },
+        action: { label: '주문 내역', to: '/me/orders' },
       })
       // 주문 상태는 결제 완료 이벤트로 바뀌므로 목록·장바구니·지갑을 모두 다시 불러온다
       void queryClient.invalidateQueries()
@@ -81,7 +80,6 @@ export function PaymentSuccessPage() {
     <div className={`container ${styles.page}`}>
       <div className={styles.head}>
         <h1 className={styles.title}>주문 결제</h1>
-        <DevApiNote ids={['payment.confirm']} />
       </div>
 
       {!params ? (

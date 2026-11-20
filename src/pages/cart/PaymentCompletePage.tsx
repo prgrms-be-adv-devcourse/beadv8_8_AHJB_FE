@@ -3,7 +3,6 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { orderApi, paymentApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
 import { LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState } from '@/components/EmptyState'
 import { Img } from '@/components/Img'
 import { productPath } from '@/components/ProductCard'
@@ -65,7 +64,7 @@ export function PaymentCompletePage() {
 
   const toOrders = (
     <LinkButton to="/me/orders" variant="highlight" size="sm">
-      구매 주문 보기
+      주문 내역 보기
     </LinkButton>
   )
 
@@ -73,7 +72,6 @@ export function PaymentCompletePage() {
     <div className={`container ${styles.page}`}>
       <div className={styles.head}>
         <h1 className={styles.title}>주문 결제</h1>
-        <DevApiNote ids={['payment.byOrderGroup', 'payment.detail', 'order.detail', 'product.detail']} />
       </div>
 
       {orderGroupId === null && paymentId === null ? (
@@ -94,7 +92,7 @@ export function PaymentCompletePage() {
             <>
               {paymentQuery.error?.message}
               <br />
-              결제한 주문은 구매 주문에서 확인할 수 있어요.
+              결제한 주문은 주문 내역에서 확인할 수 있어요.
             </>
           }
           action={toOrders}

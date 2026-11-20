@@ -1,5 +1,4 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
 import { Spinner } from '@/components/Spinner'
@@ -12,8 +11,6 @@ interface ImagePickerProps {
   uploading: boolean
   fileInputRef: RefObject<HTMLInputElement>
   onFiles: (files: FileList | null) => void
-  /** 없으면 목업 사진 버튼을 숨긴다 (실제 업로드를 켰을 때) */
-  onOpenSamples?: () => void
   error: string | null
 }
 
@@ -24,7 +21,6 @@ export function ImagePicker({
   uploading,
   fileInputRef,
   onFiles,
-  onOpenSamples,
   error,
 }: ImagePickerProps) {
   return (
@@ -83,11 +79,6 @@ export function ImagePicker({
         <p className={styles.help} style={{ flex: 1 }}>
           정면·뒷면·구성품·흠집을 찍어 주세요. 첫 장이 목록 대표 사진이에요. 최대 10장.
         </p>
-        {onOpenSamples ? (
-          <Button type="button" size="sm" variant="outline" onClick={onOpenSamples}>
-            목업 사진 고르기
-          </Button>
-        ) : null}
       </div>
       {error ? <p className={styles.error}>{error}</p> : null}
     </section>

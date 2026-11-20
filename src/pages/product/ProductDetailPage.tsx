@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { auctionApi, productApi, recommendApi } from '@/api/endpoints'
 import { Badge } from '@/components/Badge'
-import { DevApiNote } from '@/components/DevApiNote'
 import { ErrorState } from '@/components/EmptyState'
 import { Icon } from '@/components/Icon'
 import { SellerCard } from '@/components/SellerCard'
@@ -126,12 +125,12 @@ export function ProductDetailPage() {
             ) : null}
             {dutchDetail ? (
               <Badge variant="outline" size="lg">
-                드롭 타임
+                스페셜 경매
               </Badge>
             ) : null}
             {auction?.instantWinPrice ? (
               <Badge variant="outline" size="lg">
-                즉시낙찰 {formatWon(auction.instantWinPrice)}
+                즉시 구매 {formatWon(auction.instantWinPrice)}
               </Badge>
             ) : null}
           </div>
@@ -143,7 +142,6 @@ export function ProductDetailPage() {
               <span>상품번호 {product.productId}</span>
             </p>
           </div>
-          <DevApiNote ids={['product.detail', 'auction.detail']} />
           {dutchDetail ? (
             <DutchBoard data={dutchDetail} product={product} />
           ) : englishDetail ? (
@@ -160,7 +158,7 @@ export function ProductDetailPage() {
               wished={product.wished}
               disabled={product.isMine}
             />
-            <SellerCard seller={product.seller} note="거래 채팅은 낙찰 후 열려요" />
+            <SellerCard seller={product.seller} />
           </div>
         </div>
       </div>
@@ -209,13 +207,13 @@ export function ProductDetailPage() {
             </div>
           </section>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>거래 안내</h2>
+          <details className={`${styles.section} ${styles.guide}`}>
+            <summary className={styles.sectionTitle}>거래 방법 보기</summary>
             <div className={styles.card}>
               <ul className={styles.policy}>
                 {dutchDetail ? (
                   <li>
-                    드롭 타임은 시작가에서 정해진 시간마다 가격이 내려가요. 가장 먼저 구매한 한 명이 그 가격에 가져가고,
+                    스페셜 경매(드롭)는 시작가에서 정해진 시간마다 가격이 내려가요. 가장 먼저 구매한 한 명이 그 가격에 가져가고,
                     최저가까지 아무도 사지 않으면 유찰돼요.
                   </li>
                 ) : (
@@ -236,7 +234,7 @@ export function ProductDetailPage() {
                 </li>
               </ul>
             </div>
-          </section>
+          </details>
         </div>
 
         <div style={COLUMN_STYLE}>
@@ -258,7 +256,6 @@ export function ProductDetailPage() {
             title="비슷한 경매"
             items={similarQuery.data?.filter((item) => item.productId !== product.productId)}
             loading={similarQuery.isLoading}
-            apiKey="recommend.byAuction"
           />
         </div>
       ) : null}

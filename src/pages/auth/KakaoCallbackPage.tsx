@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { ApiError } from '@/api/client'
 import { useAuth, type AuthContextValue, type LoginResult } from '@/auth/AuthProvider'
 import { Button, LinkButton } from '@/components/Button'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Icon } from '@/components/Icon'
 import { Spinner } from '@/components/Spinner'
 import { useToast } from '@/components/Toast'
@@ -167,7 +166,6 @@ export function KakaoCallbackPage() {
             이메일로 로그인
           </LinkButton>
         ) : null}
-        <DevApiNote ids={['auth.kakaoLogin']} />
         <div className={styles.links}>
           {failure.emailMember ? null : <Link to={loginPath}>로그인 화면으로</Link>}
         </div>

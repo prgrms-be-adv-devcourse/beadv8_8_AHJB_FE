@@ -1,8 +1,6 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** 실제 서버로 보낼 API 키 목록 (쉼표 구분, 예: auth.login,auction.detail). 비우면 전부 목업 */
-  readonly VITE_REAL_APIS?: string
   /** 로컬 개발 서버 proxy 대상 (vite.config.ts 에서만 사용) */
   readonly VITE_DEV_PROXY_TARGET?: string
   /** 토스페이먼츠 클라이언트 키 (payment.chargeRequest 가 실제일 때 결제창에 필요). 로컬은 테스트 키(test_ck_...) */

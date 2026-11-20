@@ -1,5 +1,3 @@
-import { isRealApi } from '@/api/config'
-
 /**
  * 카카오 로그인 (인가 코드 방식).
  *
@@ -7,9 +5,6 @@ import { isRealApi } from '@/api/config'
  * 2. 카카오 → /oauth/kakao/callback?code&state (KakaoCallbackPage)
  *    consumeKakaoState() 로 state 를 확인한 뒤 code 를 백엔드(POST /api/v1/auth/oauth/kakao)로 보낸다.
  * 3. 처음 로그인이면 받은 가입 토큰을 setPendingKakaoSignup() 으로 메모리에만 두고 /signup/kakao 로 보낸다.
- *
- * 목업일 때(auth.kakaoLogin 이 VITE_REAL_APIS 에 없을 때)는 카카오에 가지 않고
- * 바로 콜백으로 가짜 인가 코드를 넘긴다 (mock/handlers/auth.ts).
  */
 
 /** 카카오 콘솔과 백엔드 설정에 등록된 값과 글자 하나까지 같아야 한다 */
@@ -19,16 +14,6 @@ const KAKAO_AUTHORIZE_URL = 'https://kauth.kakao.com/oauth/authorize'
 const STATE_KEY = 'jjinmak.kakaoOAuth'
 /** 인가 화면에 머무를 수 있는 시간. 지나면 state 를 버린다 */
 const STATE_TTL_MS = 10 * 60 * 1000
-
-/**
- * 목업 카카오 계정 회원번호. 같은 브라우저에서는 늘 같은 카카오 계정으로 본다 (처음엔 가입, 다음부턴 로그인).
- * 다른 경우를 보려면 개발자 도구에서 이 값을 바꾼다 (mock/handlers/auth.ts mockKakaoEmail):
- *   localStorage.setItem('jjinmak.mockKakaoId', 'noemail1') → 이메일 없음 (직접 입력)
- *   localStorage.setItem('jjinmak.mockKakaoId', 'dup1')     → 이미 이메일 회원 (AUTH113)
- *   localStorage.setItem('jjinmak.mockKakaoId', 'nonick1')  → 닉네임 없음 (빈 칸)
- *   localStorage.setItem('jjinmak.mockKakaoId', 'takennick1') → 이미 쓰는 닉네임 (중복 안내)
- */
-const MOCK_KAKAO_ID_KEY = 'jjinmak.mockKakaoId'
 
 interface SavedState {
   state: string
@@ -53,18 +38,6 @@ export function safeRedirect(value: string | null | undefined): string {
   return value
 }
 
-function mockKakaoId(): string {
-  try {
-    const saved = window.localStorage.getItem(MOCK_KAKAO_ID_KEY)
-    if (saved) return saved
-    const created = String(Date.now())
-    window.localStorage.setItem(MOCK_KAKAO_ID_KEY, created)
-    return created
-  } catch {
-    return 'demo'
-  }
-}
-
 /**
  * 카카오 로그인을 시작한다 (현재 페이지를 떠난다).
  * sessionStorage 를 쓸 수 없으면 state 를 검증할 수 없으니 시작하지 않고 에러를 던진다.
@@ -76,12 +49,6 @@ export function startKakaoLogin(redirect: string = '/'): void {
     window.sessionStorage.setItem(STATE_KEY, JSON.stringify(saved))
   } catch {
     throw new Error('브라우저 저장소를 쓸 수 없어서 카카오 로그인을 시작하지 못했어요. 시크릿 모드라면 일반 창에서 시도해 주세요.')
-  }
-
-  if (!isRealApi('auth.kakaoLogin')) {
-    const code = `mock-kakao.${mockKakaoId()}.${randomToken()}`
-    window.location.assign(`${KAKAO_CALLBACK_PATH}?code=${code}&state=${state}`)
-    return
   }
 
   const clientId = import.meta.env.VITE_KAKAO_REST_API_KEY

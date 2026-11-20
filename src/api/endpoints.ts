@@ -12,7 +12,6 @@ import type {
 } from '@/types/auth'
 import type {
   AccountStatusInfo,
-  Me,
   MemberDetail,
   MemberSummary,
   RegisterSellerRequest,
@@ -102,267 +101,265 @@ type Id = number | string
 /** 인증 */
 export const authApi = {
   /** 201, 바디 없음 */
-  signup: (body: SignupRequest) => http.post<null>('auth.signup', '/api/v1/auth/signup', body),
-  login: (body: LoginRequest) => http.post<LoginResponse>('auth.login', '/api/v1/auth/login', body),
+  signup: (body: SignupRequest) => http.post<null>('/api/v1/auth/signup', body),
+  login: (body: LoginRequest) => http.post<LoginResponse>('/api/v1/auth/login', body),
   /** 보통은 client.ts 의 refreshSession() 이 자동으로 호출한다 */
   reissue: (refreshToken: string) =>
-    http.post<LoginResponse>('auth.reissue', '/api/v1/auth/reissue', { refreshToken }),
+    http.post<LoginResponse>('/api/v1/auth/reissue', { refreshToken }),
   /** 204 */
   /** 실제 서버는 리프레시 쿠키로 처리한다. refreshToken 은 목업용 */
   logout: (refreshToken?: string) =>
-    http.post<null>('auth.logout', '/api/v1/auth/logout', refreshToken ? { refreshToken } : undefined),
+    http.post<null>('/api/v1/auth/logout', refreshToken ? { refreshToken } : undefined),
   emailAvailable: (email: string) =>
-    http.get<AvailabilityResponse>('auth.emailAvailable', '/api/v1/auth/email-availability', { email }),
+    http.get<AvailabilityResponse>('/api/v1/auth/email-availability', { email }),
   nicknameAvailable: (nickname: string) =>
-    http.get<AvailabilityResponse>('auth.nicknameAvailable', '/api/v1/auth/nickname-availability', {
+    http.get<AvailabilityResponse>('/api/v1/auth/nickname-availability', {
       nickname,
     }),
   /** 카카오 인가 코드로 로그인. 가입 안 된 카카오 계정이면 signupToken 을 준다 */
   kakaoLogin: (body: KakaoLoginRequest) =>
-    http.post<KakaoLoginResponse>('auth.kakaoLogin', '/api/v1/auth/oauth/kakao', body),
+    http.post<KakaoLoginResponse>('/api/v1/auth/oauth/kakao', body),
   /** 201. 가입과 동시에 로그인 (리프레시 토큰은 HttpOnly 쿠키) */
   kakaoSignup: (body: KakaoSignupRequest) =>
-    http.post<KakaoSignupResponse>('auth.kakaoSignup', '/api/v1/auth/oauth/kakao/signup', body),
+    http.post<KakaoSignupResponse>('/api/v1/auth/oauth/kakao/signup', body),
 }
 
 /** 회원 */
 export const memberApi = {
-  /** 목업 전용: 로그인이 목업일 때 AuthProvider 가 내 정보(Me)를 만든다. 목업 /member/me 는 detail 필드도 같이 준다 */
-  me: () => http.get<Me>('member.me', '/api/v1/member/me'),
   /** 회원 정보 화면의 기본 정보 */
-  detail: () => http.get<MemberDetail>('member.me', '/api/v1/member/me'),
-  summary: () => http.get<MemberSummary>('member.summary', '/api/v1/member/me/summary'),
-  seller: () => http.get<SellerInfo>('member.seller', '/api/v1/member/me/seller'),
-  warnings: () => http.get<AccountStatusInfo>('member.warnings', '/api/v1/member/me/warnings'),
+  detail: () => http.get<MemberDetail>('/api/v1/member/me'),
+  summary: () => http.get<MemberSummary>('/api/v1/member/me/summary'),
+  seller: () => http.get<SellerInfo>('/api/v1/member/me/seller'),
+  warnings: () => http.get<AccountStatusInfo>('/api/v1/member/me/warnings'),
   /** 201, 바디 없음 */
   registerSeller: (body: RegisterSellerRequest) =>
-    http.post<null>('member.registerSeller', '/api/v1/member/me/seller', body),
+    http.post<null>('/api/v1/member/me/seller', body),
 }
 
 /** 상품 */
 export const productApi = {
-  detail: (productId: Id) => http.get<ProductDetail>('product.detail', `/api/v1/products/${productId}`),
-  mine: () => http.get<MyProductListResponse>('product.mine', '/api/v1/products/me'),
+  detail: (productId: Id) => http.get<ProductDetail>(`/api/v1/products/${productId}`),
+  mine: () => http.get<MyProductListResponse>('/api/v1/products/me'),
   create: (body: ProductCreateRequest) =>
-    http.post<ProductCreateResponse>('product.create', '/api/v1/products', body),
+    http.post<ProductCreateResponse>('/api/v1/products', body),
   update: (productId: Id, body: ProductUpdateRequest) =>
-    http.patch<null>('product.update', `/api/v1/products/${productId}`, body),
+    http.patch<null>(`/api/v1/products/${productId}`, body),
   /** 204 */
-  remove: (productId: Id) => http.delete<null>('product.delete', `/api/v1/products/${productId}`),
+  remove: (productId: Id) => http.delete<null>(`/api/v1/products/${productId}`),
   /**
    * 곧 시작(경매 생성 전) 목록. 경매 행이 없어서 상품 도메인이 제공한다. 비로그인 조회 가능.
    * status 는 보내지 않는다. 카테고리·페이지만 (size 최대 50), 시작 임박순 고정.
    */
   upcoming: (params: Pick<AuctionListParams, 'category' | 'page' | 'size'>) =>
-    http.get<AuctionListResponse>('product.upcoming', '/api/v1/products/upcoming', { ...params }),
+    http.get<AuctionListResponse>('/api/v1/products/upcoming', { ...params }),
   /** 사진 1장 업로드 (판매자만). 받은 imageId 를 등록·수정의 imageIds 로 보낸다 */
   uploadImage: (file: Blob, fileName: string) => {
     const formData = new FormData()
     formData.append('file', file, fileName)
-    return http.post<ProductImageUploadResponse>('product.images', '/api/v1/products/images', formData)
+    return http.post<ProductImageUploadResponse>('/api/v1/products/images', formData)
   },
 }
 
 /** 상품 Q&A */
 export const qnaApi = {
   list: (productId: Id, params: QnaListParams = {}) =>
-    http.get<QnaListResponse>('qna.list', `/api/v1/products/${productId}/qnas`, params),
+    http.get<QnaListResponse>(`/api/v1/products/${productId}/qnas`, params),
   create: (productId: Id, body: QnaCreateRequest) =>
-    http.post<Qna>('qna.create', `/api/v1/products/${productId}/qnas`, body),
-  update: (qnaId: Id, content: string) => http.patch<null>('qna.update', `/api/v1/qnas/${qnaId}`, { content }),
+    http.post<Qna>(`/api/v1/products/${productId}/qnas`, body),
+  update: (qnaId: Id, content: string) => http.patch<null>(`/api/v1/qnas/${qnaId}`, { content }),
   /** 204 */
-  remove: (qnaId: Id) => http.delete<null>('qna.delete', `/api/v1/qnas/${qnaId}`),
+  remove: (qnaId: Id) => http.delete<null>(`/api/v1/qnas/${qnaId}`),
 }
 
 /** 찜 */
 export const wishApi = {
-  add: (productId: Id) => http.post<WishToggleResponse>('wish.add', `/api/v1/products/${productId}/wishes`),
+  add: (productId: Id) => http.post<WishToggleResponse>(`/api/v1/products/${productId}/wishes`),
   remove: (productId: Id) =>
-    http.delete<WishToggleResponse>('wish.remove', `/api/v1/products/${productId}/wishes`),
-  list: (params: PageParams = {}) => http.get<WishListResponse>('wish.list', '/api/v1/wishes', params),
+    http.delete<WishToggleResponse>(`/api/v1/products/${productId}/wishes`),
+  list: (params: PageParams = {}) => http.get<WishListResponse>('/api/v1/wishes', params),
 }
 
 /** 경매 */
 export const auctionApi = {
   /** 진행 중·종료 목록. 곧 시작은 productApi.upcoming (listByTab 이 골라 준다) */
   list: (params: AuctionListParams) =>
-    http.get<AuctionListResponse>('auction.list', '/api/v1/auctions', { ...params }),
+    http.get<AuctionListResponse>('/api/v1/auctions', { ...params }),
   /** 탭에 맞는 API 로 목록 조회: 곧 시작 → 상품 API, 나머지 → 경매 API */
   listByTab: (params: AuctionListParams) =>
     params.status === 'SCHEDULED'
       ? productApi.upcoming({ category: params.category, page: params.page, size: params.size })
       : auctionApi.list(params),
-  detail: (auctionId: Id) => http.get<AuctionDetail>('auction.detail', `/api/v1/auctions/${auctionId}`),
+  detail: (auctionId: Id) => http.get<AuctionDetail>(`/api/v1/auctions/${auctionId}`),
   bids: (auctionId: Id, params: PageParams = {}) =>
-    http.get<PageResponse<Bid>>('auction.bids', `/api/v1/auctions/${auctionId}/bids`, params),
+    http.get<PageResponse<Bid>>(`/api/v1/auctions/${auctionId}/bids`, params),
   bid: (auctionId: Id, bidPrice: number) =>
-    http.post<BidResponse>('auction.bid', `/api/v1/auctions/${auctionId}/bids`, { bidPrice }),
+    http.post<BidResponse>(`/api/v1/auctions/${auctionId}/bids`, { bidPrice }),
   instantWin: (auctionId: Id) =>
-    http.post<InstantWinResponse>('auction.instantWin', `/api/v1/auctions/${auctionId}/instant-win`),
-  myBids: () => http.get<MyBid[]>('auction.myBids', '/api/v1/auctions/me/bids'),
+    http.post<InstantWinResponse>(`/api/v1/auctions/${auctionId}/instant-win`),
+  myBids: () => http.get<MyBid[]>('/api/v1/auctions/me/bids'),
   /** 하향식 목록 (진행 중·종료). 곧 시작은 상품 API */
   dutchList: (params: DutchAuctionListParams = {}) =>
-    http.get<DutchAuctionListResponse>('auction.dutchList', '/api/v1/auctions/dutch', { ...params }),
+    http.get<DutchAuctionListResponse>('/api/v1/auctions/dutch', { ...params }),
   /** 상세 API 는 영국식과 같다. auction.auctionType 이 'DUTCH' 인 응답 */
-  dutchDetail: (auctionId: Id) => http.get<DutchAuctionDetail>('auction.detail', `/api/v1/auctions/${auctionId}`),
+  dutchDetail: (auctionId: Id) => http.get<DutchAuctionDetail>(`/api/v1/auctions/${auctionId}`),
   /** expectedPrice = 화면에 보이던 가격. 서버 현재가가 더 높으면 AUCTION013, 이미 팔렸으면 AUCTION014 */
   dutchBuy: (auctionId: Id, expectedPrice: number) =>
-    http.post<DutchBuyResponse>('auction.dutchBuy', `/api/v1/auctions/${auctionId}/dutch-buy`, { expectedPrice }),
+    http.post<DutchBuyResponse>(`/api/v1/auctions/${auctionId}/dutch-buy`, { expectedPrice }),
 }
 
 /** 장바구니 */
 export const cartApi = {
-  list: () => http.get<CartItem[]>('cart.list', '/api/v1/cart'),
+  list: () => http.get<CartItem[]>('/api/v1/cart'),
   /**
    * 결제 요청. 결제수단(생략하면 예치금)과 포인트 사용액(생략하면 0)을 함께 보낸다.
    * 결제창을 거쳐야 하면 isPaid:false + data(결제창 파라미터)가 온다
    */
   pay: (productIds: number[], options: Omit<CartPaymentRequest, 'productIds'> = {}) =>
-    http.post<CartPaymentResult | null>('cart.pay', '/api/v1/cart/payment', { productIds, pointUseAmount: 0, ...options }),
-  cancelPayment: (orderGroupId: number) => http.post<null>('cart.cancel', '/api/v1/cart', { orderGroupId }),
+    http.post<CartPaymentResult | null>('/api/v1/cart/payment', { productIds, pointUseAmount: 0, ...options }),
+  cancelPayment: (orderGroupId: number) => http.post<null>('/api/v1/cart', { orderGroupId }),
 }
 
 /** 주문 */
 export const orderApi = {
-  winner: (params: PageParams = {}) => http.get<Order[]>('order.winner', '/api/v1/order/winner', params),
-  seller: (params: PageParams = {}) => http.get<Order[]>('order.seller', '/api/v1/order/seller', params),
-  detail: (orderId: Id) => http.get<Order>('order.detail', `/api/v1/order/${orderId}`),
-  confirm: (orderId: Id) => http.post<null>('order.confirm', `/api/v1/order/${orderId}/confirm-purchase`),
+  winner: (params: PageParams = {}) => http.get<Order[]>('/api/v1/order/winner', params),
+  seller: (params: PageParams = {}) => http.get<Order[]>('/api/v1/order/seller', params),
+  detail: (orderId: Id) => http.get<Order>(`/api/v1/order/${orderId}`),
+  confirm: (orderId: Id) => http.post<null>(`/api/v1/order/${orderId}/confirm-purchase`),
   requestRefund: (orderId: Id) =>
-    http.post<null>('order.refund', `/api/v1/order/${orderId}/request-refund`),
+    http.post<null>(`/api/v1/order/${orderId}/request-refund`),
   send: (orderId: Id, body: SendProductRequest) =>
-    http.post<null>('order.send', `/api/v1/order/${orderId}/send-product`, body),
-  delivery: (orderId: Id) => http.get<DeliveryStatus>('delivery.status', `/api/v1/order/${orderId}/delivery`),
+    http.post<null>(`/api/v1/order/${orderId}/send-product`, body),
+  delivery: (orderId: Id) => http.get<DeliveryStatus>(`/api/v1/order/${orderId}/delivery`),
 }
 
 /** 지갑. 백엔드 WalletApiController */
 export const walletApi = {
   /** 잔액. balance = 예치금, settlementBalance = 정산금, pointBalance = 포인트 */
-  me: () => http.get<Wallet>('wallet.me', '/api/v1/wallet/me'),
+  me: () => http.get<Wallet>('/api/v1/wallet/me'),
   /** 원장(입출금 내역). 최신순, size 최대 50 */
-  ledger: (params: LedgerParams = {}) => http.get<LedgerPage>('wallet.ledger', '/api/v1/wallet/me/ledger', params),
+  ledger: (params: LedgerParams = {}) => http.get<LedgerPage>('/api/v1/wallet/me/ledger', params),
   /** 홀딩(묶인 돈 / 정산 예정). role 기본 BUYER, size 최대 50 */
   holdings: (params: HoldingParams = {}) =>
-    http.get<HoldingPage>('wallet.holdings', '/api/v1/wallet/me/holdings', params),
+    http.get<HoldingPage>('/api/v1/wallet/me/holdings', params),
   /** 예치금 전액 출금(명목상). 잔액 → 0. 잔액 0 이면 WALLET601. 정산금은 출금되지 않는다 */
-  withdraw: () => http.post<Withdrawal>('wallet.withdraw', '/api/v1/wallet/me/withdrawals'),
+  withdraw: () => http.post<Withdrawal>('/api/v1/wallet/me/withdrawals'),
   /** 내 출금 내역. 최신순, size 최대 50 */
   withdrawals: (params: WithdrawalListParams = {}) =>
-    http.get<PageResponse<Withdrawal>>('wallet.withdrawals', '/api/v1/wallet/me/withdrawals', params),
+    http.get<PageResponse<Withdrawal>>('/api/v1/wallet/me/withdrawals', params),
 }
 
 /** 결제 · 충전 (백엔드 PaymentApiController) */
 export const paymentApi = {
   /** 충전 요청. 응답의 pgOrderId / amount / orderName / pgMethod 를 토스 결제창에 넘긴다. 금액이 정책 범위를 벗어나면 CHARGE010 */
   requestCharge: (amount: number) =>
-    http.post<ChargeSummary>('payment.chargeRequest', '/api/v1/payments/charges', { amount }),
+    http.post<ChargeSummary>('/api/v1/payments/charges', { amount }),
   /** 충전 승인. 토스 successUrl 쿼리(paymentKey, orderId, amount)를 그대로 넘긴다. 멱등 */
   confirmCharge: (body: ChargeConfirmRequest) =>
-    http.post<ChargeSummary>('payment.chargeConfirm', '/api/v1/payments/charges/confirm', body),
+    http.post<ChargeSummary>('/api/v1/payments/charges/confirm', body),
   /** 내 충전 내역 (수동 충전 + 주문 부족분 충전). 최신순 */
   charges: (params: ChargeListParams = {}) =>
-    http.get<PageResponse<ChargeSummary>>('payment.charges', '/api/v1/payments/charges/me', params),
+    http.get<PageResponse<ChargeSummary>>('/api/v1/payments/charges/me', params),
   /** 충전 1건 상세 */
   chargeDetail: (chargeId: number) =>
-    http.get<ChargeSummary>('payment.chargeDetail', `/api/v1/payments/charges/${chargeId}`),
+    http.get<ChargeSummary>(`/api/v1/payments/charges/${chargeId}`),
   /** 충전 취소. cancelable 인 건만. 예치금에서 차감한 뒤 토스 결제를 취소한다 */
   cancelCharge: (chargeId: number) =>
-    http.post<ChargeSummary>('payment.chargeCancel', `/api/v1/payments/charges/${chargeId}/cancel`),
+    http.post<ChargeSummary>(`/api/v1/payments/charges/${chargeId}/cancel`),
   /** 주문 결제 승인. 부족분 충전이면 토스 승인 → 충전 → 홀딩, 직접 결제면 토스 승인 → 홀딩까지 한 번에. 멱등 */
   confirmPayment: (body: PaymentConfirmRequest) =>
-    http.post<PaymentSummary>('payment.confirm', '/api/v1/payments/confirm', body),
+    http.post<PaymentSummary>('/api/v1/payments/confirm', body),
   /** 결제 전 견적: 이 결제수단·포인트 사용액으로 결제하면 무엇으로 얼마씩 나가고 결제창에서 얼마를 결제하는지 */
   quote: (params: PaymentQuoteParams) =>
-    http.get<PaymentQuote>('payment.quote', '/api/v1/payments/quote', params),
+    http.get<PaymentQuote>('/api/v1/payments/quote', params),
   /** 내 결제 내역 (주문 묶음 단위). 최신순, size 최대 50 */
   list: (params: PaymentListParams = {}) =>
-    http.get<PageResponse<PaymentSummary>>('payment.list', '/api/v1/payments/me', params),
+    http.get<PageResponse<PaymentSummary>>('/api/v1/payments/me', params),
   /** 내 결제 상세 */
-  detail: (paymentId: Id) => http.get<PaymentDetail>('payment.detail', `/api/v1/payments/me/${paymentId}`),
+  detail: (paymentId: Id) => http.get<PaymentDetail>(`/api/v1/payments/me/${paymentId}`),
   /** 주문 그룹으로 결제 상세 조회. 결제창 없이 끝난 결제는 paymentId 를 모르므로 결제 완료 화면에서 쓴다 */
   byOrderGroup: (orderGroupId: Id) =>
-    http.get<PaymentDetail>('payment.byOrderGroup', `/api/v1/payments/me/order-groups/${orderGroupId}`),
+    http.get<PaymentDetail>(`/api/v1/payments/me/order-groups/${orderGroupId}`),
   /** 주문 1건의 결제 정보 (구매자만). 결제가 끝나지 않은 주문이면 WALLET301 */
   orderPayment: (orderId: Id) =>
-    http.get<OrderPayment>('payment.orderPayment', `/api/v1/payments/me/orders/${orderId}`),
+    http.get<OrderPayment>(`/api/v1/payments/me/orders/${orderId}`),
   /** 결제 정책: 충전 금액 범위, 포인트 적립률, 수수료율 */
-  policy: () => http.get<PaymentPolicy>('payment.policy', '/api/v1/payments/policy'),
+  policy: () => http.get<PaymentPolicy>('/api/v1/payments/policy'),
 }
 
 /** 환불 */
 export const refundApi = {
-  detail: (refundId: Id) => http.get<Refund>('refund.detail', `/api/v1/refunds/${refundId}`),
-  byOrder: (orderId: Id) => http.get<Refund>('refund.byOrder', '/api/v1/refunds', { orderId }),
+  detail: (refundId: Id) => http.get<Refund>(`/api/v1/refunds/${refundId}`),
+  byOrder: (orderId: Id) => http.get<Refund>('/api/v1/refunds', { orderId }),
   accept: (refundId: Id) =>
-    http.patch<RefundProcessResult>('refund.accept', `/api/v1/refunds/${refundId}/accept`),
+    http.patch<RefundProcessResult>(`/api/v1/refunds/${refundId}/accept`),
   reject: (refundId: Id) =>
-    http.patch<RefundProcessResult>('refund.reject', `/api/v1/refunds/${refundId}/reject`),
+    http.patch<RefundProcessResult>(`/api/v1/refunds/${refundId}/reject`),
 }
 
 /** 정산 */
 export const settlementApi = {
   list: (params: SettlementListParams = {}) =>
-    http.get<PageResponse<SettlementSummary>>('settlement.list', '/api/v1/settlements', params),
+    http.get<PageResponse<SettlementSummary>>('/api/v1/settlements', params),
   detail: (settlementId: Id) =>
-    http.get<SettlementDetail>('settlement.detail', `/api/v1/settlements/${settlementId}`),
+    http.get<SettlementDetail>(`/api/v1/settlements/${settlementId}`),
 }
 
 /** 후기 */
 export const reviewApi = {
-  reviewable: () => http.get<ReviewableOrder[]>('review.reviewable', '/api/v1/reviews/reviewable-orders'),
-  create: (body: ReviewCreateRequest) => http.post<Review>('review.create', '/api/v1/reviews', body),
+  reviewable: () => http.get<ReviewableOrder[]>('/api/v1/reviews/reviewable-orders'),
+  create: (body: ReviewCreateRequest) => http.post<Review>('/api/v1/reviews', body),
   received: (params: PageParams = {}) =>
-    http.get<ReviewListResponse>('review.received', '/api/v1/reviews/received', params),
+    http.get<ReviewListResponse>('/api/v1/reviews/received', params),
   written: (params: PageParams = {}) =>
-    http.get<ReviewListResponse>('review.written', '/api/v1/reviews/written', params),
+    http.get<ReviewListResponse>('/api/v1/reviews/written', params),
   update: (reviewId: Id, body: ReviewUpdateRequest) =>
-    http.patch<null>('review.update', `/api/v1/reviews/${reviewId}`, body),
+    http.patch<null>(`/api/v1/reviews/${reviewId}`, body),
   /** 204 */
-  remove: (reviewId: Id) => http.delete<null>('review.delete', `/api/v1/reviews/${reviewId}`),
+  remove: (reviewId: Id) => http.delete<null>(`/api/v1/reviews/${reviewId}`),
 }
 
 /** 알림 */
 export const notificationApi = {
   list: (params: NotificationListParams = {}) =>
-    http.get<NotificationListResponse>('notification.list', '/api/v1/notifications', { ...params }),
-  unreadCount: () => http.get<UnreadCountResponse>('notification.unreadCount', '/api/v1/notifications/unread-count'),
+    http.get<NotificationListResponse>('/api/v1/notifications', { ...params }),
+  unreadCount: () => http.get<UnreadCountResponse>('/api/v1/notifications/unread-count'),
   read: (notificationId: Id) =>
-    http.patch<null>('notification.read', `/api/v1/notifications/${notificationId}/read`),
-  readAll: () => http.patch<ReadAllResponse>('notification.readAll', '/api/v1/notifications/read-all'),
-  settings: () => http.get<NotificationSettingsResponse>('notification.settings', '/api/v1/notifications/settings'),
+    http.patch<null>(`/api/v1/notifications/${notificationId}/read`),
+  readAll: () => http.patch<ReadAllResponse>('/api/v1/notifications/read-all'),
+  settings: () => http.get<NotificationSettingsResponse>('/api/v1/notifications/settings'),
   updateSettings: (body: NotificationSettingsUpdateRequest) =>
-    http.put<NotificationSettingsResponse>('notification.updateSettings', '/api/v1/notifications/settings', body),
+    http.put<NotificationSettingsResponse>('/api/v1/notifications/settings', body),
   /** 로그인 후 푸시 권한이 granted 이면 매번 */
   registerDevice: (token: string) =>
-    http.post<null>('notification.registerDevice', '/api/v1/notifications/devices', { token }),
+    http.post<null>('/api/v1/notifications/devices', { token }),
   /** 로그아웃 직전 */
   removeDevice: (token: string) =>
-    http.delete<null>('notification.removeDevice', `/api/v1/notifications/devices/${encodeURIComponent(token)}`),
+    http.delete<null>(`/api/v1/notifications/devices/${encodeURIComponent(token)}`),
 }
 
 /** 상품 검색 */
 export const searchApi = {
   products: (params: ProductSearchParams = {}) =>
-    http.get<ProductSearchResponse>('search.products', '/api/v1/search', { ...params }),
+    http.get<ProductSearchResponse>('/api/v1/search', { ...params }),
 }
 
 /** 추천 */
 export const recommendApi = {
-  popular: () => http.get<RecommendedAuction[]>('recommend.popular', '/api/v1/recommend/popular'),
+  popular: () => http.get<RecommendedAuction[]>('/api/v1/recommend/popular'),
   /** 로그인 필요 */
-  me: () => http.get<RecommendedAuction[]>('recommend.me', '/api/v1/recommend/me'),
+  me: () => http.get<RecommendedAuction[]>('/api/v1/recommend/me'),
   byAuction: (auctionId: Id) =>
-    http.get<RecommendedAuction[]>('recommend.byAuction', `/api/v1/recommend/auction/${auctionId}`),
+    http.get<RecommendedAuction[]>(`/api/v1/recommend/auction/${auctionId}`),
 }
 
 /** 채팅 (REST). 메시지 전송·수신은 STOMP */
 export const chatApi = {
-  rooms: (params: PageParams = {}) => http.get<ChatRoomListResponse>('chat.rooms', '/api/v1/chat-rooms', params),
-  room: (roomId: Id) => http.get<ChatRoomDetail>('chat.room', `/api/v1/chat-rooms/${roomId}`),
+  rooms: (params: PageParams = {}) => http.get<ChatRoomListResponse>('/api/v1/chat-rooms', params),
+  room: (roomId: Id) => http.get<ChatRoomDetail>(`/api/v1/chat-rooms/${roomId}`),
   messages: (roomId: Id, params: ChatMessageListParams = {}) =>
-    http.get<ChatMessageListResponse>('chat.messages', `/api/v1/chat-rooms/${roomId}/messages`, params),
+    http.get<ChatMessageListResponse>(`/api/v1/chat-rooms/${roomId}/messages`, params),
   /** 화면에 보이는 마지막 메시지까지 읽음 처리. 읽은 위치는 앞으로만 움직인다 */
   read: (roomId: Id, lastReadMessageId: number) =>
-    http.patch<ChatReadResponse>('chat.read', `/api/v1/chat-rooms/${roomId}/read`, { lastReadMessageId }),
-  unreadCount: () => http.get<ChatUnreadCountResponse>('chat.unreadCount', '/api/v1/chat-rooms/unread-count'),
+    http.patch<ChatReadResponse>(`/api/v1/chat-rooms/${roomId}/read`, { lastReadMessageId }),
+  unreadCount: () => http.get<ChatUnreadCountResponse>('/api/v1/chat-rooms/unread-count'),
 }

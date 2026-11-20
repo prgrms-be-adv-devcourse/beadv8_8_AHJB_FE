@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { paymentApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { formatKoreanDate, formatPoint, formatWon } from '@/lib/format'
 import { feeOf, paymentParts, usePaymentPolicy } from '@/lib/payment'
 import { payoutDateOf } from '@/lib/settlement'
@@ -106,7 +105,6 @@ export function OrderAmountCard({ order, role, now }: OrderAmountCardProps) {
               ? '구매확정한 주문이에요. 결제한 돈은 판매자에게 정산돼요.'
               : '결제한 돈은 구매확정 전까지 찐막이 보관해요. 확정하면 판매자에게 정산되고, 환불되면 결제한 수단 그대로 돌아와요.'}
       </p>
-      <DevApiNote ids={role === 'seller' ? ['payment.policy'] : ['payment.orderPayment']} />
     </section>
   )
 }

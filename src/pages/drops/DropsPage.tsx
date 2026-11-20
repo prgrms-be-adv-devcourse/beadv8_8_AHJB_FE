@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { auctionApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
@@ -13,7 +12,7 @@ import styles from './Drops.module.css'
 
 const PAGE_SIZE = 20
 
-/** 드롭 타임(하향식 경매) 목록 /drops. 운영자가 여는 이벤트 경매 */
+/** 스페셜 경매(하향식 경매) 목록 /drops. 운영자가 여는 이벤트 경매 */
 export function DropsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const status = searchParams.get('status') === 'ENDED' ? 'ENDED' : 'IN_PROGRESS'
@@ -35,13 +34,10 @@ export function DropsPage() {
 
   return (
     <div className={`container ${styles.page}`}>
-      <div className={styles.intro}>
-        <p className={styles.eyebrow}>드롭 타임</p>
-        <h1 className={styles.title}>기다릴수록 내려가고, 먼저 누르면 내 것</h1>
-        <p className={styles.desc}>
-          시작가에서 정해진 시간마다 가격이 내려가요. 가장 먼저 구매한 한 명만 가져가요. 최저가는 공개하지 않아요.
-        </p>
-      </div>
+      <h1 className={styles.pageTitle}>스페셜 경매</h1>
+      <p className={styles.banner}>
+        <strong>드롭</strong> 시간이 지날수록 가격이 내려가요 · 먼저 구매한 한 명만 가져가요
+      </p>
 
       <div className={styles.toolbar} role="group" aria-label="상태">
         <Chip selected={status === 'IN_PROGRESS'} onClick={() => setSearchParams({})}>
@@ -51,8 +47,6 @@ export function DropsPage() {
           종료
         </Chip>
       </div>
-
-      <DevApiNote ids={['auction.dutchList']} />
 
       {listQuery.isError ? (
         <ErrorState message={listQuery.error.message} onRetry={() => listQuery.refetch()} />

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { auctionApi } from '@/api/endpoints'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Skeleton } from '@/components/Spinner'
 import { formatShortDateTime, formatWon } from '@/lib/format'
 import type { Bid } from '@/types/auction'
@@ -63,7 +62,6 @@ export function BidHistory({ auctionId, bidCount, live, won }: BidHistoryProps) 
       <h2 id="bid-history-title" className={pageStyles.sectionTitle}>
         입찰 기록 <span className={`${pageStyles.sectionCount} num`}>{lastPage?.totalElements ?? bidCount}</span>
       </h2>
-      <DevApiNote ids={['auction.bids']} />
       <div className={styles.box}>
         {query.isLoading ? (
           <div className={styles.loading}>

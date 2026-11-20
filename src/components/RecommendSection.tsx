@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react'
-import { DevApiNote } from '@/components/DevApiNote'
 import { ProductCard, ProductCardSkeleton } from '@/components/ProductCard'
-import type { ApiKey } from '@/api/config'
 import { useProductSummaries } from '@/lib/productSummaries'
 import type { AuctionSummary } from '@/types/auction'
 import type { RecommendedAuction } from '@/types/recommend'
@@ -12,13 +10,12 @@ interface RecommendSectionProps {
   description?: ReactNode
   items: RecommendedAuction[] | undefined
   loading: boolean
-  apiKey: ApiKey
   /** 기본 5개 */
   limit?: number
 }
 
 /** 추천 경매 카드 줄. 추천 API 에는 상품명·사진이 없어서 상품 정보와 합친다. 비어 있으면 그리지 않는다 */
-export function RecommendSection({ title, description, items, loading, apiKey, limit = 5 }: RecommendSectionProps) {
+export function RecommendSection({ title, description, items, loading, limit = 5 }: RecommendSectionProps) {
   const shown = (items ?? []).slice(0, limit)
   const products = useProductSummaries(shown.map((item) => item.productId))
 
@@ -46,7 +43,6 @@ export function RecommendSection({ title, description, items, loading, apiKey, l
         <h2 className={styles.title}>{title}</h2>
       </div>
       {description ? <p className={styles.desc}>{description}</p> : null}
-      <DevApiNote ids={[apiKey, 'product.detail']} />
       <div className="grid-products">
         {loading
           ? Array.from({ length: limit }, (_, index) => <ProductCardSkeleton key={index} />)

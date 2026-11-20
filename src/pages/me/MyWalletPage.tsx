@@ -8,7 +8,6 @@ import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { ChargeDialog } from '@/components/ChargeDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Chip } from '@/components/form/Field'
 import { Pagination } from '@/components/Pagination'
@@ -194,21 +193,6 @@ export function MyWalletPage() {
       <div className={styles.head}>
         <h1 className={styles.title}>예치금</h1>
       </div>
-      <DevApiNote
-        ids={[
-          'wallet.me',
-          'wallet.holdings',
-          'wallet.ledger',
-          'wallet.withdraw',
-          'wallet.withdrawals',
-          'payment.chargeRequest',
-          'payment.chargeConfirm',
-          'payment.charges',
-          'payment.chargeCancel',
-          'payment.list',
-          'payment.policy',
-        ]}
-      />
 
       <div className={styles.summaryCards}>
         <div className={`${styles.sumCard} ${styles.sumCardDark}`}>

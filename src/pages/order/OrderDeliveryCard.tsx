@@ -1,5 +1,4 @@
 import type { UseQueryResult } from '@tanstack/react-query'
-import { DevApiNote } from '@/components/DevApiNote'
 import { Spinner } from '@/components/Spinner'
 import { formatDateTime } from '@/lib/format'
 import { CARRIER_LABELS, DELIVERY_CODE_LABELS, DELIVERY_PROGRESS_CODES } from '@/lib/labels'
@@ -23,7 +22,6 @@ export function OrderDeliveryCard({ query }: OrderDeliveryCardProps) {
   return (
     <section className={styles.card}>
       <h2 className={styles.cardTitle}>배송</h2>
-      <DevApiNote ids={['delivery.status']} />
       {query.isLoading ? (
         <Spinner block />
       ) : delivery ? (

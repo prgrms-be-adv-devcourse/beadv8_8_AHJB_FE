@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ApiError } from '@/api/client'
-import { isRealApi } from '@/api/config'
 import { cartApi, paymentApi, walletApi } from '@/api/endpoints'
 import { tokenStore } from '@/api/tokenStore'
 import { Button, LinkButton } from '@/components/Button'
 import { ChargeDialog } from '@/components/ChargeDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { DevApiNote } from '@/components/DevApiNote'
 import { EmptyState, ErrorState } from '@/components/EmptyState'
 import { Checkbox, Field, Input, RadioCard } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
@@ -130,12 +128,7 @@ export function CartPage() {
       if (!result.data) {
         throw new Error('결제창 정보를 받지 못했어요. 잠시 뒤 다시 시도해 주세요.')
       }
-      const { pgOrderId, chargeAmount, orderName, paymentId, pgMethod } = result.data
-      if (!isRealApi('payment.confirm')) {
-        // 목업: 토스 결제창을 거치지 않고 바로 승인
-        await paymentApi.confirmPayment({ pgOrderId, paymentKey: `mock_${paymentId}`, amount: chargeAmount })
-        return { status: 'PAID', orderGroupId: result.orderGroupId }
-      }
+      const { pgOrderId, chargeAmount, orderName, pgMethod } = result.data
       // 확인 모달(<dialog>)이 결제창을 가리므로 먼저 닫는다
       setConfirmOpen(false)
       try {
@@ -161,10 +154,10 @@ export function CartPage() {
       if (outcome.status !== 'PAID') return
       toast(`${selected.length}건 결제했어요. 판매자가 발송하면 알려드릴게요.`, {
         tone: 'success',
-        action: { label: '구매 주문', to: '/me/orders' },
+        action: { label: '주문 내역', to: '/me/orders' },
       })
       void queryClient.invalidateQueries()
-      // 결제 완료 화면에서 무엇으로 얼마씩 냈는지 보여 준다. 주문 그룹 id 를 못 받았으면 구매 주문으로 간다
+      // 결제 완료 화면에서 무엇으로 얼마씩 냈는지 보여 준다. 주문 그룹 id 를 못 받았으면 주문 내역으로 간다
       navigate(outcome.orderGroupId !== null ? orderPaymentCompletePath(outcome.orderGroupId) : '/me/orders')
     },
     onError: (error) => {
@@ -212,7 +205,6 @@ export function CartPage() {
         <p className={styles.sub}>
           낙찰받은 상품이 담겨요. 낙찰 후 24시간 안에 결제하지 않으면 낙찰이 무효되고 경고(결제 미이행)를 받아요.
         </p>
-        <DevApiNote ids={['cart.list', 'product.detail', 'cart.pay', 'cart.cancel', 'wallet.me', 'payment.quote', 'payment.confirm']} />
       </div>
 
       {cartQuery.isLoading ? (
@@ -223,14 +215,14 @@ export function CartPage() {
         <EmptyState
           icon="cart"
           title="결제할 낙찰 상품이 없어요"
-          description="경매에서 낙찰받으면 여기에 담겨요. 결제한 상품은 마이페이지 구매 주문에서 볼 수 있어요."
+          description="경매에서 낙찰받으면 여기에 담겨요. 결제한 상품은 마이페이지 주문 내역에서 볼 수 있어요."
           action={
             <div style={{ display: 'flex', gap: 8 }}>
               <LinkButton to="/auctions" variant="solid" size="sm">
                 경매 둘러보기
               </LinkButton>
               <LinkButton to="/me/orders" variant="outline" size="sm">
-                구매 주문
+                주문 내역
               </LinkButton>
             </div>
           }
