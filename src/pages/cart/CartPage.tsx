@@ -443,22 +443,28 @@ export function CartPage() {
                 <dd className="num">{formatPoint(quote.pointUseAmount)}</dd>
               </>
             ) : null}
-            {quote.walletUseAmount > 0 ? (
+            {payMethod === 'DEPOSIT' ? (
+              // 예치금: 현재 잔액 (+ 충전) − 결제 금액 = 결제 후 잔액. 포인트로 전액을 내면 예치금은 그대로라 숨긴다
+              quote.amount > quote.pointUseAmount ? (
+                <>
+                  <dt>현재 잔액</dt>
+                  <dd className="num">{formatWon(quote.balance)}</dd>
+                  {pgAmount > 0 ? (
+                    <>
+                      <dt>계좌이체 충전</dt>
+                      <dd className="num">{formatWon(pgAmount)}</dd>
+                    </>
+                  ) : null}
+                  <dt>결제 금액</dt>
+                  <dd className="num">{formatWon(quote.amount - quote.pointUseAmount)}</dd>
+                  <dt>결제 후 잔액</dt>
+                  <dd className="num">{formatWon(quote.balanceAfterPayment)}</dd>
+                </>
+              ) : null
+            ) : pgAmount > 0 ? (
               <>
-                <dt>예치금</dt>
-                <dd className="num">{formatWon(quote.walletUseAmount)}</dd>
-              </>
-            ) : null}
-            {pgAmount > 0 ? (
-              <>
-                <dt>{payMethod === 'DEPOSIT' ? '계좌이체 충전' : PAY_METHOD_LABELS[payMethod]}</dt>
+                <dt>{PAY_METHOD_LABELS[payMethod]}</dt>
                 <dd className="num">{formatWon(pgAmount)}</dd>
-              </>
-            ) : null}
-            {payMethod === 'DEPOSIT' && pgAmount > shortage ? (
-              <>
-                <dt>충전하고 남는 예치금</dt>
-                <dd className="num">{formatWon(pgAmount - shortage)}</dd>
               </>
             ) : null}
           </dl>
