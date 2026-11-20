@@ -151,7 +151,7 @@ function ReviewDialog({ target, editing, onClose }: ReviewDialogProps) {
       }
     >
       <StarRatingInput value={rating} onChange={setRating} />
-      <Field label="후기" hint={`${content.length}/1000 · 상품 상태, 포장, 응답 속도를 알려 주세요.`}>
+      <Field label="후기" hint={`${content.length}/1000 · 상품 상태, 포장, 판매자 만족도를 알려 주세요.`}>
         {(id, describedBy) => (
           <Textarea
             id={id}
@@ -174,7 +174,7 @@ const linkButtonStyle = {
   textDecoration: 'underline',
 } as const
 
-/** /me/reviews 후기 (작성 가능 · 쓴 후기 · 받은 후기) */
+/** /me/reviews 후기 (작성 가능 · 작성한 후기 · 받은 후기) */
 export function MyReviewsPage() {
   const { me } = useAuth()
   const now = useNow()
@@ -227,10 +227,10 @@ export function MyReviewsPage() {
           작성 가능 <span className="num">{reviewableQuery.data?.length ?? ''}</span>
         </Chip>
         <Chip selected={tab === 'written'} onClick={() => setTab('written')}>
-          쓴 후기 <span className="num">{writtenQuery.data?.reviews.length ?? ''}</span>
+          작성한 후기 <span className="num">{writtenQuery.data?.reviews.length ?? ''}</span>
         </Chip>
         <Chip selected={tab === 'received'} onClick={() => setTab('received')}>
-          받은 후기 <span className="num">{received.length || ''}</span>
+          받은 후기 <span className="num">{receivedQuery.data?.reviews.length ?? ''}</span>
         </Chip>
       </div>
 
@@ -321,7 +321,7 @@ export function MyReviewsPage() {
               ))}
             </div>
           ) : (
-            <EmptyState icon="star" title={tab === 'written' ? '쓴 후기가 없어요' : '받은 후기가 없어요'} />
+            <EmptyState icon="star" title={tab === 'written' ? '작성한 후기가 없어요' : '받은 후기가 없어요'} />
           )}
         </>
       )}

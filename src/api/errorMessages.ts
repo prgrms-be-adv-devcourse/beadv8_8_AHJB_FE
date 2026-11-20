@@ -158,6 +158,7 @@ const USER_MESSAGES: Record<string, string> = {
   WALLET501: '다른 요청과 겹쳐서 처리하지 못했어요. 다시 시도해 주세요.',
   WALLET601: '출금할 예치금이 없어요.',
   WALLET602: '지금은 처리할 수 없는 출금이에요.',
+  WALLET603: '출금할 정산금이 없어요.',
 
   // 정산·후기
   SETTLEMENT001: '정산 내역을 찾을 수 없어요.',

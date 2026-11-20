@@ -3,7 +3,8 @@
  * - GET /api/v1/wallet/me           → Wallet
  * - GET /api/v1/wallet/me/ledger    → LedgerPage
  * - GET /api/v1/wallet/me/holdings  → HoldingPage
- * - POST /api/v1/wallet/me/withdrawals → Withdrawal (전액 출금, 명목상)
+ * - POST /api/v1/wallet/me/withdrawals → Withdrawal (예치금 전액 출금, 명목상)
+ * - POST /api/v1/wallet/me/settlement-withdrawals → Withdrawal (정산금 전액 출금, 명목상)
  * - GET /api/v1/wallet/me/withdrawals  → PageResponse<Withdrawal>
  */
 
@@ -16,7 +17,7 @@ export type WalletAccount = 'DEPOSIT' | 'SETTLEMENT' | 'POINT'
 
 /**
  * 원장 거래 유형 (백엔드 WalletTransactionType 전체).
- * 사용자 지갑에 실제로 찍히는 건 CHARGE, CHARGE_CANCEL, WITHDRAWAL, HOLD_PAY, SETTLEMENT_RECEIVE, REFUND_RECEIVE,
+ * 사용자 지갑에 실제로 찍히는 건 CHARGE, CHARGE_CANCEL, WITHDRAWAL, SETTLEMENT_WITHDRAWAL, HOLD_PAY, SETTLEMENT_RECEIVE, REFUND_RECEIVE,
  * POINT_EARN, POINT_HOLD_PAY, POINT_REFUND_RECEIVE, REVERSAL 이고
  * 나머지는 시스템 지갑(ESCROW·FEE) 전용이라 화면에는 나오지 않는다.
  */
@@ -24,6 +25,7 @@ export type TransactionType =
   | 'CHARGE'
   | 'CHARGE_CANCEL'
   | 'WITHDRAWAL'
+  | 'SETTLEMENT_WITHDRAWAL'
   | 'HOLD_PAY'
   | 'HOLD_RECEIVE'
   | 'SETTLEMENT_PAY'
@@ -156,7 +158,7 @@ export type WithdrawalStatus = 'REQUESTED' | 'COMPLETED' | 'FAILED'
 export interface Withdrawal {
   withdrawalId: number
   amount: number
-  /** 어느 주머니에서 나갔는지. 지금은 DEPOSIT(예치금)만 */
+  /** 어느 주머니에서 나갔는지. DEPOSIT(예치금) 또는 SETTLEMENT(정산금) */
   account: WalletAccount
   status: WithdrawalStatus
   requestedAt: string

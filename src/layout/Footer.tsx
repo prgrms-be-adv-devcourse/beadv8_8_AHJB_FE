@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { PHOTO_CREDITS } from '@/lib/photos'
 import styles from './Footer.module.css'
 
 /** 사이트 하단 */
@@ -17,14 +16,6 @@ export function Footer() {
           <Link to="/cart">장바구니</Link>
           <Link to="/me">마이페이지</Link>
         </nav>
-        <p className={styles.credits}>
-          상품 사진: Wikimedia Commons —{' '}
-          {PHOTO_CREDITS.map((credit, index) => (
-            <span key={credit.note}>
-              {credit.who} ({credit.license}, {credit.note}){index < PHOTO_CREDITS.length - 1 ? ', ' : ''}
-            </span>
-          ))}
-        </p>
       </div>
     </footer>
   )
