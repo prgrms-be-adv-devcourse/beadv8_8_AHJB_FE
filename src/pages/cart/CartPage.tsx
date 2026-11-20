@@ -88,6 +88,8 @@ export function CartPage() {
   // 포인트는 보유한 만큼, 결제 금액까지만 쓸 수 있다. 선택한 상품이 바뀌어 한도가 줄면 사용액도 따라 줄인다
   const maxPoint = Math.min(pointBalance, payTotal)
   const pointUse = Math.min(pointRequested, maxPoint)
+  // 예치금으로 결제하면 모자라는 금액. 결제수단 설명에 쓰려고 어떤 수단을 골랐든 계산한다 (견적은 고른 수단 것만 온다)
+  const depositShortage = walletQuery.data ? Math.max(0, payTotal - pointUse - balance) : 0
   const quotedPoint = useDebouncedValue(pointUse, QUOTE_DEBOUNCE_MS)
 
   // 결제 전 견적: 이 결제수단 · 포인트 사용액이면 무엇으로 얼마씩 나가고 결제창에서 얼마를 결제하는지. 계산은 백엔드가 한다
@@ -336,10 +338,10 @@ export function CartPage() {
                   title={PAY_METHOD_LABELS[method]}
                   description={
                     method === 'DEPOSIT'
-                      ? `잔액 ${walletQuery.data ? formatWon(balance) : '–'} · 모자라면 계좌이체로 충전`
+                      ? `잔액 ${walletQuery.data ? formatWon(balance) : '–'}${depositShortage > 0 ? ` · ${formatWon(depositShortage)} 부족` : ''}`
                       : method === 'TRANSFER'
-                        ? '예치금을 쓰지 않고 바로 결제'
-                        : '예치금을 쓰지 않고 바로 결제 · 포인트 적립 제외'
+                        ? '계좌 간편결제'
+                        : '포인트 적립 제외'
                   }
                 />
               ))}
