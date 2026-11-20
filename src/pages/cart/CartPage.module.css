@@ -141,6 +141,10 @@
   text-align: right;
   font-weight: 600;
 }
+/* 결제 확인 모달 안: 모달 본문의 흐린 글자색 대신 금액을 또렷하게 */
+.confirmRows dd {
+  color: var(--text);
+}
 .total {
   padding-top: var(--space-12);
   border-top: 1px solid var(--hairline);
@@ -250,10 +254,10 @@
 }
 .orderList li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-10);
-  align-items: baseline;
-  padding: var(--space-10) 0;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: var(--space-12);
+  align-items: center;
+  padding: var(--space-12) 0;
   border-bottom: 1px solid var(--hairline);
   font-weight: 600;
 }
@@ -262,6 +266,12 @@
 }
 .orderList .itemMeta {
   font-weight: 400;
+}
+.orderList .itemMeta a {
+  text-decoration: underline;
+}
+.orderThumb {
+  display: block;
 }
 .completeActions {
   display: flex;
