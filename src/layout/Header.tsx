@@ -1,10 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cartApi, chatApi, notificationApi } from '@/api/endpoints'
 import { useAuth } from '@/auth/AuthProvider'
-import { LinkButton } from '@/components/Button'
-import { Input } from '@/components/form/Field'
 import { Icon } from '@/components/Icon'
 import { useNow } from '@/lib/clock'
 import { STATUS_TABS } from '@/pages/auctions/auctionListParams'
@@ -13,19 +10,17 @@ import styles from './Header.module.css'
 /** 결제 기한이 이만큼 안 남았으면 장바구니 숫자를 강조 (6시간) */
 const PAYMENT_DUE_HOT_MS = 6 * 3600 * 1000
 
-/** 상단 헤더: 로고, 검색, 사용자 메뉴, 경매 상태 탭 */
+/**
+ * 상단 헤더 (KREAM 구성 참고)
+ * - 1줄: 유틸 메뉴 (판매하기 · 채팅 · 마이페이지 · 알림 / 로그인 · 회원가입). 모바일은 하단 탭바가 대신한다
+ * - 2줄: 로고 · 메인 메뉴(경매 · 스페셜 경매) · 검색 · 장바구니
+ * - 3줄: 경매 영역(홈·경매 목록)에서만 하위 탭 (추천 · 경매 중 · 오픈 예정 · 경매 종료)
+ */
 export function Header() {
   const { me, isLoggedIn } = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const now = useNow()
-  const [keyword, setKeyword] = useState(location.pathname === '/search' ? (searchParams.get('keyword') ?? '') : '')
-
-  // 검색 결과 화면에서는 주소의 검색어를 입력칸에 맞춘다
-  useEffect(() => {
-    if (location.pathname === '/search') setKeyword(searchParams.get('keyword') ?? '')
-  }, [location.pathname, searchParams])
 
   const cartQuery = useQuery({
     queryKey: ['cart'],
@@ -57,126 +52,105 @@ export function Header() {
     (item) => Date.parse(item.paymentDueAt) - now < PAYMENT_DUE_HOT_MS,
   )
 
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const value = keyword.trim()
-    navigate(value ? `/search?keyword=${encodeURIComponent(value)}` : '/search')
-  }
-
-  // 경매 목록에서 현재 탭 (status 가 없으면 진행 중)
-  const currentStatus = location.pathname === '/auctions' ? (searchParams.get('status') ?? 'IN_PROGRESS') : null
+  // 경매 영역: 홈(추천)과 경매 목록. 메인 메뉴 '경매'가 켜지고 하위 탭이 보인다
+  const isHome = location.pathname === '/'
+  const isAuctionList = location.pathname === '/auctions'
+  const inAuctionSection = isHome || isAuctionList
+  const currentStatus = isAuctionList ? (searchParams.get('status') ?? 'IN_PROGRESS') : null
+  const loginPath = `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
 
   return (
     <header className={styles.header}>
-      <div className={`container ${styles.top}`}>
-        <Link to="/" className={styles.logo} aria-label="찐막 홈">
-          <span className={styles.mark} aria-hidden="true" />
-          찐막
-        </Link>
-        <form className={styles.search} role="search" onSubmit={handleSearch}>
-          <label htmlFor="global-search" className="sr-only">
-            경매 검색
-          </label>
-          <Input
-            id="global-search"
-            type="search"
-            icon="search"
-            placeholder="슈퍼패미컴, 게임보이, 한정판…"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-            autoComplete="off"
-          />
-        </form>
-        <nav className={styles.actions} aria-label="사용자 메뉴">
-          <LinkButton to="/sell" variant="outline" size="sm" className={styles.sell}>
-            <Icon name="plus" size={14} />
-            <span className={styles.hideXs}>판매하기</span>
-          </LinkButton>
+      <div className={styles.util}>
+        <nav className={`container ${styles.utilInner}`} aria-label="사용자 메뉴">
+          <Link to="/sell" className={styles.utilLink}>
+            판매하기
+          </Link>
           {isLoggedIn ? (
             <>
-              <NavLink
-                to="/chats"
-                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
-                aria-label={chatUnreadCount ? `채팅 ${chatUnreadCount}개 방 안 읽음` : '채팅'}
-              >
-                <span className={styles.iconWrap}>
-                  <Icon name="chat" size={18} />
-                  {chatUnreadCount ? (
-                    <span className={`${styles.count} ${styles.countHot} num`}>
-                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
-                    </span>
-                  ) : null}
-                </span>
-              </NavLink>
-              <NavLink
-                to="/notifications"
-                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
-                aria-label={`알림 ${unreadCount}개 안 읽음`}
-              >
-                <span className={styles.iconWrap}>
-                  <Icon name="bell" size={18} />
-                  {unreadCount ? (
-                    <span className={`${styles.count} ${styles.countHot} num`}>{unreadCount > 99 ? '99+' : unreadCount}</span>
-                  ) : null}
-                </span>
-              </NavLink>
-              <NavLink
-                to="/cart"
-                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
-                aria-label={`장바구니 ${cartCount}개`}
-              >
-                <span className={styles.iconWrap}>
-                  <Icon name="cart" size={18} />
-                  {cartCount ? (
-                    <span className={`${styles.count} ${paymentDueSoon ? styles.countHot : ''} num`}>{cartCount}</span>
-                  ) : null}
-                </span>
-              </NavLink>
-              <NavLink
-                to="/me"
-                className={({ isActive: active }) => `${styles.navLink} ${active ? styles.active : ''}`}
-              >
-                <Icon name="user" size={18} />
-                <span className={styles.hideSm}>{me?.nickname ?? '마이'}</span>
-              </NavLink>
+              <Link to="/chats" className={styles.utilLink}>
+                채팅
+                {chatUnreadCount ? <span className={styles.dot} aria-label={`안 읽은 채팅 ${chatUnreadCount}개`} /> : null}
+              </Link>
+              <Link to="/me" className={styles.utilLink}>
+                마이페이지
+              </Link>
+              <Link to="/notifications" className={styles.utilLink}>
+                알림
+                {unreadCount ? <span className={styles.dot} aria-label={`안 읽은 알림 ${unreadCount}개`} /> : null}
+              </Link>
             </>
           ) : (
             <>
-              <Link
-                to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
-                className={styles.navLink}
-              >
+              <Link to={loginPath} className={styles.utilLink}>
                 로그인
               </Link>
-              <Link to="/signup" className={`${styles.navLink} ${styles.hideSm}`}>
+              <Link to="/signup" className={styles.utilLink}>
                 회원가입
               </Link>
             </>
           )}
         </nav>
       </div>
-      <nav className={styles.cats} aria-label="경매 분류">
-        <div className={`container ${styles.catsInner}`}>
-          <NavLink to="/" end className={({ isActive: active }) => `${styles.cat} ${active ? styles.catOn : ''}`}>
-            홈
-          </NavLink>
-          {STATUS_TABS.filter((tab) => tab.value !== 'ENDED').map((tab) => (
+
+      <div className={`container ${styles.main}`}>
+        <Link to="/" className={styles.logo} aria-label="찐막 홈">
+          <span className={styles.mark} aria-hidden="true" />
+          찐막
+        </Link>
+        <div className={styles.right}>
+          <nav className={styles.mainNav} aria-label="경매 메뉴">
             <Link
-              key={tab.value}
-              to={tab.value === 'IN_PROGRESS' ? '/auctions' : `/auctions?status=${tab.value}`}
-              className={`${styles.cat} ${currentStatus === tab.value ? styles.catOn : ''}`}
-              aria-current={currentStatus === tab.value ? 'page' : undefined}
+              to="/"
+              className={`${styles.mainLink} ${inAuctionSection ? styles.mainLinkOn : ''}`}
+              aria-current={inAuctionSection ? 'page' : undefined}
             >
-              {tab.value === 'IN_PROGRESS' ? <span className={styles.liveDot} aria-hidden="true" /> : null}
-              {tab.label}
+              경매
             </Link>
-          ))}
-          <NavLink to="/drops" className={({ isActive: active }) => `${styles.cat} ${active ? styles.catOn : ''}`}>
-            <Icon name="bolt" size={12} />
-            스페셜 경매
-          </NavLink>
+            <NavLink to="/drops" className={({ isActive: active }) => `${styles.mainLink} ${active ? styles.mainLinkOn : ''}`}>
+              스페셜 경매
+            </NavLink>
+          </nav>
+          <div className={styles.icons}>
+            <Link to="/search" className={styles.iconLink} aria-label="검색">
+              <Icon name="search" size={22} />
+            </Link>
+            {isLoggedIn ? (
+              <Link to="/notifications" className={`${styles.iconLink} ${styles.mobileOnly}`} aria-label={`알림 ${unreadCount}개 안 읽음`}>
+                <Icon name="bell" size={22} />
+                {unreadCount ? <span className={styles.dot} /> : null}
+              </Link>
+            ) : null}
+            <Link to={isLoggedIn ? '/cart' : loginPath} className={styles.iconLink} aria-label={`장바구니 ${cartCount}개`}>
+              <Icon name="cart" size={22} />
+              {cartCount ? (
+                <span className={`${styles.count} ${paymentDueSoon ? styles.countHot : ''} num`}>{cartCount}</span>
+              ) : null}
+            </Link>
+          </div>
         </div>
-      </nav>
+      </div>
+
+      {inAuctionSection ? (
+        <nav className={`container ${styles.sub}`} aria-label="경매 분류">
+          <Link to="/" className={`${styles.subLink} ${isHome ? styles.subLinkOn : ''}`} aria-current={isHome ? 'page' : undefined}>
+            추천
+          </Link>
+          {STATUS_TABS.map((tab) => {
+            const on = currentStatus === tab.value
+            return (
+              <Link
+                key={tab.value}
+                to={tab.value === 'IN_PROGRESS' ? '/auctions' : `/auctions?status=${tab.value}`}
+                className={`${styles.subLink} ${on ? styles.subLinkOn : ''}`}
+                aria-current={on ? 'page' : undefined}
+              >
+                {tab.label}
+              </Link>
+            )
+          })}
+        </nav>
+      ) : null}
     </header>
   )
 }

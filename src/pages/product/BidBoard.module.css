@@ -18,7 +18,7 @@
 }
 .timerHot {
   background: var(--coral);
-  color: var(--text);
+  color: var(--white);
 }
 .timerDone {
   background: var(--olive-3);
@@ -146,7 +146,7 @@
 .bidError {
   font-size: 12px;
   line-height: 17px;
-  color: #c2410c;
+  color: #e5263b;
   font-weight: 500;
 }
 .bidActions {

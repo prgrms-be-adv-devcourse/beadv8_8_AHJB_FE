@@ -41,7 +41,7 @@
 }
 .closing {
   background: var(--status-closing);
-  color: var(--text);
+  color: var(--white);
 }
 .ended {
   background: var(--status-ended);

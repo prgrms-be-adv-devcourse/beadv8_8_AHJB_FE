@@ -30,7 +30,7 @@
   color: var(--text-muted);
 }
 .error {
-  color: #c2410c;
+  color: #e5263b;
 }
 .success {
   color: #1f7a5a;
@@ -62,11 +62,11 @@
   color: var(--text-muted);
 }
 .input:hover:not(:disabled) {
-  border-color: #22222280;
+  border-color: #1b1d2a80;
 }
 .input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px #2222220f;
+  box-shadow: 0 0 0 3px #3b5bfd26;
 }
 .input:focus-visible {
   border-color: var(--text);

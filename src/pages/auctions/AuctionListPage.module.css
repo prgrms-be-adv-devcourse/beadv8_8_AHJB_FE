@@ -69,26 +69,9 @@
 }
 
 /* 상태 탭: 밑줄형 */
-.statusTabs {
-  display: flex;
-  gap: var(--space-20);
-  border-bottom: 1px solid var(--hairline);
-  margin-bottom: var(--space-20);
-}
-.statusTab {
-  padding: var(--space-10) 0;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  background: transparent;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.statusTabOn {
-  color: var(--text);
-  border-bottom-color: var(--text);
+.searchBar {
+  max-width: 640px;
+  margin-bottom: var(--space-24);
 }
 .more {
   display: flex;

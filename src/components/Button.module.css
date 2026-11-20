@@ -64,7 +64,7 @@
   color: var(--on-primary);
 }
 .highlight:not(:disabled):hover {
-  background: var(--coral);
+  background: var(--primary-hover);
 }
 .outline {
   background: var(--white);

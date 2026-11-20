@@ -38,7 +38,7 @@
 .action {
   flex: none;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--lemon);
 }
 .action:hover {
   text-decoration: underline;

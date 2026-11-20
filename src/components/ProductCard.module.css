@@ -41,7 +41,7 @@
 }
 .timerHot {
   background: var(--coral);
-  color: var(--text);
+  color: var(--white);
 }
 .body {
   display: flex;

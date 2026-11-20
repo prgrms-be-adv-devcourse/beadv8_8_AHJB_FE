@@ -40,7 +40,7 @@
   transition: color var(--dur) var(--ease);
 }
 .links a:hover {
-  color: var(--primary);
+  color: var(--lemon);
 }
 .credits {
   grid-column: 1 / -1;

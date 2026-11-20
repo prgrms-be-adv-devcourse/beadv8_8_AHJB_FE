@@ -17,30 +17,32 @@
 }
 :root {
   color-scheme: light;
-  --background: #f8f8f8;
+  /* 브랜드 톤 (2026-11-20): 로고·배너와 같은 게임기 원색. 블루(주) · 코인 옐로(강조) · 레드(긴급) */
+  --background: #f5f6fa;
   --white: #ffffff;
-  --text: #222222;
-  --text-muted: #222222b3;
-  --black: #101010;
-  --border: #2222224d;
-  --border-focus: #a7a7a7;
-  --hairline: #2222221a;
-  --primary: #ff9667;
-  --on-primary: var(--text);
-  --accent: #726996;
-  --accent-hover: #897eb4;
-  --coral: #ff602c;
-  --coral-2: #ffae94;
-  --coral-3: #ffc5b1;
+  --text: #1b1d2a;
+  --text-muted: #1b1d2ab3;
+  --black: #12131c;
+  --border: #1b1d2a4d;
+  --border-focus: var(--primary);
+  --hairline: #1b1d2a1a;
+  --primary: #3b5bfd;
+  --primary-hover: #2c49e0;
+  --on-primary: #ffffff;
+  --accent: #3b5bfd;
+  --accent-hover: #2c49e0;
+  --coral: #ff4757;
+  --coral-2: #ff9aa5;
+  --coral-3: #ffd6da;
   --orange: #fa5d29;
   --olive: #c0ab3c;
   --olive-2: #cdc38b;
-  --olive-3: #dbd6c0;
-  --lemon: #fff083;
-  --violet: #502bd8;
-  --violet-3: #917eda;
-  --mint: #aaeec4;
-  --mint-2: #c8e4d3;
+  --olive-3: #e1e4ee;
+  --lemon: #ffe14d;
+  --violet: #7a3cf2;
+  --violet-3: #b9a1f8;
+  --mint: #9be8c0;
+  --mint-2: #d4f5e3;
   --sky-2: #99ccfc;
   --sky-3: #b4d7f8;
   --blue: #49b3fc;
@@ -73,7 +75,7 @@
   --radius-md: 8px;
   --radius-full: 50%;
   --shadow-float: 0 0 6px 0 rgba(0, 0, 0, 0.2);
-  --focus-ring: 0 0 0 2px #f8f8f8, 0 0 0 4px #222222;
+  --focus-ring: 0 0 0 2px #f5f6fa, 0 0 0 4px var(--primary);
   --ease: ease;
   --dur: 0.3s;
   --container: 1280px;
@@ -239,6 +241,47 @@ table {
 @media (min-width: 1600px) {
   .grid-products {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+/*
+ * 홈·추천처럼 "한 줄"만 보여 주는 목록 (최대 6개 받아 온다)
+ * - 모바일: 가로 스크롤 (카드 폭 고정, 다음 카드가 살짝 보이게)
+ * - 태블릿 이상: 열 수만큼만 보이고 나머지는 숨긴다 → 줄이 넘어가거나 빈칸이 생기지 않는다
+ */
+@media (max-width: 767px) {
+  .grid-products--row {
+    display: flex;
+    gap: var(--space-12);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin-left: calc(-1 * var(--gutter));
+    margin-right: calc(-1 * var(--gutter));
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+    scroll-padding-left: var(--gutter);
+  }
+  .grid-products--row::-webkit-scrollbar {
+    display: none;
+  }
+  .grid-products--row > * {
+    flex: 0 0 42%;
+    scroll-snap-align: start;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .grid-products--row > :nth-child(n + 4) {
+    display: none;
+  }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .grid-products--row > :nth-child(n + 5) {
+    display: none;
+  }
+}
+@media (min-width: 1280px) and (max-width: 1599px) {
+  .grid-products--row > :nth-child(n + 6) {
+    display: none;
   }
 }
 .grid-products--narrow {
