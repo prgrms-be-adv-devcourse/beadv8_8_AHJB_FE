@@ -50,7 +50,7 @@ export function HomePage() {
 
   return (
     <div className={`container ${styles.page}`}>
-      <HeroBanner featured={featured} now={now} />
+      <HeroBanner featured={featured} />
 
       {cartItems.length && earliestDueAt ? (
         <Link to="/cart" className={styles.cartBanner}>

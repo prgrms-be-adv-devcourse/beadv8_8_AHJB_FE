@@ -43,9 +43,6 @@
 .brand {
   background: #3b5bfd;
 }
-.hot {
-  background: #7a3cf2;
-}
 .drop {
   background: #16a36a;
 }
@@ -139,12 +136,11 @@
   overflow: hidden;
   background: var(--white);
   color: var(--text);
-  box-shadow: 8px 8px 0 #00000040;
-  transform: rotate(2deg);
+  box-shadow: 0 8px 0 #00000033;
   transition: transform 0.3s var(--ease);
 }
 .hotCard:hover {
-  transform: rotate(0deg) translateY(-3px);
+  transform: translateY(-3px);
 }
 .hotImage {
   border-radius: 0;
@@ -152,6 +148,12 @@
 }
 .hotInfo {
   padding: var(--space-12) var(--space-16) var(--space-16);
+}
+.hotTag {
+  margin-bottom: var(--space-4);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
 }
 .hotName {
   font-size: 14px;

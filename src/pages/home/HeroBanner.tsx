@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
 import { Img } from '@/components/Img'
 import { productPath } from '@/components/ProductCard'
-import { formatCountdown, formatWon } from '@/lib/format'
+import { formatWon } from '@/lib/format'
 import type { AuctionSummary } from '@/types/auction'
 import styles from './HeroBanner.module.css'
 
@@ -12,7 +12,7 @@ const AUTOPLAY_MS = 6000
 
 interface Slide {
   key: string
-  tone: 'brand' | 'hot' | 'drop' | 'sell'
+  tone: 'brand' | 'drop' | 'sell'
   label: string
   title: ReactNode
   desc: string
@@ -21,17 +21,16 @@ interface Slide {
 }
 
 interface HeroBannerProps {
-  /** 입찰 경쟁 1위 (없으면 그 슬라이드를 뺀다) */
+  /** 입찰 수 1위 진행 중 경매 (없으면 첫 장 오른쪽에 아이콘) */
   featured: AuctionSummary | undefined
-  now: number
 }
 
 /**
  * 홈 상단 배너 (KREAM·번개장터 메인 배너 참고)
- * - 슬라이드: 서비스 소개 · 지금 가장 뜨거운 경매(진행 중 경매가 있을 때, 실데이터) · 스페셜 경매 · 판매 유도
+ * - 슬라이드 3장: 서비스 소개(오른쪽은 인기 1위 경매 카드, 없으면 아이콘) · 스페셜 경매 · 판매 유도
  * - 6초마다 넘어가고, 마우스를 올리거나 포커스가 있으면 멈춘다. 모바일은 손가락으로 넘긴다(scroll-snap)
  */
-export function HeroBanner({ featured, now }: HeroBannerProps) {
+export function HeroBanner({ featured }: HeroBannerProps) {
   const intro: Slide = {
     key: 'intro',
     tone: 'brand',
@@ -45,30 +44,12 @@ export function HeroBanner({ featured, now }: HeroBannerProps) {
     ),
     desc: '게임만 모아 사고, 팔고, 경매해요. 찾던 그 게임, 찐막에서 만나요.',
     cta: { to: '/auctions', label: '경매 둘러보기' },
-    visual: <IconArt icon="gavel" />,
+    // 진행 중 경매가 있으면 인기 1위 카드, 없으면 아이콘
+    visual: featured ? <HotCard item={featured} /> : <IconArt icon="gavel" />,
   }
-  const hot: Slide | null = featured
-    ? {
-        key: 'hot',
-        tone: 'hot',
-        label: '지금 입찰 경쟁 1위',
-        title: (
-          <>
-            지금 가장
-            <br />
-            뜨거운 경매
-          </>
-        ),
-        desc: `입찰 ${featured.bidCount}회, 마감까지 ${featured.endAt ? formatCountdown(Date.parse(featured.endAt) - now) : '-'}`,
-        cta: { to: productPath(featured.productId), label: '입찰하러 가기' },
-        visual: <HotCard item={featured} />,
-      }
-    : null
 
-  // 첫 장은 항상 서비스 소개, 진행 중 경매가 있으면 입찰 1위가 이어진다
   const slides: Slide[] = [
     intro,
-    ...(hot ? [hot] : []),
     {
       key: 'drop',
       tone: 'drop',
@@ -176,12 +157,13 @@ export function HeroBanner({ featured, now }: HeroBannerProps) {
   )
 }
 
-/** 1번 슬라이드: 입찰 1위 상품 */
+/** 첫 장 오른쪽: 입찰 수 1위 경매 */
 function HotCard({ item }: { item: AuctionSummary }) {
   return (
     <Link to={productPath(item.productId)} className={styles.hotCard} tabIndex={-1}>
       <Img src={item.thumbnailUrl} alt={item.productName} className={styles.hotImage} />
       <div className={styles.hotInfo}>
+        <p className={styles.hotTag}>인기 경매 · 입찰 {item.bidCount}회</p>
         <p className={styles.hotName}>{item.productName}</p>
         <p className={`${styles.hotPrice} num`}>
           <span>현재가</span>
