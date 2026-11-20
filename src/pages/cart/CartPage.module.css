@@ -141,10 +141,6 @@
   text-align: right;
   font-weight: 600;
 }
-/* 결제 확인 모달 안: 모달 본문의 흐린 글자색 대신 금액을 또렷하게 */
-.confirmRows dd {
-  color: var(--text);
-}
 .total {
   padding-top: var(--space-12);
   border-top: 1px solid var(--hairline);
