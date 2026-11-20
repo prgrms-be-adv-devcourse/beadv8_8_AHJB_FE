@@ -411,7 +411,7 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             suffix="원"
             value={bidInput}
             invalid={!!bidError && !reachesInstantWin}
-            aria-describedby="bid-help"
+            aria-describedby={bidError || reachesInstantWin ? 'bid-help' : undefined}
             disabled={!canBid}
             onChange={(event) => {
               setTouched(true)
@@ -447,21 +447,12 @@ export function AuctionBidBox({ data, product, hasMyBid }: AuctionBidBoxProps) {
             <p id="bid-help" className={styles.bidError} role="alert">
               {bidError}
             </p>
-          ) : (
+          ) : reachesInstantWin ? (
             <p id="bid-help" className={styles.bidHelp}>
-              {reachesInstantWin ? (
-                <>
-                  즉시 구매가(<strong className="num">{formatWon(auction.instantWinPrice)}</strong>) 이상이에요. 입찰하면{' '}
-                  <strong>즉시 구매가로 바로 낙찰</strong>돼요.
-                </>
-              ) : (
-                <>
-                  현재가에 <strong className="num">{formatWon(increment)}</strong> 단위로 올려요. 낙찰되면 낙찰가 +
-                  배송비를 24시간 안에 예치금으로 결제해요.
-                </>
-              )}
+              즉시 구매가(<strong className="num">{formatWon(auction.instantWinPrice)}</strong>) 이상이에요. 입찰하면{' '}
+              <strong>즉시 구매가로 바로 낙찰</strong>돼요.
             </p>
-          )}
+          ) : null}
           <Button
             type="submit"
             variant="highlight"

@@ -104,7 +104,7 @@ export function OrderDetailPage() {
           {role === 'seller' ? '판매 내역' : '주문 내역'}
         </Link>
         <Icon name="chevronRight" size={12} />
-        <span className="num">주문 {order.id}</span>
+        <span>주문 상세정보</span>
       </nav>
 
       <div className={styles.layout}>
@@ -114,8 +114,8 @@ export function OrderDetailPage() {
               <Badge tone={meta.tone} size="lg">
                 {meta.label}
               </Badge>
-              <span className={styles.muted}>
-                {role === 'seller' ? '판매' : '구매'} · 주문 {order.id}
+              <span className={`${styles.muted} num`}>
+                주문번호 {order.id}
               </span>
             </div>
 
