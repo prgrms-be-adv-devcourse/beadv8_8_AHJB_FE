@@ -42,9 +42,3 @@
 .links a:hover {
   color: var(--lemon);
 }
-.credits {
-  grid-column: 1 / -1;
-  font-size: 11px;
-  line-height: 17px;
-  color: #ffffff80;
-}

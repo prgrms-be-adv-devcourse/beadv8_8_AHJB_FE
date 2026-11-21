@@ -243,7 +243,9 @@ export const walletApi = {
     http.get<HoldingPage>('/api/v1/wallet/me/holdings', params),
   /** 예치금 전액 출금(명목상). 잔액 → 0. 잔액 0 이면 WALLET601. 정산금은 출금되지 않는다 */
   withdraw: () => http.post<Withdrawal>('/api/v1/wallet/me/withdrawals'),
-  /** 내 출금 내역. 최신순, size 최대 50 */
+  /** 정산금 전액 출금(명목상). 정산금 → 0. 정산금 0 이면 WALLET603. 예치금 · 포인트는 출금되지 않는다 */
+  withdrawSettlement: () => http.post<Withdrawal>('/api/v1/wallet/me/settlement-withdrawals'),
+  /** 내 출금 내역. 예치금 · 정산금 출금이 함께 온다(account 로 구분). 최신순, size 최대 50 */
   withdrawals: (params: WithdrawalListParams = {}) =>
     http.get<PageResponse<Withdrawal>>('/api/v1/wallet/me/withdrawals', params),
 }

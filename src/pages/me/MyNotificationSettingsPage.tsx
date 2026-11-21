@@ -43,7 +43,7 @@ export function MyNotificationSettingsPage() {
         <h1 className={styles.title}>알림 설정</h1>
       </div>
       <p className={styles.headSub}>
-        끈 묶음은 휴대폰·브라우저 알림이 오지 않고 알림함에만 남아요. 계정 알림(경고·제재)은 끌 수 없어요.
+        알림을 끄면 휴대폰·브라우저 알림이 오지 않고 알림함에만 남아요. 계정 알림(경고·제재)은 끌 수 없어요.
       </p>
       {settingsQuery.isLoading ? (
         <Spinner block />

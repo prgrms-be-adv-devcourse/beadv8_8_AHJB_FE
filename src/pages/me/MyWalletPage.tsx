@@ -100,9 +100,9 @@ export function MyWalletPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
   const { me } = useAuth()
-  const isSeller = !!me?.isSeller
   const [chargeOpen, setChargeOpen] = useState(false)
   const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [settlementWithdrawOpen, setSettlementWithdrawOpen] = useState(false)
   const [tab, setTab] = useState<HistoryTab>('charges')
   const [page, setPage] = useState(0)
   const [withdrawalPage, setWithdrawalPage] = useState(0)
@@ -112,12 +112,6 @@ export function MyWalletPage() {
   const policy = usePaymentPolicy()
   const [cancelTarget, setCancelTarget] = useState<ChargeSummary | null>(null)
   const walletQuery = useQuery({ queryKey: ['wallet'], queryFn: walletApi.me })
-  // 판매자: 받을 예정 금액(정산 전 홀딩 합계). 합계만 필요해서 1건만 받는다
-  const sellerHoldingsQuery = useQuery({
-    queryKey: ['wallet', 'holdings', 'SELLER'],
-    queryFn: () => walletApi.holdings({ role: 'SELLER', size: 1 }),
-    enabled: isSeller,
-  })
   const withdrawalsQuery = useQuery({
     queryKey: ['wallet', 'withdrawals', withdrawalPage],
     queryFn: () => walletApi.withdrawals({ page: withdrawalPage, size: PAGE_SIZE }),
@@ -151,6 +145,10 @@ export function MyWalletPage() {
     placeholderData: keepPreviousData,
   })
   const balance = walletQuery.data?.balance ?? 0
+  // 정산금: 구매확정으로 받은 판매 대금. 예치금과 따로 보관되고 따로 출금한다
+  const settlementBalance = walletQuery.data?.settlementBalance ?? 0
+  // 판매자에게만 보여 준다. 판매자가 아니어도 남은 정산금이 있으면 출금할 수 있어야 하니 보여 준다
+  const showSettlement = !!me?.isSeller || settlementBalance > 0
   // 결제창만 열고 나온 건(REQUESTED)은 사용자에겐 "충전"이 아니므로 숨긴다. 백엔드 스케줄러가 알아서 정리한다
   const visibleCharges = chargesQuery.data?.content.filter((c) => c.status !== 'REQUESTED') ?? []
   // 결제창을 닫거나 결제 기한이 지나 닫힌 결제(FAILED)는 돈이 움직이지 않은 건이라 숨긴다. 결제창을 닫을 때마다 하나씩 생긴다
@@ -169,6 +167,21 @@ export function MyWalletPage() {
     onError: (error) => {
       toast(error.message, { tone: 'error' })
       setWithdrawOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+    },
+  })
+
+  /** 정산금 전액 출금(명목상). 실제 송금은 없고 정산금이 0 이 되며 출금 내역에 남는다. 예치금 · 포인트는 그대로다 */
+  const withdrawSettlement = useMutation<Withdrawal, ApiError>({
+    mutationFn: () => walletApi.withdrawSettlement(),
+    onSuccess: (w) => {
+      toast(`정산금 ${formatWon(w.amount)}을 등록 계좌로 출금했어요.`, { tone: 'success' })
+      setSettlementWithdrawOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['wallet'] })
+    },
+    onError: (error) => {
+      toast(error.message, { tone: 'error' })
+      setSettlementWithdrawOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['wallet'] })
     },
   })
@@ -200,11 +213,6 @@ export function MyWalletPage() {
           <span className={`${styles.sumValue} num`}>
             {walletQuery.data ? formatWon(walletQuery.data.balance) : '–'}
           </span>
-          {walletQuery.data && walletQuery.data.settlementBalance > 0 && (
-            <span className={styles.sumSub}>
-              정산금 {formatWon(walletQuery.data.settlementBalance)} 별도 보관 (결제에는 쓰이지 않아요)
-            </span>
-          )}
           <div className={styles.sumActions}>
             <Button variant="highlight" size="sm" onClick={() => setChargeOpen(true)}>
               충전하기
@@ -231,18 +239,21 @@ export function MyWalletPage() {
             제외)
           </span>
         </div>
-        {isSeller ? (
+        {showSettlement ? (
           <div className={styles.sumCard}>
-            <span className={styles.sumLabel}>정산 예정 금액</span>
-            <span className={`${styles.sumValue} num`}>
-              {sellerHoldingsQuery.data ? formatWon(sellerHoldingsQuery.data.heldTotal) : '–'}
-            </span>
-            <span className={styles.sumSub}>
-              판매한 주문의 수수료 제외 금액
-              {sellerHoldingsQuery.data && sellerHoldingsQuery.data.settleableTotal > 0
-                ? ` · 구매확정 완료 ${formatWon(sellerHoldingsQuery.data.settleableTotal)}`
-                : ''}
-            </span>
+            <span className={styles.sumLabel}>정산금</span>
+            <span className={`${styles.sumValue} num`}>{walletQuery.data ? formatWon(settlementBalance) : '–'}</span>
+            <div className={styles.sumActions}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!walletQuery.data || settlementBalance <= 0}
+                title={settlementBalance <= 0 ? '출금할 정산금이 없어요' : '정산금 전액을 등록 계좌로 출금해요'}
+                onClick={() => setSettlementWithdrawOpen(true)}
+              >
+                출금
+              </Button>
+            </div>
           </div>
         ) : null}
       </div>
@@ -265,6 +276,13 @@ export function MyWalletPage() {
             <div className={styles.list}>
               {visibleCharges.map((charge) => {
                 const canCancel = charge.cancelable && balance >= charge.amount
+                const partlyUsed = charge.status === 'CHARGED' && charge.usedAmount > 0
+                // 취소 버튼이 없는 이유. 버튼이 있던 자리에 대신 적는다
+                const cancelBlockedReason = partlyUsed
+                  ? '일부 사용된 충전은 취소할 수 없어요'
+                  : charge.status === 'CHARGED' && charge.cancelable
+                    ? '잔액이 충전액보다 적어 지금은 취소할 수 없어요'
+                    : null
                 return (
                   <div key={charge.chargeId} className={styles.row} style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
                     <div className={styles.rowBody}>
@@ -276,23 +294,11 @@ export function MyWalletPage() {
                         {CHARGE_PURPOSE_LABELS[charge.purpose]}
                         {charge.method ? ` · ${charge.method}` : ''}
                       </p>
-                      <p className={styles.rowMeta}>
-                        {charge.status === 'ABORTED' && charge.failureMessage
-                          ? charge.failureMessage
-                          : charge.status === 'CHARGED' && charge.usedAmount > 0
-                            ? `${formatWon(charge.usedAmount)} 사용 · 일부 사용된 충전은 취소할 수 없어요`
-                            : charge.status === 'CHARGED' && !canCancel && charge.cancelable
-                              ? '잔액이 충전액보다 적어 지금은 취소할 수 없어요'
-                              : null}
-                        {charge.receiptUrl ? (
-                          <>
-                            {' '}
-                            <a href={charge.receiptUrl} target="_blank" rel="noreferrer">
-                              영수증
-                            </a>
-                          </>
-                        ) : null}
-                      </p>
+                      {charge.status === 'ABORTED' && charge.failureMessage ? (
+                        <p className={styles.rowMeta}>{charge.failureMessage}</p>
+                      ) : partlyUsed ? (
+                        <p className={`${styles.rowMeta} num`}>{formatWon(charge.usedAmount)} 사용</p>
+                      ) : null}
                     </div>
                     <div className={styles.rowSide}>
                       <span className={`${styles.amount} num ${charge.status === 'CHARGED' ? styles.plus : ''}`}>
@@ -303,6 +309,8 @@ export function MyWalletPage() {
                         <Button variant="outline" size="sm" onClick={() => setCancelTarget(charge)}>
                           충전 취소
                         </Button>
+                      ) : cancelBlockedReason ? (
+                        <span className={styles.rowMeta}>{cancelBlockedReason}</span>
                       ) : null}
                     </div>
                   </div>
@@ -378,7 +386,9 @@ export function MyWalletPage() {
                       <Badge tone={WITHDRAWAL_TONES[w.status]}>{WITHDRAWAL_STATUS_LABELS[w.status]}</Badge>
                       <span className={`${styles.rowMeta} num`}>{formatDateTime(w.completedAt ?? w.requestedAt)}</span>
                     </div>
-                    <p className={styles.rowTitle}>예치금 전액 출금 · 등록 계좌</p>
+                    <p className={styles.rowTitle}>
+                      {w.account === 'SETTLEMENT' ? '정산금' : '예치금'} 전액 출금 · 등록 계좌
+                    </p>
                     {w.status === 'FAILED' && w.failureReason ? <p className={styles.rowMeta}>{w.failureReason}</p> : null}
                   </div>
                   <div className={styles.rowSide}>
@@ -464,6 +474,16 @@ export function MyWalletPage() {
             결제하신 계좌로 환불받으려면 먼저 충전 취소를 해 주세요.
           </>
         ) : null}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={settlementWithdrawOpen}
+        title={`정산금 ${formatWon(settlementBalance)}을 출금할까요?`}
+        confirmLabel="출금하기"
+        loading={withdrawSettlement.isPending}
+        onConfirm={() => withdrawSettlement.mutate()}
+        onClose={() => setSettlementWithdrawOpen(false)}
+      >
+        정산금 전액이 등록하신 계좌로 출금되고 정산금이 0원이 돼요. 예치금과 포인트는 그대로예요.
       </ConfirmDialog>
       <ConfirmDialog
         open={cancelTarget !== null}

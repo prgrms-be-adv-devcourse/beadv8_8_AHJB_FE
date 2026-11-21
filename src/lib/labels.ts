@@ -108,6 +108,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   CHARGE: '충전',
   CHARGE_CANCEL: '충전 취소',
   WITHDRAWAL: '출금',
+  SETTLEMENT_WITHDRAWAL: '정산금 출금',
   HOLD_PAY: '결제',
   HOLD_RECEIVE: '결제 보관',
   SETTLEMENT_PAY: '정산 지급',
@@ -158,6 +159,8 @@ export function describeLedgerEntry(entry: LedgerEntry): string {
       return '충전 취소 (계좌 환불)'
     case 'WITHDRAWAL':
       return '예치금 출금 (등록 계좌)'
+    case 'SETTLEMENT_WITHDRAWAL':
+      return '정산금 출금 (등록 계좌)'
     case 'HOLD_PAY':
       return '주문 결제'
     case 'SETTLEMENT_RECEIVE':

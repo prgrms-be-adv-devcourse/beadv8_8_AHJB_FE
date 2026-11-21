@@ -176,18 +176,6 @@ export function PaymentCompletePage() {
             </ul>
           ) : null}
 
-          {payment.charges.some((charge) => charge.receiptUrl) ? (
-            <p className={styles.rule}>
-              {payment.charges
-                .filter((charge) => charge.receiptUrl)
-                .map((charge) => (
-                  <a key={charge.chargeId} href={charge.receiptUrl as string} target="_blank" rel="noreferrer">
-                    토스페이먼츠 영수증 ({formatWon(charge.amount)})
-                  </a>
-                ))}
-            </p>
-          ) : null}
-
           <div className={styles.completeActions}>
             {payment.status === 'PAID' ? (
               toOrders
