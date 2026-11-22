@@ -149,7 +149,10 @@ export function ProductDetailPage() {
             <h1 className={styles.title}>{product.name}</h1>
             <p className={`${styles.meta} num`} style={{ marginTop: 8 }}>
               {detail?.auction.status === 'IN_PROGRESS' && stream.viewers != null ? (
-                <span className={styles.viewers}>{stream.viewers.toLocaleString('ko-KR')}명 보는 중</span>
+                <span className={styles.viewers}>
+                  <Icon name="eye" size={14} />
+                  {stream.viewers.toLocaleString('ko-KR')}명 보는 중
+                </span>
               ) : null}
               <span>찜 {product.wishCount}</span>
               <span>{formatRelativeTime(product.createdAt, now)} 등록</span>

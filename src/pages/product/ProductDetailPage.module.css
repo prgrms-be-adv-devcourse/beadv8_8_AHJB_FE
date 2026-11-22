@@ -228,14 +228,12 @@
 .viewers {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  margin: -3px 0;
+  padding: 2px 10px;
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  background: #fff;
   font-weight: 600;
-  color: var(--status-live);
-}
-.viewers::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
+  color: var(--text);
 }
