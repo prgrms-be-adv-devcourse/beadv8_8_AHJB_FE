@@ -15,6 +15,8 @@ interface BidHistoryProps {
   bidCount: number
   /** 진행 중이면 5초마다 새로고침, 1위 표시가 '최고' */
   live: boolean
+  /** 실시간 구독 중이면 새 입찰이 캐시에 바로 들어오므로 폴링·입찰 수 변화 새로고침을 하지 않는다 */
+  streaming?: boolean
   /** 낙찰된 경매(WON·PAID·COMPLETED)면 1위에 '낙찰' 표시. 유찰·미결제·환불이면 표시 안 함 */
   won: boolean
 }
@@ -24,13 +26,13 @@ interface BidHistoryProps {
  * 백엔드 size 최대 50 제한 때문에 page 0, 1, 2 … 를 size 10 으로 받아 이어 붙인다.
  * 진행 중 5초 폴링·입찰 수 변화 시 새로고침은 불러온 페이지 전체를 다시 받는다.
  */
-export function BidHistory({ auctionId, bidCount, live, won }: BidHistoryProps) {
+export function BidHistory({ auctionId, bidCount, live, streaming = false, won }: BidHistoryProps) {
   const query = useInfiniteQuery({
     queryKey: ['auction', auctionId, 'bids'],
     queryFn: ({ pageParam }) => auctionApi.bids(auctionId, { page: pageParam, size: PAGE_SIZE }),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => (lastPage.hasNext ? allPages.length : undefined),
-    refetchInterval: live ? 5000 : false,
+    refetchInterval: live && !streaming ? 5000 : false,
   })
 
   // bidCount 를 queryKey 에 넣으면 불러온 페이지가 초기화되므로, 바뀔 때 refetch 한다.
@@ -38,8 +40,8 @@ export function BidHistory({ auctionId, bidCount, live, won }: BidHistoryProps) 
   useEffect(() => {
     if (lastBidCount.current === bidCount) return
     lastBidCount.current = bidCount
-    void query.refetch()
-  }, [bidCount])
+    if (!streaming) void query.refetch()
+  }, [bidCount, streaming])
 
   // 페이지 사이에 새 입찰이 들어오면 경계에서 같은 기록이 겹칠 수 있어 bidId 로 중복 제거
   const bids = useMemo<Bid[]>(() => {

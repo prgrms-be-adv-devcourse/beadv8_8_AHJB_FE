@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_KAKAO_REST_API_KEY?: string
   /** 거래 채팅 WebSocket 주소 (STOMP). 비우면 로컬은 같은 출처(Vite proxy), 배포는 wss://api.jjinmak.kro.kr */
   readonly VITE_WS_BASE_URL?: string
+  readonly VITE_API_STREAM_BASE_URL?: string
 }
 
 interface ImportMeta {
