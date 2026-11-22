@@ -224,3 +224,16 @@
 .guide[open] summary::after {
   content: " ⌄";
 }
+/* 실시간 시청자 수 (SSE) */
+.viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: -3px 0;
+  padding: 2px 10px;
+  border: 1px solid var(--text);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 600;
+  color: var(--text);
+}

@@ -20,6 +20,7 @@ import { BidHistory } from './BidHistory'
 import { DutchBoard } from './DutchBoard'
 import { Gallery } from './Gallery'
 import { QnaSection } from './QnaSection'
+import { useAuctionStream } from './useAuctionStream'
 import styles from './ProductDetailPage.module.css'
 
 const COLUMN_STYLE = { display: 'flex', flexDirection: 'column', gap: 40, minWidth: 0 } as const
@@ -40,21 +41,31 @@ export function ProductDetailPage() {
   const product = productQuery.data
   const auctionId = product?.auctionId ?? null
 
+  // 실시간 구독 (SSE). 연결돼 있으면 영국식은 폴링을 멈추고, 끊기면 다시 폴링한다
+  const stream = useAuctionStream(auctionId)
+
   // 상세 API 하나가 영국식·하향식을 같이 준다 (auction.auctionType 으로 구분)
   const auctionQuery = useQuery<AuctionDetail | DutchAuctionDetail>({
     queryKey: ['auction', auctionId],
     queryFn: () => auctionApi.detail(auctionId!),
     enabled: !!auctionId,
-    refetchInterval: (query) => (query.state.data?.auction.status === 'IN_PROGRESS' ? 3000 : false),
+    refetchInterval: (query) => {
+      const info = query.state.data?.auction
+      if (info?.status !== 'IN_PROGRESS') return false
+      // 하향식 가격 하락은 이벤트로 오지 않아 구독 중에도 폴링한다
+      if (stream.connected && info.auctionType !== 'DUTCH') return false
+      return 3000
+    },
   })
 
   const detail = auctionQuery.data
   const dutchDetail = detail?.auction.auctionType === 'DUTCH' ? (detail as DutchAuctionDetail) : null
   const englishDetail = detail && !dutchDetail ? (detail as AuctionDetail) : null
 
-  // 내가 입찰한 적 있는지 확인용 (입찰 수가 바뀔 때마다 다시 받음). 하향식은 입찰이 없다
+  // 내가 입찰한 적 있는지 확인용. 하향식은 입찰이 없다.
+  // 내 입찰이 성공하면 BidBoard 가 ['auction', id] 를 invalidate 해서 다시 받는다 (남의 입찰마다 받을 필요 없음)
   const myBidCheckQuery = useQuery({
-    queryKey: ['auction', auctionId, 'bids', 'mine-check', englishDetail?.auction.bidCount],
+    queryKey: ['auction', auctionId, 'bids', 'mine-check'],
     queryFn: () => auctionApi.bids(auctionId!, { size: 50 }),
     enabled: !!auctionId && !!englishDetail,
   })
@@ -137,6 +148,12 @@ export function ProductDetailPage() {
           <div>
             <h1 className={styles.title}>{product.name}</h1>
             <p className={`${styles.meta} num`} style={{ marginTop: 8 }}>
+              {detail?.auction.status === 'IN_PROGRESS' && stream.viewers != null ? (
+                <span className={styles.viewers}>
+                  <Icon name="eye" size={14} />
+                  {stream.viewers.toLocaleString('ko-KR')}명 보는 중
+                </span>
+              ) : null}
               <span>찜 {product.wishCount}</span>
               <span>{formatRelativeTime(product.createdAt, now)} 등록</span>
               <span>상품번호 {product.productId}</span>
@@ -243,6 +260,7 @@ export function ProductDetailPage() {
               auctionId={auction.auctionId}
               bidCount={auction.bidCount}
               live={auction.status === 'IN_PROGRESS'}
+              streaming={stream.connected}
               won={auction.status === 'WON' || auction.status === 'PAID' || auction.status === 'COMPLETED'}
             />
           ) : null}
