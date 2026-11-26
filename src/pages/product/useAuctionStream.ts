@@ -5,6 +5,7 @@ import type { PageResponse } from '@/types/common'
 import { syncServerTime } from '@/lib/clock'
 import {
   auctionStreamUrl,
+  streamTabId,
   type AuctionStreamAuction,
   type AuctionStreamBid,
   type AuctionStreamViewers,
@@ -26,18 +27,22 @@ export interface AuctionStreamState {
  * - viewers: 시청자 수
  * 연결이 안 되거나(503 상한 초과 등) 끊긴 동안은 connected=false → 호출하는 쪽이 폴링으로 대체한다.
  * 끝난 경매는 서버가 마지막 상태를 보내고 닫으므로, 브라우저 자동 재연결을 막으려고 여기서 close 한다.
+ * 탭 ID 를 함께 보내 새로고침해도 시청자 수가 늘지 않게 한다 (같은 탭의 이전 연결은 서버가 닫는다).
+ * 탭 복제로 ID 가 겹쳐 서버가 이 연결을 닫으면(replaced) 새 ID 로 다시 연결한다.
  */
 export function useAuctionStream(auctionId: number | null): AuctionStreamState {
   const queryClient = useQueryClient()
   const [connected, setConnected] = useState(false)
   const [viewers, setViewers] = useState<number | null>(null)
+  // replaced 를 받으면 올려서 새 탭 ID 로 다시 연결한다
+  const [generation, setGeneration] = useState(0)
 
   useEffect(() => {
     if (!auctionId || typeof EventSource === 'undefined') return
 
     const detailKey = ['auction', auctionId]
     const bidsKey = ['auction', auctionId, 'bids']
-    const source = new EventSource(auctionStreamUrl(auctionId))
+    const source = new EventSource(auctionStreamUrl(auctionId, streamTabId(generation > 0)))
     let opened = false
     let closed = false
 
@@ -98,6 +103,15 @@ export function useAuctionStream(auctionId: number | null): AuctionStreamState {
       })
     })
 
+    // 같은 탭 ID 로 다른 연결이 생겨 서버가 이 연결을 닫았다 (탭 복제). 새 ID 로 다시 연결
+    source.addEventListener('replaced', () => {
+      if (closed) return
+      closed = true
+      source.close()
+      setConnected(false)
+      setGeneration((value) => value + 1)
+    })
+
     source.addEventListener('viewers', (event) => {
       const payload = JSON.parse((event as MessageEvent<string>).data) as AuctionStreamViewers
       setViewers(payload.count)
@@ -109,7 +123,7 @@ export function useAuctionStream(auctionId: number | null): AuctionStreamState {
       setConnected(false)
       setViewers(null)
     }
-  }, [auctionId, queryClient])
+  }, [auctionId, queryClient, generation])
 
   return { connected, viewers }
 }
